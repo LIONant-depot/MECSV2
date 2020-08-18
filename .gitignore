@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+.vs
+x64
+/dependencies
+/builds/MEGS-VisualExamples.vs2019/Debug
+/builds/MEGS-VisualExamples.vs2019/VTune Profiler Results
+
