@@ -34,7 +34,6 @@ namespace mecs::unit_test::functionality::queries
     //----------------------------------------------------------------------------------------------
     struct sytem_test_01 : mecs::system::instance
     {
-        constexpr static auto   type_guid_v = type_guid{ "sytem_test_01" };
         using instance::instance;
 
         // This query involves 3 components:
@@ -54,17 +53,16 @@ namespace mecs::unit_test::functionality::queries
     //----------------------------------------------------------------------------------------------
     struct sytem_test_02 : mecs::system::instance
     {
-        constexpr static auto   type_guid_v = type_guid{ "sytem_test_01" };
-        using                   query_t     = std::tuple< all<second> >;
-
         using instance::instance;
+
+        using query_t = std::tuple< all<second> >;
 
         void operator()(const entity& Entity, const first* pFirst, const pepe2& Pepe2)
         {
             xassert(pFirst);
             xassert(pFirst->m_Value == 1);
             xassert(Pepe2.m_Value == 54);
-            printf("Entity: %s, Requires 'pepe'!\n", Entity.getGuid().getStringHex<char>().c_str());
+            printf("Entity: %s, Requires 'second'!\n", Entity.getGuid().getStringHex<char>().c_str());
         }
     };
 
@@ -90,7 +88,8 @@ namespace mecs::unit_test::functionality::queries
         // Create graph
         //
         auto& DefaultWorld = *Universe.m_WorldDB[0];
-        auto& System = DefaultWorld.m_GraphDB.CreateGraphConnection<sytem_test_02>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        auto& System = DefaultWorld.m_GraphDB.CreateGraphConnection<sytem_test_01>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.m_GraphDB.CreateGraphConnection<sytem_test_02>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
 
         //
         // Create archetypes
@@ -123,13 +122,15 @@ namespace mecs::unit_test::functionality::queries
                     Pepe.m_Value = 22;
                     int a = 0;
                 });
-        //
-        // 
-        //
 
-        int a = 0;
+        //
+        // Test systems
+        //
         DefaultWorld.Start();
 
-        int b = 0;
+        for(int i=0;i<2;i++) 
+            DefaultWorld.Resume();
+
+        int a = 0;
     }
 }

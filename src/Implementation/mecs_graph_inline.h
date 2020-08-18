@@ -22,7 +22,7 @@ namespace mecs::graph
         // This message is a must have since we need to deal with the memory barrier
         {
             auto& MainEndSyncPoint = xcore::types::PickFirstArgument(std::forward<T_END_SYNC_POINTS>(EndSyncpoints) ...);
-            MainEndSyncPoint.m_Events.m_Done.AddDelegate<&T_SYSTEM::msgSyncPointDone>(System);
+            MainEndSyncPoint.m_Events.m_Done.AddDelegate<&custom_system_t::msgSyncPointDone>(System);
         }
 
         if constexpr (&custom_system_t::msgSyncPointStart != &system::instance::msgSyncPointStart)

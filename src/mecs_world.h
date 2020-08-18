@@ -32,6 +32,11 @@ namespace mecs::world
             m_GraphDB.Start(bContinuousPlay);
         }
 
+        void Resume(bool bContinuousPlay = false)
+        {
+            m_GraphDB.Resume(bContinuousPlay);
+        }
+
         guid                            m_Guid              {};
         mecs::universe::instance&       m_Universe;
         mecs::archetype::data_base      m_ArchetypeDB       {};

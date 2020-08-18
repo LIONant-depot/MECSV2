@@ -22,26 +22,19 @@ namespace mecs::sync_point
 
     struct instance : xcore::scheduler::trigger<mecs::settings::max_graph_connections>, overrites
     {
-        using                       parent_t    = xcore::scheduler::trigger<mecs::settings::max_graph_connections>;
-        using                       guid        = xcore::guid::unit<64, struct sync_point_tag >;
-        using                       type_guid   = mecs::sync_point::type_guid;
+        using                       parent_t        = xcore::scheduler::trigger<mecs::settings::max_graph_connections>;
+        using                       guid            = xcore::guid::unit<64, struct sync_point_tag >;
+        using                       type_guid       = mecs::sync_point::type_guid;
+        constexpr static auto       type_guid_v     = type_guid{"sync point instance"};
+        constexpr static auto       name_v          = xconst_universal_str("sync point instance");
+
+        bool                        m_bDisable      {false};
+        std::uint32_t               m_Tick          {0};
+        guid                        m_Guid          {};
+        details::events             m_Events        {};
+        xcore::string::ref<char>    m_Name          {};
 
         xforceinline instance( void ) noexcept : parent_t{ xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE, xcore::scheduler::triggers::DONT_CLEAN_COUNT } {}
-
-        guid                        m_Guid      {};
-        details::events             m_Events    {};
-        xcore::string::ref<char>    m_Name      {};
-    };
-
-    struct general : instance
-    {
-        constexpr static auto   type_guid_v     = type_guid{"general sync point"};
-        constexpr static auto   name_v          = xconst_universal_str("general");
-
-        bool                    m_bDisable      {false};
-        std::uint32_t           m_Tick          {0};
-
-        using instance::instance;
 
         virtual void qt_onTriggered (void) noexcept override
         {
@@ -50,7 +43,7 @@ namespace mecs::sync_point
             if( m_bDisable == false )
             {
                 m_Events.m_Start.NotifyAll(*this);
-                instance::qt_onTriggered();
+                parent_t::qt_onTriggered();
             }
         }
     };
@@ -95,7 +88,7 @@ namespace mecs::sync_point
 
         void Init(void)
         {
-            Register<general>();
+            Register<instance>();
         }
 
         template< typename...T_SYNC_POINT >

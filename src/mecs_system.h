@@ -255,6 +255,47 @@ namespace mecs::system
                     user_system_t::ForEach( user_system_t::m_Query, *this, user_system_t::entities_per_job_v );
                 }
             }
+
+            void msgSyncPointDone( mecs::sync_point::instance& Syncpoint ) noexcept
+            {
+                // Call the user function if he overwrote it
+                if constexpr ( &user_system_t::msgSyncPointDone != &system::overrites::msgSyncPointDone )
+                {
+                    user_system_t::msgSyncPointDone(Syncpoint);
+                }
+
+                // unlock and sync groups from the cache
+                /*
+                for( const auto& E : user_system_t::m_Cache.m_Lines )
+                {
+                    bool bFound = false;
+                    std::as_const(E.m_pGroup->m_SemaphoreLock).unlock();
+
+                    for( const auto& Q : user_system_t::m_Query.m_lResults )
+                    {
+                        if( E.m_pGroup == Q.m_pGroup )
+                        {
+                            bFound = true;
+                            break;
+                        }
+                    }
+
+                    if( bFound == false ) E.m_pGroup->MemoryBarrierSync( Syncpoint );
+                }
+                */
+
+                //
+                // Let the archetypes that we used do their memory barriers
+                //
+                for( auto& R : user_system_t::m_Query.m_lResults )
+                {
+                    R.m_pArchetype->MemoryBarrierSync( Syncpoint );
+                }
+
+                //user_system_t::m_Cache.m_Lines.clear();
+                user_system_t::m_Query.m_lResults.clear();
+            }
+
         };
     }
 
@@ -278,12 +319,11 @@ namespace mecs::system
         constexpr auto MakeDescriptor( void ) noexcept
         {
             using sys = mecs::system::details::custom_system<T_SYSTEM>;
-            static_assert(T_SYSTEM::type_guid_v.isValid());
             static_assert( std::is_same_v<decltype(T_SYSTEM::type_guid_v), const mecs::system::type_guid> );
 
             return mecs::system::descriptor
             {
-                T_SYSTEM::type_guid_v
+                T_SYSTEM::type_guid_v.isValid() ? T_SYSTEM::type_guid_v : type_guid{ __FUNCSIG__ }
             ,   []( mecs::system::overrites::construct&& C ) noexcept
                 {
                     auto p = new sys{ std::move(C) };
@@ -352,7 +392,15 @@ namespace mecs::system
                 Guid
             ,   m_World
             ,   Descriptor.m_Name
-            ,   {}
+            ,   { xcore::scheduler::definition::definition::Flags
+                    (
+                        xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE
+                        , xcore::scheduler::jobtype::NORMAL
+                        , xcore::scheduler::affinity::NORMAL
+                        , xcore::scheduler::priority::NORMAL
+                        , xcore::scheduler::triggers::DONT_CLEAN_COUNT
+                    )
+                }
             };
 
             auto AddIt = [&](map_systems::value& Vec) noexcept

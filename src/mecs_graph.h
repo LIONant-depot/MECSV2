@@ -26,10 +26,23 @@ namespace mecs::graph
         //void AddGraphConnection( mecs::syncpin)
 
         events                      m_Events;
-        mecs::sync_point::general   m_StartSyncPoint;
-        mecs::sync_point::general   m_EndSyncPoint;
+        mecs::sync_point::instance  m_StartSyncPoint;
+        mecs::sync_point::instance  m_EndSyncPoint;
 
-        instance( mecs::world::instance& World, mecs::universe::instance& Universe ) : m_Universe{ Universe }, m_World(World), m_SystemDB(World){}
+        instance( mecs::world::instance& World, mecs::universe::instance& Universe )
+            : xcore::scheduler::job<1>
+            { xcore::scheduler::definition::definition::Flags
+                (
+                  xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE
+                , xcore::scheduler::jobtype::NORMAL
+                , xcore::scheduler::affinity::NORMAL
+                , xcore::scheduler::priority::NORMAL
+                , xcore::scheduler::triggers::DONT_CLEAN_COUNT 
+                )
+            }
+            , m_Universe{ Universe }
+            , m_World(World)
+            , m_SystemDB(World){}
 
         void Init( void ) noexcept
         {
@@ -41,20 +54,39 @@ namespace mecs::graph
             //
             m_EndSyncPoint.AddJobToBeTrigger(*this);
             m_StartSyncPoint.JobWillNotifyMe(*this);
-
-            m_EndSyncPoint.m_Events.m_Done.AddDelegate<&instance::msgSyncPointDone>(*this);
         }
 
-        void Start( bool bContinuousPlay = false ) noexcept
+        void Start( bool bContinuousPlay ) noexcept
         {
+            //
+            // Make sure I am the last system to get notified in the End trigger
+            //
+            if( m_EndSyncPoint.m_Events.m_Done.m_lDelegates.back().m_pThis != this ) 
+                m_EndSyncPoint.m_Events.m_Done.AddDelegate<&instance::msgSyncPointDone>(*this);
+
             //
             // Clear some variables
             //
-            m_bContinuousPlay   = bContinuousPlay;
-            m_FrameNumber       = 0;
+            m_bContinuousPlay           = bContinuousPlay;
+            m_EndSyncPoint.m_bDisable   = !m_bContinuousPlay;
+            m_FrameNumber               = 0;
 
             //
             // Get started
+            //
+            XCORE_PERF_FRAME_MARK()
+            auto& Scheduler = xcore::get().m_Scheduler;
+            Scheduler.AddJobToQuantumWorld(*this);
+            Scheduler.MainThreadStartsWorking();
+        }
+
+        void Resume( bool bContinuousPlay ) noexcept
+        {
+            m_bContinuousPlay           = bContinuousPlay;
+            m_EndSyncPoint.m_bDisable   = !m_bContinuousPlay;
+
+            //
+            // Add the graph as the core of the graph
             //
             XCORE_PERF_FRAME_MARK()
             auto& Scheduler = xcore::get().m_Scheduler;

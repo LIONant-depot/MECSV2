@@ -209,6 +209,44 @@ namespace mecs::archetype
             m_MainPool.Init( *this, m_MainPoolDescriptorSpan, 100000u );
         }
 
+        void MemoryBarrierSync( mecs::sync_point::instance& SyncPoint ) noexcept
+        {
+            XCORE_PERF_ZONE_SCOPED_N("mecs::archetype::MemoryBarrierSync")
+
+            //
+            // Avoid updating multiple times for a given sync_point done
+            //
+            if (m_pLastSyncPoint == &SyncPoint && m_LastTick == SyncPoint.m_Tick)
+                return;
+
+            // Save state of previous update to make sure no one ask us to update twice
+            m_pLastSyncPoint = &SyncPoint;
+            m_LastTick       = SyncPoint.m_Tick;
+
+            //
+            // Make sure to lock for writing
+            //
+            xcore::lock::scope Lock(m_SemaphoreLock);
+
+            //
+            // Update all the pools
+            //
+            m_MainPool.MemoryBarrier();
+            if(m_MainPool.size()==0) return;
+
+            for( int i=0, end = static_cast<int>(m_MainPool.size()); i != end; ++i )
+            {
+                auto& Specialized = m_MainPool.getComponentByIndex<specialized_pool>(i,0);
+                Specialized.m_EntityPool.MemoryBarrier();
+            }
+
+            //
+            // Update double buffer state if we have any
+            //
+            m_DoubleBufferInfo.m_StateBits ^= m_DoubleBufferInfo.m_DirtyBits.load(std::memory_order_relaxed);
+            m_DoubleBufferInfo.m_DirtyBits.store(0, std::memory_order_relaxed);
+        }
+
         void Start( void ) noexcept 
         {
             //
@@ -531,6 +569,9 @@ namespace mecs::archetype
 
         xcore::lock::semaphore                          m_SemaphoreLock             {};
         details::safety                                 m_Safety                    {};
+
+        mecs::sync_point::instance*                     m_pLastSyncPoint            { nullptr };
+        std::uint32_t                                   m_LastTick                  { 0 };
 
         guid                                            m_Guid                      {};
 
