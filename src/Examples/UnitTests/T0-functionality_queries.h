@@ -127,9 +127,11 @@ namespace mecs::unit_test::functionality::queries
         // Test systems
         //
         DefaultWorld.Start();
-
-        for(int i=0;i<2;i++) 
+        for(int i=0;i<2;i++)
+        {
+            printf("------------------------------------------------------------------\n");
             DefaultWorld.Resume();
+        }
 
         int a = 0;
     }
