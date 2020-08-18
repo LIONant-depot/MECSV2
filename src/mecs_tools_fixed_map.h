@@ -47,6 +47,13 @@ namespace mecs::tools
             m_Map.clear();
         }
 
+        constexpr xforceinline entry& getEntryFromItsValue( value& Value ) const noexcept
+        {
+            xassert(reinterpret_cast<std::size_t>(&Value) >= reinterpret_cast<std::size_t>(m_Map.data()));
+            xassert(reinterpret_cast<std::size_t>(&Value) < reinterpret_cast<std::size_t>(m_Map.end()));
+            return *reinterpret_cast<entry*>(reinterpret_cast<std::size_t>(&Value) - offsetof(entry, m_Value));
+        }
+
         template< typename T_CALLBACK = void(*)(value&)> xforceinline constexpr
         entry* alloc(key Key, T_CALLBACK&& Callback = [](value&) constexpr noexcept {}) noexcept
         {

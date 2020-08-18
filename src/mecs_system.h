@@ -23,9 +23,14 @@ namespace mecs::system
 
     struct overrites : xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>
     {
+        using                           type_guid   = mecs::system::type_guid;
+        using                           entity      = mecs::component::entity;
+        template<typename...T> using    all         = mecs::archetype::query::all<std::tuple<T...>>;
+        template<typename...T> using    any         = mecs::archetype::query::any<std::tuple<T...>>;
+        template<typename...T> using    none        = mecs::archetype::query::none<std::tuple<T...>>;
+
         using job_t     = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
         using guid      = xcore::guid::unit<64, struct mecs_system_tag>;
-        using type_guid = mecs::system::type_guid;
 
         using job_t::job_t;
 
@@ -34,14 +39,14 @@ namespace mecs::system
         {
             guid                            m_Guid;
             mecs::world::instance&          m_World;
-            xcore::string::const_universal  m_Str;
-            xcore::scheduler::definition    m_Def;
+            xcore::string::const_universal  m_Name;
+            xcore::scheduler::definition    m_JobDefinition;
         };
 
         // Defaults that can be overwritten by the user
-        constexpr static auto                   entities_per_job_v  = 5000;
-        constexpr static auto                   type_guid_v         = mecs::system::type_guid{ nullptr };
-        constexpr static auto                   name_v              = xconst_universal_str("mecs::System(Unnamed)");
+        static constexpr auto                   entities_per_job_v  = 5000;
+        static constexpr auto                   type_guid_v         = type_guid{ nullptr };
+        static constexpr auto                   name_v              = xconst_universal_str("mecs::System(Unnamed)");
         using                                   query_t             = std::tuple<>;
         using                                   events_t            = std::tuple<>;
 
@@ -125,10 +130,10 @@ namespace mecs::system
     struct instance : overrites
     {
         instance(const construct&& Settings) noexcept
-            : overrites{ Settings.m_Def | xcore::scheduler::triggers::DONT_CLEAN_COUNT }
+            : overrites{ Settings.m_JobDefinition | xcore::scheduler::triggers::DONT_CLEAN_COUNT }
             , m_World            { Settings.m_World }
             , m_Guid             { Settings.m_Guid }
-        { setupName(Settings.m_Str); }
+        { setupName(Settings.m_Name); }
 
         template< typename T_CALLBACK > constexpr xforceinline
         void ForEach( mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob ) noexcept
@@ -229,7 +234,7 @@ namespace mecs::system
         {
             using                   user_system_t       = T_SYSTEM;
             using                   world_instance_t    = std::decay_t< decltype(user_system_t::m_World) >;
-            constexpr static auto   query_v             = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
+            static constexpr auto   query_v             = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
             using                   events_tuple        = decltype(GetEventTuple(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
             static constexpr auto   events_guids        = std::array{ GetEventGuids(reinterpret_cast<typename user_system_t::events_t*>(nullptr)) };
 

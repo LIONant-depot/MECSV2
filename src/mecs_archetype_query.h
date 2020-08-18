@@ -70,9 +70,9 @@ namespace mecs::archetype::query
         static_assert( ((std::is_reference_v<T_COMPONENTS_AND_TAGS> == false) && ...) );
      //   static_assert( ((std::is_const_v<T_COMPONENTS_AND_TAGS>     == false) && ...) );
 
-        using                 type              = xcore::types::tuple_sort_t             <mecs::component::smaller_guid, std::tuple<T_COMPONENTS_AND_TAGS...>>;
-        using                 filterout         = typename details::filter_out           <mecs::component::tag, T_COMPONENTS_AND_TAGS...>::type;
-        using                 filterout_allbut  = typename details::filter_out_all_but   <mecs::component::tag, T_COMPONENTS_AND_TAGS...>::type;
+        using                 type              = xcore::types::tuple_sort_t                    <mecs::component::smaller_guid, std::tuple<T_COMPONENTS_AND_TAGS...>>;
+        using                 filterout         = typename query::details::filter_out           <mecs::component::tag, T_COMPONENTS_AND_TAGS...>::type;
+        using                 filterout_allbut  = typename query::details::filter_out_all_but   <mecs::component::tag, T_COMPONENTS_AND_TAGS...>::type;
 
         static constexpr auto component_list_v  = details::get_arrays<filterout>::value;
         static constexpr auto tag_list_v        = details::get_arrays<filterout_allbut>::value;
@@ -212,6 +212,7 @@ namespace mecs::archetype::query
     //---------------------------------------------------------------------------------
     // QUERY::ACCESS
     //---------------------------------------------------------------------------------
+    /*
     template< typename...T_COMPONENTS_WITH_CONST_AND_REFERENCES >
     struct access
     {
@@ -245,6 +246,7 @@ namespace mecs::archetype::query
             }
         }
     };
+    */
 
     //---------------------------------------------------------------------------------
     // QUERY:: RESULT 
