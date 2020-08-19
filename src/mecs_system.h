@@ -28,9 +28,8 @@ namespace mecs::system
         template<typename...T> using    all         = mecs::archetype::query::all<std::tuple<T...>>;
         template<typename...T> using    any         = mecs::archetype::query::any<std::tuple<T...>>;
         template<typename...T> using    none        = mecs::archetype::query::none<std::tuple<T...>>;
-
-        using job_t     = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
-        using guid      = xcore::guid::unit<64, struct mecs_system_tag>;
+        using                           job_t       = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
+        using                           guid        = xcore::guid::unit<64, struct mecs_system_tag>;
 
         using job_t::job_t;
 
@@ -44,11 +43,11 @@ namespace mecs::system
         };
 
         // Defaults that can be overwritten by the user
-        static constexpr auto                   entities_per_job_v  = 5000;
-        static constexpr auto                   type_guid_v         = type_guid{ nullptr };
-        static constexpr auto                   name_v              = xconst_universal_str("mecs::System(Unnamed)");
-        using                                   query_t             = std::tuple<>;
-        using                                   events_t            = std::tuple<>;
+        static constexpr auto               entities_per_job_v  = 5000;
+        static constexpr auto               type_guid_v         = type_guid{ nullptr };
+        static constexpr auto               name_v              = xconst_universal_str("mecs::System(Unnamed)");
+        using                               query_t             = std::tuple<>;
+        using                               events_t            = std::tuple<>;
 
         // Messages that we can handle, these can be overwritten by the user
         inline void msgSyncPointDone    (mecs::sync_point::instance&)   noexcept {}
@@ -70,8 +69,8 @@ namespace mecs::system
             using call_back_t = T_CALLBACK;
 
             xcore::scheduler::channel&              m_Channel;
-            T_CALLBACK&&                            m_Callback;
-            int                                     m_nEntriesPerJob;
+            const T_CALLBACK&&                      m_Callback;
+            const int                               m_nEntriesPerJob;
         };
 
         template< typename T, typename...T_ARGS> constexpr xforceinline
@@ -79,21 +78,16 @@ namespace mecs::system
         {
             using       func_tuple  = std::tuple<T_ARGS...>;
             auto&       Specialized = R.m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
-            const auto  Decide      = [&]( int iArg, auto Arg ) constexpr
+            const auto  Decide      = [&]( int iArg, auto Arg ) constexpr noexcept
             {
                 using       t = xcore::types::decay_full_t<decltype(Arg)>;
                 const auto& I = R.m_lFunctionToArchetype[iArg];
 
                 if( I.m_Index == mecs::archetype::query::result_entry::invalid_index) return reinterpret_cast<std::byte*>(nullptr);
 
-                if( I.m_isShared )
-                {
-                    return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_MainPool.getComponentByIndex<t>( Index, I.m_Index ));
-                }
-                else
-                {
-                    return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t>(iStart, I.m_Index));
-                }
+                if( I.m_isShared ) return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_MainPool.getComponentByIndex<t>( Index, I.m_Index ));
+
+                return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t>( iStart, I.m_Index ));
             };
             
             return std::array<std::byte*, sizeof...(T_ARGS)>
@@ -103,27 +97,32 @@ namespace mecs::system
         }
 
         template< typename T, typename...T_ARGS> constexpr xforceinline
-        void ProcesssCall(std::tuple<T_ARGS...>*, std::span<std::byte*> Span, T& Params) noexcept
+        void ProcesssCall(std::tuple<T_ARGS...>*, std::span<std::byte*> Span, T& Params, int iStart, const int iEnd ) noexcept
         {
             using func_tuple    = std::tuple<T_ARGS...>;
 
-            // Call the system
-            Params.m_Callback
-            (
-                ([&]() constexpr noexcept 
-                {
-                    auto& p  = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
-                    auto  pp = p;
-                    if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
-                    {
-                        if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                        else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
-                    }
+            xassert(iStart != iEnd);
 
-                    if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pp);
-                    else                                     return reinterpret_cast<T_ARGS>(*pp);
-                }())...
-            );
+            // Call the system
+            do
+            {
+                Params.m_Callback
+                (
+                    ([&]() constexpr noexcept 
+                    {
+                        auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
+                        auto  pBackup   = p;
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
+                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                        }
+
+                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                    }())...
+                );
+            } while( ++iStart != iEnd );
         }
     }
 
@@ -165,12 +164,12 @@ namespace mecs::system
         }
 
         template< typename T_PARAMS > constexpr xforceinline
-        void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, int Index ) noexcept
+        void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
         {
             auto&  SpecializedPool = MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
             for( int end=static_cast<int>(SpecializedPool.m_EntityPool.size()), i=0; i<end; )
             {
-                int MyEnd = std::min<int>(i+Params.m_nEntriesPerJob, end);
+                const int MyEnd = std::min<int>(i+Params.m_nEntriesPerJob, end);
                 Params.m_Channel.SubmitJob(
                 [
                     iStart  = i
@@ -178,15 +177,18 @@ namespace mecs::system
                 ,   &R
                 ,   &Params
                 ,   Index
-                ]
+                ] () constexpr noexcept
                 {
                     using function_arg_tuple = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
-                    auto Pointers = details::ProcessInitArray( reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, R, Params );
+                    auto  Pointers           = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, R, Params);
 
-                    for( int i=iStart; i!=iEnd; ++i )
-                    {
-                        details::ProcesssCall( reinterpret_cast<function_arg_tuple*>(nullptr), Pointers, Params);
-                    }
+                    details::ProcesssCall
+                    (
+                        reinterpret_cast<function_arg_tuple*>(nullptr)
+                    ,   Pointers
+                    ,   Params
+                    ,   iStart
+                    ,   iEnd );
                 });
                 i = MyEnd;
             }
@@ -194,10 +196,9 @@ namespace mecs::system
 
         // TODO: This will be private
         mecs::world::instance&              m_World;
-        system::instance::guid              m_Guid;
+        mecs::system::instance::guid        m_Guid;
         mecs::archetype::query::instance    m_Query{};
 
-        // query::instance     m_Query;
         // details::cache      m_Cache;
     };
 
@@ -216,14 +217,8 @@ namespace mecs::system
         template< typename...T_ARGS > constexpr 
         auto GetEventGuids(std::tuple<T_ARGS...>*) noexcept
         {
-            if constexpr ( !!sizeof...(T_ARGS))
-            { 
-                return std::array{ T_ARGS::type_guid_v ... };
-            }
-            else
-            {
-                return std::array<mecs::system::event::type_guid,0>{};
-            }
+            if constexpr ( !!sizeof...(T_ARGS)) return std::array{ T_ARGS::type_guid_v ... };
+            else                                return std::array<mecs::system::event::type_guid, 0>{};
         }
 
         //---------------------------------------------------------------------------------
@@ -235,12 +230,12 @@ namespace mecs::system
             using                   user_system_t       = T_SYSTEM;
             using                   world_instance_t    = std::decay_t< decltype(user_system_t::m_World) >;
             static constexpr auto   query_v             = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
-            using                   events_tuple        = decltype(GetEventTuple(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
-            static constexpr auto   events_guids        = std::array{ GetEventGuids(reinterpret_cast<typename user_system_t::events_t*>(nullptr)) };
+            using                   events_tuple_t      = decltype(GetEventTuple(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
+            static constexpr auto   events_guids_v      = GetEventGuids(reinterpret_cast<typename user_system_t::events_t*>(nullptr));
 
             using user_system_t::user_system_t;
 
-            events_tuple m_Events{};
+            events_tuple_t m_Events{};
 
             virtual void qt_onRun(void) noexcept override
             {
@@ -331,7 +326,7 @@ namespace mecs::system
                 }
             ,   T_SYSTEM::name_v
             ,   static_cast<std::uint32_t>(offsetof( sys, m_Events ))
-            ,   sys::events_guids
+            ,   sys::events_guids_v
             };
         }
     }
@@ -360,7 +355,7 @@ namespace mecs::system
 
                 // Register all the events types
                 using sys = details::custom_system<T_SYSTEMS>;
-                EventDescriptionDataBase.TupleRegister( reinterpret_cast<typename sys::events_tuple*>(nullptr) );
+                EventDescriptionDataBase.TupleRegister( reinterpret_cast<typename sys::events_tuple_t*>(nullptr) );
 
             }) || ...))
             {
