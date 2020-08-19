@@ -57,7 +57,7 @@ namespace mecs::unit_test::functionality::queries
 
         using query_t = std::tuple< all<second> >;
 
-        void operator()(const entity& Entity, const first* pFirst, const pepe2& Pepe2)
+        void operator()(const entity& Entity, const first* pFirst, const pepe2& Pepe2, pepe2& Pepe1)
         {
             xassert(pFirst);
             xassert(pFirst->m_Value == 1);

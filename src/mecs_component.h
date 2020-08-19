@@ -382,11 +382,13 @@ namespace mecs::component
         template< typename T_COMPONENT > xforceinline
         void registerComponent(void) noexcept
         {
-            bool b = m_mapDescriptors.alloc(component::descriptor_v<T_COMPONENT>.m_Guid, [&](const component::descriptor*& Value) constexpr noexcept
+            bool b = m_mapDescriptors.alloc(component::descriptor_v<T_COMPONENT>.m_Guid, [&](const component::descriptor*& pValue) constexpr noexcept
             {
-                m_lDescriptors.push_back(&component::descriptor_v<T_COMPONENT>);
-                Value = &component::descriptor_v<T_COMPONENT>;
-                Value->m_BitNumber = Value->m_Type == type::TAG ? m_TagUniqueBitGenerator++ : m_DataUniqueBitGenerator++;
+                auto& Desc = component::descriptor_v<T_COMPONENT>;
+                Desc.m_BitNumber = Desc.m_Type == type::TAG ? m_TagUniqueBitGenerator++ : m_DataUniqueBitGenerator++;
+
+                m_lDescriptors.push_back(&Desc);
+                pValue = &Desc;
             });
             xassert(b==false);
         }

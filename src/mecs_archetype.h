@@ -61,9 +61,12 @@ namespace mecs::archetype
                 std::uint8_t                m_nReaders          { 0 };              // How many systems have this group locked for reading
             };
 
-            using component_lock_list_t = xcore::lock::object<std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>, xcore::lock::semaphore>;
+            using component_list_t = std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>;
 
-            component_lock_list_t           m_lComponentLocks{};
+            static bool LockQueryComponents     ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
+            static bool UnlockQueryComponents   ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
+
+            component_list_t    m_lComponentLocks{};
         };
     }
 
@@ -556,6 +559,7 @@ namespace mecs::archetype
         };
 
         using main_pool_descriptors = std::array<const mecs::component::descriptor*, mecs::settings::max_data_components_per_entity>;
+        using safety_lock_object    = xcore::lock::object<details::safety, xcore::lock::semaphore >;
 
         mecs::component::entity::map*                   m_pEntityMap                { nullptr };
 
@@ -568,7 +572,7 @@ namespace mecs::archetype
         mecs::archetype::event::details::events         m_Events                    {};
 
         xcore::lock::semaphore                          m_SemaphoreLock             {};
-        details::safety                                 m_Safety                    {};
+        safety_lock_object                              m_Safety                    {};
 
         mecs::sync_point::instance*                     m_pLastSyncPoint            { nullptr };
         std::uint32_t                                   m_LastTick                  { 0 };

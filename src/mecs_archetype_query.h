@@ -42,7 +42,7 @@ namespace mecs::archetype::query
         template< typename...T_COMPONENTS_AND_TAGS >
         struct get_arrays< std::tuple<T_COMPONENTS_AND_TAGS...> >
         {
-            static constexpr auto value = std::array{ entry{ mecs::component::descriptor_v<T_COMPONENTS_AND_TAGS>, !std::is_const_v<T_COMPONENTS_AND_TAGS> } ... };
+            static constexpr auto value = std::array{ entry{ mecs::component::descriptor_v<T_COMPONENTS_AND_TAGS>, std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T_COMPONENTS_AND_TAGS>>> } ... };
         };
 
         template<>
@@ -300,7 +300,6 @@ namespace mecs::archetype::query
             m_isInitialized = true;
 
             static constexpr query::details::define<T_SYSTEM_FUNCTION> function_define_data_v{};
-
 
             //
             // Handle the Component Side

@@ -1,5 +1,12 @@
 namespace mecs::graph
 {
+    struct lock_error
+    {
+        std::array<mecs::system::instance::guid, 2>     m_lSystemGuids;
+        mecs::archetype::instance::guid                 m_gArchetype;
+        const char*                                     m_pMessage;
+    };
+
     struct events
     {
         using graph_init  = xcore::types::make_unique< mecs::tools::event<world::instance&>,    struct graph_init_tag >;
@@ -154,5 +161,7 @@ namespace mecs::graph
         mecs::sync_point::instance_data_base    m_SyncpointDB           {};
         mecs::system::event::instance_data_base m_SystemEventDB         {};
 //        mecs::archetype::data_base              m_ArchetypeDB           {};
+
+        xcore::lock::object<std::vector<lock_error>, xcore::lock::spin> m_LockErrors{};
     };
 }

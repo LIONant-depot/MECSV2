@@ -108,7 +108,7 @@ namespace mecs::system
             {
                 Params.m_Callback
                 (
-                    ([&]() constexpr noexcept 
+                    ([&]() constexpr noexcept -> T_ARGS
                     {
                         auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
                         auto  pBackup   = p;
@@ -141,6 +141,18 @@ namespace mecs::system
             if( QueryI.m_lResults.size() == 0 )
                 return;
 
+            //
+            // Check for graph errors by Locking the relevant components in the archetypes
+            //
+            if (mecs::archetype::details::safety::LockQueryComponents(*this, QueryI))
+            {
+                // we got an error here
+                xassert(false);
+            }
+
+            //
+            // Loop through all the results and lets the system deal with the components
+            //
             xcore::scheduler::channel       Channel(getName());
             using                           params_t = details::process_resuts_params<T_CALLBACK>;
             params_t                        Params
@@ -259,7 +271,14 @@ namespace mecs::system
                     user_system_t::msgSyncPointDone(Syncpoint);
                 }
 
+                //
+                // unlock all the groups that we need to work with so that no one tries to add/remove entities
+                //
+                mecs::archetype::details::safety::UnlockQueryComponents(*this, user_system_t::m_Query);
+
+                //
                 // unlock and sync groups from the cache
+                //
                 /*
                 for( const auto& E : user_system_t::m_Cache.m_Lines )
                 {
