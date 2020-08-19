@@ -1,4 +1,4 @@
-<img src="https://i.imgur.com/SXy1GT0.jpg" align="right" width="250px" />
+<img src="https://i.imgur.com/NwahbNn.jpg" align="right" width="250px" />
 
 # MECS (Version: 2.0 Alpha)
 <!---

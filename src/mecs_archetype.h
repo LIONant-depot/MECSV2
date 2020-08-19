@@ -57,8 +57,8 @@ namespace mecs::archetype
         {
             struct component_lock_entry
             {
-                system::instance*           m_pSystem{ nullptr };       // Which system has this component locked for writing
-                std::uint8_t                m_nReaders{ 0 };            // How many systems have this group locked for reading
+                system::instance*           m_pWritingSystem    { nullptr };        // Which system has this component locked for writing
+                std::uint8_t                m_nReaders          { 0 };              // How many systems have this group locked for reading
             };
 
             using component_lock_list_t = xcore::lock::object<std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>, xcore::lock::semaphore>;
@@ -76,12 +76,11 @@ namespace mecs::archetype
     //----------------------------------------------------------------------------------------------
     struct specialized_pool : mecs::component::singleton
     {
-        constexpr static auto           type_guid_v = mecs::component::type_guid{ 2ull };
-        constexpr static auto           name_v      = xconst_universal_str("mecs::archetype::specialized");
-
-        using guid                  = xcore::guid::unit<64, struct specialized_pool_tag>;
-        using type_guid             = xcore::guid::unit<64, struct specialized_pool_type_tag>;
-        using share_component_keys  = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
+        constexpr static auto           type_guid_v             = mecs::component::type_guid{ 2ull };
+        constexpr static auto           name_v                  = xconst_universal_str("mecs::archetype::specialized");
+        using                           guid                    = xcore::guid::unit<64, struct specialized_pool_tag>;
+        using                           type_guid               = xcore::guid::unit<64, struct specialized_pool_type_tag>;
+        using                           share_component_keys    = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
 
         type_guid                       m_TypeGuid                  {};
         instance*                       m_pInstance                 {};
@@ -225,6 +224,7 @@ namespace mecs::archetype
 
             //
             // Make sure to lock for writing
+            // TODO: Do we really need this lock here?
             //
             xcore::lock::scope Lock(m_SemaphoreLock);
 
