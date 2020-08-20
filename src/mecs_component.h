@@ -62,7 +62,7 @@ namespace mecs::component
         using                   type_guid           = component::type_guid;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
         constexpr static auto   name_v              { xconst_universal_str("unnamed share") };
-        static constexpr std::uint64_t   getKey(void*) noexcept { return 0; }
+        static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }
     };
 
     struct entity final : data
@@ -88,94 +88,25 @@ namespace mecs::component
         xforceinline      void              MarkAsZombie  ( void )       noexcept { reinterpret_cast<std::size_t&>(m_pInstance) = reinterpret_cast<std::size_t>(m_pInstance) | 1; }
     };
 
-    //
-    // RESEARCH BEGIN!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Additional type of components...
-    //
-
-    // For systems that need to search for which components can be used
-    // it could be done with scopes.
-    //      First scope is the entity itself
-    //      Second scope is the pool
-    //      Theird scope is the architype
-    //      etc.
-    // struct include_pool_scope      : tag {};
-    // struct include_archetype_scope : tag {};
-    // struct include_all_scopes      : tag {};
-    // struct include_resource_scope  : tag {};
-    //
-    // Or may be it automatically search those scopes as long as there is a component to be found
-
-    // TODO: not implemented yet, aka pool_share or archetype_share or resource_share
-    // Share is like scope, which is the scope that is searching for components types
-    // type_share could be one of:
-    //      entity_share    -> Any component within the entity
-    //                         This is the default state so this can be skip... 
-    //      pool_share      -> Could be a bounding box where all the entities in there will render at the same time
-    //                         Entities with the same pool_share->getKey() will get group into the same pool
-    //      archetype_share -> Could be like a tags, or some other component
-    //                         Entities with the same archetype_share->getKey() will get group into the same pool
-  /*
-    enum class type_share : std::uint8_t
+    // Possibly new type of components. Still pending definition details...
+    struct reference
     {
-          POOL
-        , ARCHETYPE
+        constexpr static auto   type_guid_v         { nullptr };
+        constexpr static auto   name_v              { xconst_universal_str("unnamed reference") };
+        using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
+        entity::guid m_Entity{ nullptr };
+        static constexpr std::uint64_t getKey(const void* p) noexcept { return static_cast<const reference*>(p)->m_Entity.m_Value; }
     };
 
-    struct share
+    // Possibly new type of components. Still pending definition details...
+    struct share_reference : share
     {
-        constexpr static auto           type_guid_v             { component::type_guid{ nullptr } };
-        constexpr static auto           name_v                  { xconst_universal_str("unnamed resource") };
-        constexpr static auto           type_data_access_v      { type_data_access::LINEAR };
-        static constexpr entity::guid   getKey( void ) noexcept { return nullptr; }
+        constexpr static auto   type_guid_v         { nullptr };
+        constexpr static auto   name_v              { xconst_universal_str("unnamed share reference") };
+        using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
+        entity::guid m_Entity{ nullptr };
+        static constexpr std::uint64_t   getKey(const void* p) noexcept { return static_cast<const share_reference*>(p)->m_Entity.m_Value; }
     };
-    */
-
-    //      resource_share  -> Could be like a texture, mesh, etc.
-    //                         Entities with the same resource_share->getKey() will get group into the same pool
-
-
-    // TODO: Not implemented yet... work in progress..
-    // This are done usually for meshes, textures, etc. Things that entities don't really have by they "reference" to
-    // Group_by
-    
-    struct resource
-    {
-        constexpr static auto   type_guid_v         { component::type_guid{ nullptr } };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed resource") };
-        constexpr static auto   type_data_access_v  { type_data_access::LINEAR };
-
-        struct ref_base
-        {
-            constexpr static auto   group_by_reference_v{ false };
-            entity::guid            m_Value;
-        };
-
-        template< typename T_COMPONENT >
-        struct ref : ref_base
-        {
-            static_assert( std::is_base_of_v<resource, T_COMPONENT> );
-            using type = T_COMPONENT;
-        };
-
-        template< typename T_COMPONENT >
-        struct group_ref : ref<T_COMPONENT>
-        {
-            constexpr static auto   group_by_reference_v{ true };
-        };
-    };
-
-    /*
-    struct grouping
-    {
-        constexpr static auto   type_guid_v         { component::type_guid{ nullptr } };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed resource") };
-        entity::guid            m_Value;
-    };
-    */
-    //
-    // RESEARCH END!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    //
 
     //----------------------------------------------------------------------------
     // DESCRIPTOR
@@ -184,10 +115,10 @@ namespace mecs::component
 
     struct descriptor
     {
-        using fn_construct          = void(void*)           noexcept;
-        using fn_destruct           = void(void*)           noexcept;
-        using fn_move               = void(void*, void*)    noexcept;
-        using fn_getkey             = std::uint64_t(void*)  noexcept;
+        using fn_construct          = void(void*)                   noexcept;
+        using fn_destruct           = void(void*)                   noexcept;
+        using fn_move               = void(void*, void*)            noexcept;
+        using fn_getkey             = std::uint64_t(const void*)    noexcept;
 
         const type_guid                         m_Guid;
         union
@@ -310,7 +241,7 @@ namespace mecs::component
                     ,   construct_fn_v<T_COMPONENT>
                     ,   destruct_fn_v<T_COMPONENT>
                     ,   movable_fn_v<T_COMPONENT>
-                    ,   (&T_COMPONENT::getKey == &mecs::component::share::getKey)? []( void* pData ) constexpr noexcept { xcore::crc<64> X{}; return X.FromBytes( {reinterpret_cast<std::byte*>(pData), sizeof(T_COMPONENT)} ).m_Value; } : &T_COMPONENT::getKey
+                    ,   (&T_COMPONENT::getKey == &mecs::component::share::getKey)? []( const void* pData ) constexpr noexcept { xcore::crc<64> X{}; return X.FromBytes( {static_cast<const std::byte*>(pData), sizeof(T_COMPONENT)} ).m_Value; } : &T_COMPONENT::getKey
                     ,   static_cast<std::uint32_t>( sizeof(T_COMPONENT) )
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   type_data_access::LINEAR
