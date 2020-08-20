@@ -66,7 +66,8 @@ namespace mecs::archetype
             static bool LockQueryComponents     ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
             static bool UnlockQueryComponents   ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
 
-            component_list_t    m_lComponentLocks{};
+            std::uint8_t        m_nSharerWriters    {0};
+            component_list_t    m_lComponentLocks   {};
         };
     }
 
@@ -175,13 +176,14 @@ namespace mecs::archetype
             mecs::entity_pool::index                    m_StartIndex;
             int                                         m_Count;
             mecs::system::instance&                     m_System;
+            mecs::archetype::instance&                  m_Archetype;
 
             constexpr bool isValid( void ) const noexcept;
             template< typename T >
             void operator() ( T&& Callback ) noexcept;
 
             template< typename...T_COMPONENTS > xforceinline
-            static constexpr void getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) noexcept;
+            constexpr void getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept;
 
             template< typename T, typename...T_COMPONENTS > xforceinline
             void Initialize( T&& Callback, std::tuple<T_COMPONENTS...>* );
@@ -362,6 +364,7 @@ namespace mecs::archetype
                         ,   Index
                         ,   nEntities
                         ,   Instance
+                        ,   *this
                         };
                     }
                 }
@@ -399,6 +402,7 @@ namespace mecs::archetype
                     , Specialized.m_EntityPool.append(nEntities)
                     , nEntities
                     , Instance
+                    , *this
                 };
             }
             else
@@ -418,6 +422,7 @@ namespace mecs::archetype
                     ,   Index
                     ,   nEntities
                     ,   Instance
+                    ,   *this
                     };
                 }
 
@@ -438,6 +443,7 @@ namespace mecs::archetype
                 ,   Specialized.m_EntityPool.append(nEntities)
                 ,   nEntities
                 ,   Instance
+                ,   *this
                 };
             }
         }

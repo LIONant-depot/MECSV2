@@ -77,6 +77,30 @@ namespace mecs::archetype
                     }
                 }
 
+                // Share writer vs Share writer
+                if( Safety.m_nSharerWriters && Desc.m_Type == mecs::component::type::SHARE && isConstant == false )
+                {
+                    // 
+                    xcore::lock::scope      Lk(System.m_World.m_GraphDB.m_LockErrors);
+                    mecs::graph::lock_error Error;
+                    Error.m_lSystemGuids[0] = System.m_Guid;
+                    Error.m_lSystemGuids[1].setNull();
+                    Error.m_pMessage = "System trying to lock the entire archetype due to writing a share component, another existing system already has a write lock as one of the archetype";
+                    System.m_World.m_GraphDB.m_LockErrors.get().push_back(Error);
+                }
+
+                // Share writer vs Entity writer
+                if (Safety.m_nSharerWriters && Desc.m_Guid == mecs::component::entity::type_guid_v)
+                {
+                    // 
+                    xcore::lock::scope      Lk(System.m_World.m_GraphDB.m_LockErrors);
+                    mecs::graph::lock_error Error;
+                    Error.m_lSystemGuids[0] = System.m_Guid;
+                    Error.m_lSystemGuids[1].setNull();
+                    Error.m_pMessage        = "System trying to lock the entire archetype due to writing to the entity, but another system already has a write lock the entire archetype by using a share component write";
+                    System.m_World.m_GraphDB.m_LockErrors.get().push_back(Error);
+                }
+
                 //
                 // Deal the data access types
                 //
@@ -152,6 +176,7 @@ namespace mecs::archetype
                          || Desc.m_DataAccess == mecs::component::type_data_access::DOUBLE_BUFFER
                          || Entry.m_nReaders == 0 );
                     Entry.m_pWritingSystem = &System;
+                    if (Desc.m_Type == mecs::component::type::SHARE ) Safety.m_nSharerWriters++;
                 }
             }
         }
@@ -170,9 +195,14 @@ namespace mecs::archetype
             xcore::lock::scope Lk(Archetype.m_Safety);
             auto& Safety = Archetype.m_Safety.get();
 
+            int i = 0;
             for (auto& [Desc, isConstant] : E.m_FunctionDescriptors)
             {
                 auto& Entry = Safety.m_lComponentLocks[Desc.m_BitNumber];
+
+                if (E.m_lFunctionToArchetype[i++].m_Index == mecs::archetype::query::result_entry::invalid_index)
+                    continue;
+
                 if (isConstant)
                 {
                     xassert(Entry.m_nReaders);
@@ -182,6 +212,7 @@ namespace mecs::archetype
                 {
                     xassert(Entry.m_pWritingSystem == &System);
                     Entry.m_pWritingSystem = nullptr ;
+                    if (Desc.m_Type == mecs::component::type::SHARE) Safety.m_nSharerWriters--;
                 }
             }
         }

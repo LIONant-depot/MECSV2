@@ -13,16 +13,26 @@ namespace mecs::archetype
         }
 
         template< typename...T_COMPONENTS > xforceinline
-        static constexpr void entity_creation::getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) noexcept
+        constexpr void entity_creation::getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept
         {
             static constexpr std::array Inputs{ &mecs::component::descriptor_v<T_COMPONENTS> ... };
-
+            static_assert( ((std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T_COMPONENTS>>> == false) && ...) );
             int I = 0;
             for(std::uint8_t c=0, end = static_cast<std::uint8_t>(Span.size()); c<end; c++ )
             {
-                if( Span[c]->m_Guid == Inputs[I]->m_Guid )
+                auto& Desc = *Span[c];
+                if( Desc.m_Guid == Inputs[I]->m_Guid )
                 {
-                    Array[I] = c;
+                    if( Desc.m_isDoubleBuffer )
+                    {
+                        const std::uint32_t state = (m_Archetype.m_DoubleBufferInfo.m_StateBits >> Desc.m_BitNumber) & 1;
+                        const std::uint32_t iBase = (Span[c - 1]->m_Guid == Desc.m_Guid) ? c - 1 : c; 
+                        Array[I] = c + 1 - state;
+                    }
+                    else
+                    {
+                        Array[I] = c;
+                    }
                     if( I == static_cast<std::uint8_t>(sizeof...(T_COMPONENTS)-1) ) return;
                     I++;
                 }

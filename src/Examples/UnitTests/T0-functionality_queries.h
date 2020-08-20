@@ -40,11 +40,12 @@ namespace mecs::unit_test::functionality::queries
         // entity - Which is the entity component, and we are asking as (MUST HAVE by using &, but all entities have this component), also as a read only (by using const)
         // first  - Which is share component, and we are asking as (MAY HAVE by using *), also as a read only (by using const)
         // pepe2  - Which is a double buffer, and we are asking as (MUST HAVE by using &), also we are asking for T0 (by using const) 
-        void operator()( const entity& Entity, const first* pFirst, const pepe2& Pepe2 )
+        void operator()( const entity& Entity, const first* pFirst, const pepe2& Pepe2, pepe2& Pepe1)
         {
             if(pFirst) xassert( pFirst->m_Value == 1 );
-            xassert(Pepe2.m_Value == 54 );
-            printf("Entity: %s, Hello!\n", Entity.getGuid().getStringHex<char>().c_str() );
+            //xassert(Pepe2.m_Value == 54 );
+            Pepe1.m_Value = Pepe2.m_Value + 1;
+            printf("Entity: %s = %3d!\n", Entity.getGuid().getStringHex<char>().c_str(), Pepe2.m_Value);
         }
     };
 
@@ -57,12 +58,12 @@ namespace mecs::unit_test::functionality::queries
 
         using query_t = std::tuple< all<second> >;
 
-        void operator()(const entity& Entity, const first* pFirst, const pepe2& Pepe2, pepe2& Pepe1)
+        void operator()(const entity& Entity, const first* pFirst, const pepe2& Pepe2)
         {
             xassert(pFirst);
             xassert(pFirst->m_Value == 1);
-            xassert(Pepe2.m_Value == 54);
-            printf("Entity: %s, Requires 'second'!\n", Entity.getGuid().getStringHex<char>().c_str());
+            //xassert(Pepe2.m_Value == 54);
+            printf("Entity: %s = %3d, Requires 'second'!\n", Entity.getGuid().getStringHex<char>().c_str(), Pepe2.m_Value );
         }
     };
 
@@ -110,16 +111,15 @@ namespace mecs::unit_test::functionality::queries
             .CreateEntity(System, [](pepe& Pepe, pepe2& Pepe2)
                 {
                     int a = 0;
-
                 }, first{}, second{ {}, 33 });
 
         //
         // Create 10 entities
         //
         DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<pepe, pepe2>()
-            .CreateEntities(System, 10000, {})([](pepe2& Pepe2, pepe& Pepe)
+            .CreateEntities(System, 10, {})([](pepe2& Pepe2, pepe& Pepe)
                 {
-                    Pepe.m_Value = 22;
+                    Pepe2.m_Value = 0;
                     int a = 0;
                 });
 
