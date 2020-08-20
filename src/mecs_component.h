@@ -265,7 +265,7 @@ namespace mecs::component
                 static_assert(sizeof(T_COMPONENT) == 1);
                 return descriptor
                 {
-                        T_COMPONENT::type_guid_v
+                        T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
                     ,   T_COMPONENT::name_v
                     ,   -1
                     ,   type::TAG

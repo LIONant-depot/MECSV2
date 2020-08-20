@@ -58,28 +58,86 @@ namespace mecs::archetype
             ,   std::span<const mecs::component::descriptor* const> { m_pPool->m_EntityPool.getDescriptors() }
             ,   reinterpret_cast<sorted_tuple*>(nullptr) 
             );
+            static constexpr auto max_entries_single_thread = 10000;
+            if(m_Guids.size()) 
+            {
+                if(m_Count <= max_entries_single_thread )
+                {
+                    for( int i = m_StartIndex, end = m_StartIndex + m_Count, g=0; i != end; ++i, ++g )
+                    {
+                        m_pEntityMap->alloc(m_Guids[g], [&]( mecs::component::entity::reference& Reference )
+                        {
+                            Reference.m_Index = i;
+                            Reference.m_pPool = &m_pPool->m_EntityPool;
+                            m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i,0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
+                            Callback(m_pPool->m_EntityPool.getComponentByIndex<xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
+                            m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i,0), m_System );
+                        });
+                    }
+                }
+                else
+                {
+                    xcore::scheduler::channel Channel( xconst_universal_str("entity_creation::Initialize+g"));
+                    for (int i = m_StartIndex, end = m_StartIndex + m_Count, g = 0; i != end; )
+                    {
+                        int my_end = std::min<int>( end, i + max_entries_single_thread);
+                        Channel.SubmitJob([this,&Callback,&ComponentIndices, gStart=g, iStart=i, my_end ]() constexpr noexcept
+                        {
+                            for( auto i=iStart,g=gStart; i != my_end; ++i, ++g ) m_pEntityMap->alloc(m_Guids[g], [&](mecs::component::entity::reference& Reference)
+                            {
+                                Reference.m_Index = i;
+                                Reference.m_pPool = &m_pPool->m_EntityPool;
+                                m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
+                                Callback(m_pPool->m_EntityPool.getComponentByIndex<xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
+                                m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0), m_System);
+                            });
+                        });
 
-            if(m_Guids.size()) for( int i = m_StartIndex, end = m_StartIndex + m_Count, g=0; i != end; ++i, ++g )
-            {
-                m_pEntityMap->alloc(m_Guids[g], [&]( mecs::component::entity::reference& Reference )
-                {
-                    Reference.m_Index = i;
-                    Reference.m_pPool = &m_pPool->m_EntityPool;
-                    m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i,0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
-                    Callback(m_pPool->m_EntityPool.getComponentByIndex<xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
-                    m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i,0), m_System );
-                });
+                        g += my_end - i;
+                        i = my_end;
+                    }
+                    Channel.join();
+                }
             }
-            else for (int i = m_StartIndex, end = m_StartIndex + m_Count; i != end; ++i)
+            else 
             {
-                m_pEntityMap->alloc(mecs::component::entity::guid{ xcore::not_null }, [&](mecs::component::entity::reference& Reference)
+                if (m_Count <= max_entries_single_thread)
                 {
-                    Reference.m_Index = i;
-                    Reference.m_pPool = &m_pPool->m_EntityPool;
-                    m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
-                    Callback(m_pPool->m_EntityPool.getComponentByIndex< xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
-                    m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0), m_System );
-                });
+                    for (int i = m_StartIndex, end = m_StartIndex + m_Count; i != end; ++i)
+                    {
+                        m_pEntityMap->alloc(mecs::component::entity::guid{ xcore::not_null }, [&](mecs::component::entity::reference& Reference)
+                        {
+                            Reference.m_Index = i;
+                            Reference.m_pPool = &m_pPool->m_EntityPool;
+                            m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
+                            Callback(m_pPool->m_EntityPool.getComponentByIndex< xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
+                            m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0), m_System );
+                        });
+                    }
+                }
+                else
+                {
+                    xcore::scheduler::channel Channel( xconst_universal_str("entity_creation::Initialize"));
+                    for (int i = m_StartIndex, end = m_StartIndex + m_Count; i != end; )
+                    {
+                        int my_end = std::min<int>( end, i + max_entries_single_thread);
+                        Channel.SubmitJob([this,&Callback,&ComponentIndices, iStart=i, my_end ] () constexpr noexcept
+                        {
+                            xassert(iStart< my_end);
+                            for( auto i=iStart; i != my_end; ++i ) m_pEntityMap->alloc(mecs::component::entity::guid{ xcore::not_null }, [&](mecs::component::entity::reference& Reference)
+                            {
+                                Reference.m_Index = i;
+                                Reference.m_pPool = &m_pPool->m_EntityPool;
+                                m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
+                                Callback(m_pPool->m_EntityPool.getComponentByIndex<xcore::types::decay_full_t<T_COMPONENTS>>(i, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
+                                m_pPool->m_pInstance->m_Events.m_CreatedEntity.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(i, 0), m_System);
+                            });
+                        });
+
+                        i = my_end;
+                    }
+                    Channel.join();
+                }
             }
         }
     }

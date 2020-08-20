@@ -164,7 +164,7 @@ namespace mecs::archetype::query
         };
 
         template< typename...T_QUERY_PARAMS >
-        struct define<void(T_QUERY_PARAMS...)> : define_data
+        struct define<void(T_QUERY_PARAMS...) > : define_data
         {
             constexpr define(void) noexcept
             {
@@ -207,6 +207,15 @@ namespace mecs::archetype::query
 
         template< class T_CLASS, typename... T_ARGS >
         struct define < void(T_CLASS::*)(T_ARGS...) > : define< void(T_ARGS...) >{};
+
+        template< class T_CLASS, typename... T_ARGS >
+        struct define < void(T_CLASS::*)(T_ARGS...) const> : define< void(T_ARGS...) > {};
+
+        template< class T_CLASS, typename... T_ARGS >
+        struct define < void(T_CLASS::*)(T_ARGS...) noexcept> : define< void(T_ARGS...) > {};
+
+        template< class T_CLASS, typename... T_ARGS >
+        struct define < void(T_CLASS::*)(T_ARGS...) const noexcept> : define< void(T_ARGS...) > {};
     }
 
     //---------------------------------------------------------------------------------
