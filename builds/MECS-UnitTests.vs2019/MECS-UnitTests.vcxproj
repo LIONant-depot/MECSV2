@@ -144,9 +144,11 @@
     <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h" />
     <ClInclude Include="..\..\src\Examples\UnitTests\T0_functionality_queries.h" />
     <ClInclude Include="..\..\src\Examples\UnitTests\T1_functionality_simple.h" />
+    <ClInclude Include="..\..\src\Examples\UnitTests\T2_functionality_spawner.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_entity_pool_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_graph_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h" />
     <ClInclude Include="..\..\src\mecs.h" />
     <ClInclude Include="..\..\src\mecs_archetype.h" />
     <ClInclude Include="..\..\src\mecs_archetype_delegate.h" />

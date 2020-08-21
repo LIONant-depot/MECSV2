@@ -2,7 +2,7 @@ namespace mecs::unit_test::functionality::simple
 {
     struct simple : mecs::component::data
     {
-        constexpr static auto       name_v = xconst_universal_str("simple");
+        constexpr static auto       name_v              = xconst_universal_str("simple");
         int m_Value{ 22 };
     };
 
@@ -15,18 +15,17 @@ namespace mecs::unit_test::functionality::simple
 
     struct my_tag : mecs::component::tag 
     {
-        constexpr static auto       name_v = xconst_universal_str("my_tag");
+        constexpr static auto       name_v              = xconst_universal_str("my_tag");
     };
 
     struct my_system : mecs::system::instance
     {
+        using instance::instance;
         using query_t = std::tuple
         <
             all<simple>           
         ,   none<my_tag>          
         >;
-
-        using mecs::system::instance::instance;
 
         constexpr xforceinline
         void operator() ( double_buff& Buff, const simple& Simple ) const noexcept

@@ -128,52 +128,16 @@ namespace mecs::system
 
     struct instance : overrites
     {
-        instance(const construct&& Settings) noexcept
-            : overrites{ Settings.m_JobDefinition | xcore::scheduler::triggers::DONT_CLEAN_COUNT }
-            , m_World            { Settings.m_World }
-            , m_Guid             { Settings.m_Guid }
-        { setupName(Settings.m_Name); }
+        instance(const construct&& Settings) noexcept;
+
+        template< typename...T_SHARE_COMPONENTS >
+        mecs::archetype::entity_creation createEntities(mecs::archetype::instance::guid gArchetype, int nEntities, std::span<entity::guid> gEntitySpan, T_SHARE_COMPONENTS&&... ShareComponents) noexcept;
+
+        inline
+        void deleteEntity( mecs::component::entity& Entity );
 
         template< typename T_CALLBACK > constexpr xforceinline
-        void ForEach( mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob ) noexcept
-        {
-            // If there is nothing to do then lets bail out
-            if( QueryI.m_lResults.size() == 0 )
-                return;
-
-            //
-            // Check for graph errors by Locking the relevant components in the archetypes
-            //
-            if (mecs::archetype::details::safety::LockQueryComponents(*this, QueryI))
-            {
-                // we got an error here
-                xassert(false);
-            }
-
-            //
-            // Loop through all the results and lets the system deal with the components
-            //
-            xcore::scheduler::channel       Channel(getName());
-            using                           params_t = details::process_resuts_params<T_CALLBACK>;
-            params_t                        Params
-            {
-                Channel
-            ,   std::forward<T_CALLBACK>(Functor)
-            ,   nEntitiesPerJob
-            };
-
-            for( auto& R : QueryI.m_lResults )
-            {
-                auto& MainPool = R.m_pArchetype->m_MainPool;
-                xassert(MainPool.size());
-                for( int end = static_cast<int>(MainPool.size()), i=0; i<end; ++i )
-                {
-                    ProcessResult( Params, R, MainPool, i);
-                }
-            }
-
-            Channel.join();
-        }
+        void ForEach( mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob ) noexcept;
 
         template< typename T_PARAMS > constexpr xforceinline
         void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept

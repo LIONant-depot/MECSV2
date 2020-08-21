@@ -68,9 +68,10 @@ namespace mecs::graph
             //
             // Make sure I am the last system to get notified in the End trigger
             //
-            for( auto it = m_EndSyncPoint.m_Events.m_Done.m_lDelegates.begin(); it != m_EndSyncPoint.m_Events.m_Done.m_lDelegates.end(); ++it )
+            for( auto it = m_EndSyncPoint.m_Events.m_Done.m_lDelegates.begin(); it != m_EndSyncPoint.m_Events.m_Done.m_lDelegates.end(); )
             {
                 if (it->m_pThis == this) m_EndSyncPoint.m_Events.m_Done.m_lDelegates.erase(it);
+                else                     ++it;
             }
             m_EndSyncPoint.m_Events.m_Done.AddDelegate<&instance::msgSyncPointDone>(*this);
 

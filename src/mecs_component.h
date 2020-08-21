@@ -69,8 +69,8 @@ namespace mecs::component
     {
         struct reference
         {
-            mecs::entity_pool::instance*    m_pPool;
-            mecs::entity_pool::index        m_Index;
+            mecs::archetype::specialized_pool*  m_pPool;
+            mecs::entity_pool::index            m_Index;
         };
 
         using guid  = xcore::guid::unit<64, struct entity_tag>;
@@ -292,10 +292,7 @@ namespace mecs::component
     using tuple_data_components = xcore::types::tuple_cat_t< std::conditional_t< std::is_base_of_v<share, T_DATA_AND_TAGS> == false && std::is_base_of_v<tag, T_DATA_AND_TAGS> == false, std::tuple<T_DATA_AND_TAGS>, std::tuple<> > ... >;
 
     template< typename T_COMPARE_A, typename T_COMPARE_B >
-    struct smaller_guid
-    {;
-        static constexpr auto value   = component::descriptor_v<T_COMPARE_A>.m_Guid.m_Value < component::descriptor_v<T_COMPARE_B>.m_Guid.m_Value;
-    };
+    struct smaller_guid { static constexpr auto value = component::descriptor_v<T_COMPARE_A>.m_Guid.m_Value < component::descriptor_v<T_COMPARE_B>.m_Guid.m_Value; };
 
     //----------------------------------------------------------------------------
     // DATA BASES

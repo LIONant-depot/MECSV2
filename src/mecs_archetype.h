@@ -87,7 +87,7 @@ namespace mecs::archetype
         using                           share_component_keys    = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
 
         type_guid                       m_TypeGuid                  {};
-        instance*                       m_pInstance                 {};
+        instance*                       m_pArchetypeInstance        {};
         mecs::entity_pool::instance     m_EntityPool                {};
         std::span<std::uint64_t>        m_ShareComponentKeysSpan    {};
         share_component_keys            m_ShareComponentKeysMemory  {};
@@ -98,97 +98,99 @@ namespace mecs::archetype
     // ARCHETYPE:: INSTANCE
     // m_MainPool< Entity, Pool<E,C...>, specialized, SC... >
     //----------------------------------------------------------------------------------------------
-    namespace details
+    /*
+    template< typename...T_COMPONENTS >
+    struct call_details;
+
+    template< typename...T_COMPONENTS >
+    struct call_details< std::tuple<T_COMPONENTS...> >
     {
-        /*
-        template< typename...T_COMPONENTS >
-        struct call_details;
+        using tuple_share_components = xcore::types::tuple_sort_t
+        <
+              mecs::component::smaller_guid
+            , mecs::component::tuple_share_components<xcore::types::decay_full_t<T_COMPONENTS>...>
+        >;
 
-        template< typename...T_COMPONENTS >
-        struct call_details< std::tuple<T_COMPONENTS...> >
+        using tuple_data_components = xcore::types::tuple_sort_t
+        <
+            mecs::component::smaller_guid
+            , mecs::component::tuple_data_components<xcore::types::decay_full_t<T_COMPONENTS>...>
+        >;
+    };
+
+    template
+    < 
+        typename    T_CALLBACK
+    ,   typename... T_CALL_COMPONENTS
+    ,   typename... T_DATA_COMPONENTS
+    ,   typename... T_SHARE_COMPONENTS
+    >
+    void CreateEntity(
+            mecs::entity_pool::instance& MainPool
+        ,   mecs::entity_pool::index     MainPool_Index
+        ,   mecs::entity_pool::instance& EntityPool
+        ,   mecs::entity_pool::index     EntityPool_Index
+        ,   T_CALLBACK&& Callback
+        ,   std::tuple<T_CALL_COMPONENTS...>*
+        ,   std::tuple<T_DATA_COMPONENTS...>*
+        ,   std::tuple<T_SHARE_COMPONENTS...>* ) noexcept
+    {
+        if constexpr ( sizeof...(T_SHARE_COMPONENTS) && sizeof...(T_DATA_COMPONENTS) )
         {
-            using tuple_share_components = xcore::types::tuple_sort_t
-            <
-                  mecs::component::smaller_guid
-                , mecs::component::tuple_share_components<xcore::types::decay_full_t<T_COMPONENTS>...>
-            >;
-
-            using tuple_data_components = xcore::types::tuple_sort_t
-            <
-                mecs::component::smaller_guid
-                , mecs::component::tuple_data_components<xcore::types::decay_full_t<T_COMPONENTS>...>
-            >;
-        };
-
-        template
-        < 
-            typename    T_CALLBACK
-        ,   typename... T_CALL_COMPONENTS
-        ,   typename... T_DATA_COMPONENTS
-        ,   typename... T_SHARE_COMPONENTS
-        >
-        void CreateEntity(
-                mecs::entity_pool::instance& MainPool
-            ,   mecs::entity_pool::index     MainPool_Index
-            ,   mecs::entity_pool::instance& EntityPool
-            ,   mecs::entity_pool::index     EntityPool_Index
-            ,   T_CALLBACK&& Callback
-            ,   std::tuple<T_CALL_COMPONENTS...>*
-            ,   std::tuple<T_DATA_COMPONENTS...>*
-            ,   std::tuple<T_SHARE_COMPONENTS...>* ) noexcept
-        {
-            if constexpr ( sizeof...(T_SHARE_COMPONENTS) && sizeof...(T_DATA_COMPONENTS) )
+            std::tuple ComponentsOrder =
             {
-                std::tuple ComponentsOrder =
-                {
-                      MainPool.getComponentByIndex< T_SHARE_COMPONENTS>(MainPool_Index,    1 + xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, std::tuple<T_SHARE_COMPONENTS...>> ) ...
-                    , EntityPool.getComponentByIndex<T_DATA_COMPONENTS>(EntityPool_Index,  1 + xcore::types::tuple_t2i_v<T_DATA_COMPONENTS,  std::tuple<T_DATA_COMPONENTS...>> ) ...
-                };
-                
-                Callback( std::get<T_CALL_COMPONENTS>(ComponentsOrder) ... );
-            }
-            else if constexpr (sizeof...(T_SHARE_COMPONENTS) && 0 == sizeof...(T_DATA_COMPONENTS))
-            {
-                std::tuple ComponentsOrder =
-                {
-                    MainPool.getComponentByIndex<T_SHARE_COMPONENTS>(MainPool_Index, 1 + xcore::types::tuple_t2i_v < T_SHARE_COMPONENTS, std::tuple<T_SHARE_COMPONENTS...>>) ...
-                };
-
-                Callback(std::get<T_CALL_COMPONENTS>(ComponentsOrder) ...);
-            }
-            else if constexpr (0 == sizeof...(T_SHARE_COMPONENTS) && sizeof...(T_DATA_COMPONENTS))
-            {
-                std::tuple ComponentsOrder =
-                {
-                    EntityPool.getComponentByIndex<T_DATA_COMPONENTS>(EntityPool_Index, 1 + xcore::types::tuple_t2i_v < T_DATA_COMPONENTS, std::tuple<T_DATA_COMPONENTS...>>) ...
-                };
-
-                Callback( std::get<T_CALL_COMPONENTS>(ComponentsOrder) ... );
-            }
+                  MainPool.getComponentByIndex< T_SHARE_COMPONENTS>(MainPool_Index,    1 + xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, std::tuple<T_SHARE_COMPONENTS...>> ) ...
+                , EntityPool.getComponentByIndex<T_DATA_COMPONENTS>(EntityPool_Index,  1 + xcore::types::tuple_t2i_v<T_DATA_COMPONENTS,  std::tuple<T_DATA_COMPONENTS...>> ) ...
+            };
+            
+            Callback( std::get<T_CALL_COMPONENTS>(ComponentsOrder) ... );
         }
-        */
-
-        struct entity_creation
+        else if constexpr (sizeof...(T_SHARE_COMPONENTS) && 0 == sizeof...(T_DATA_COMPONENTS))
         {
-            std::span<mecs::component::entity::guid>    m_Guids;
-            mecs::component::entity::map*               m_pEntityMap;
-            specialized_pool*                           m_pPool;
-            mecs::entity_pool::index                    m_StartIndex;
-            int                                         m_Count;
-            mecs::system::instance&                     m_System;
-            mecs::archetype::instance&                  m_Archetype;
+            std::tuple ComponentsOrder =
+            {
+                MainPool.getComponentByIndex<T_SHARE_COMPONENTS>(MainPool_Index, 1 + xcore::types::tuple_t2i_v < T_SHARE_COMPONENTS, std::tuple<T_SHARE_COMPONENTS...>>) ...
+            };
 
-            constexpr bool isValid( void ) const noexcept;
-            template< typename T >
-            void operator() ( T&& Callback ) noexcept;
+            Callback(std::get<T_CALL_COMPONENTS>(ComponentsOrder) ...);
+        }
+        else if constexpr (0 == sizeof...(T_SHARE_COMPONENTS) && sizeof...(T_DATA_COMPONENTS))
+        {
+            std::tuple ComponentsOrder =
+            {
+                EntityPool.getComponentByIndex<T_DATA_COMPONENTS>(EntityPool_Index, 1 + xcore::types::tuple_t2i_v < T_DATA_COMPONENTS, std::tuple<T_DATA_COMPONENTS...>>) ...
+            };
 
-            template< typename...T_COMPONENTS > xforceinline
-            constexpr void getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept;
-
-            template< typename T, typename...T_COMPONENTS > xforceinline
-            void Initialize( T&& Callback, std::tuple<T_COMPONENTS...>* );
-        };
+            Callback( std::get<T_CALL_COMPONENTS>(ComponentsOrder) ... );
+        }
     }
+    */
+
+    struct entity_creation
+    {
+        static constexpr auto max_entries_single_thread = 10000;
+
+        std::span<mecs::component::entity::guid>    m_Guids;
+        mecs::component::entity::map*               m_pEntityMap;
+        specialized_pool*                           m_pPool;
+        mecs::entity_pool::index                    m_StartIndex;
+        int                                         m_Count;
+        mecs::system::instance&                     m_System;
+        mecs::archetype::instance&                  m_Archetype;
+
+        constexpr bool isValid( void ) const noexcept;
+        template< typename T >
+        void operator() ( T&& Callback ) noexcept;
+
+        inline
+        void operator() (void) noexcept;
+
+        template< typename...T_COMPONENTS > xforceinline
+        constexpr void getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept;
+
+        template< typename T, typename...T_COMPONENTS > xforceinline
+        void Initialize( T&& Callback, std::tuple<T_COMPONENTS...>* );
+    };
 
 
     struct instance
@@ -212,6 +214,8 @@ namespace mecs::archetype
 
             m_MainPool.Init( *this, m_MainPoolDescriptorSpan, 100000u );
         }
+
+        constexpr xforceinline auto& getGuid( void ) const noexcept { return m_Guid; }
 
         void MemoryBarrierSync( mecs::sync_point::instance& SyncPoint ) noexcept
         {
@@ -328,7 +332,7 @@ namespace mecs::archetype
         */
 
         template< typename...T_SHARE_COMPONENTS >
-        details::entity_creation CreateEntities( mecs::system::instance& Instance, const int nEntities, std::span<mecs::component::entity::guid> Guids, T_SHARE_COMPONENTS&&...ShareComponents ) noexcept
+        entity_creation CreateEntities( mecs::system::instance& Instance, const int nEntities, std::span<mecs::component::entity::guid> Guids, T_SHARE_COMPONENTS&&...ShareComponents ) noexcept
         {
             xassert(Guids.size() == 0u || Guids.size() == static_cast<std::uint32_t>(nEntities) );
 
@@ -393,7 +397,7 @@ namespace mecs::archetype
 
                 // Initialize the pool
                 Specialized.m_EntityPool.Init(*this, m_Descriptor.m_DataDescriptorSpan, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
-                Specialized.m_pInstance = this;
+                Specialized.m_pArchetypeInstance = this;
                 return
                 {
                     Guids
@@ -434,7 +438,7 @@ namespace mecs::archetype
                 //TODO: Preallocate nEntites before returning
                 Specialized.m_TypeGuid.setNull();
                 Specialized.m_EntityPool.Init( *this, m_Descriptor.m_DataDescriptorSpan, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
-                Specialized.m_pInstance = this;
+                Specialized.m_pArchetypeInstance = this;
                 return
                 {
                     Guids
@@ -457,6 +461,8 @@ namespace mecs::archetype
             std::array< mecs::component::entity::guid,1> GuidList { mecs::component::entity::guid{ xcore::not_null } };
             CreateEntities( Instance, 1, GuidList, std::forward<T_SHARE_COMPONENTS&&>(ShareComponents) ... )(CallBack);
         }
+
+        inline void deleteEntity( mecs::system::instance& System, mecs::component::entity& Entity ) noexcept;
 
 /*
         template< typename T, typename...T_SHARE_COMPONENTS > xforceinline 
@@ -968,6 +974,11 @@ namespace mecs::archetype
         }
         */
 
+        xforceinline instance& getArchetype( mecs::archetype::instance::guid Guid ) noexcept
+        {
+            return *m_mapArchetypes.get(Guid);
+        }
+
         xforceinline instance& getOrCreateArchitypeDetails(
               mecs::archetype::instance::guid                       Guid
             , mecs::archetype::tag_sum_guid                         TagSumGuid
@@ -1014,6 +1025,7 @@ namespace mecs::archetype
                 for (auto& e : ShareDiscriptorList) E.m_ArchitypeBits.AddBit(e->m_BitNumber);
                 E.m_upArchetype = std::make_unique<mecs::archetype::instance>();
                 E.m_upArchetype->Init(DataDiscriptorList, ShareDiscriptorList, pt->m_TagDescriptors, &m_EntityMap );
+                E.m_upArchetype->m_Guid = Guid;
                 p = pInstance = E.m_upArchetype.get();
             });
 

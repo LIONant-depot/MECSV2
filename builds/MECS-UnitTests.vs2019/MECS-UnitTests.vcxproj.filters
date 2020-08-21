@@ -263,6 +263,10 @@
     </ClInclude>
     <ClInclude Include="..\..\src\Examples\UnitTests\T0_functionality_queries.h" />
     <ClInclude Include="..\..\src\Examples\UnitTests\T1_functionality_simple.h" />
+    <ClInclude Include="..\..\src\Examples\UnitTests\T2_functionality_spawner.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
