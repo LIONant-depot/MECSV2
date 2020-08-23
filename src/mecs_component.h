@@ -36,7 +36,7 @@ namespace mecs::component
     {
         using                   type_guid           = component::type_guid;
         constexpr static auto   type_guid_v         { type_guid{nullptr} };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed tag") };
+        constexpr static auto   type_name_v         { xconst_universal_str("unnamed tag") };
     };
 
     struct data
@@ -44,7 +44,7 @@ namespace mecs::component
         using                   type_guid           = component::type_guid;
         using                   type_data_access    = component::type_data_access;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
-        constexpr static auto   name_v              { xconst_universal_str("data component") };
+        constexpr static auto   type_name_v         { xconst_universal_str("data component") };
         constexpr static auto   type_data_access_v  { type_data_access::LINEAR };
     };
 
@@ -53,7 +53,7 @@ namespace mecs::component
         using                   type_guid           = component::type_guid;
         using                   type_data_access    = component::type_data_access;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed singleton") };
+        constexpr static auto   type_name_v         { xconst_universal_str("unnamed singleton") };
         constexpr static auto   type_data_access_v  { type_data_access::LINEAR };
     };
 
@@ -61,7 +61,7 @@ namespace mecs::component
     {
         using                   type_guid           = component::type_guid;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed share") };
+        constexpr static auto   type_name_v         { xconst_universal_str("unnamed share") };
         static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }
     };
 
@@ -77,7 +77,7 @@ namespace mecs::component
         using map   = mecs::tools::fixed_map<guid, reference, settings::max_entities_v>;
 
         constexpr static type_guid  type_guid_v { 1ull };
-        constexpr static auto       name_v      { xconst_universal_str("entity") };
+        constexpr static auto       type_name_v { xconst_universal_str("entity") };
 
         map::entry* m_pInstance;
 
@@ -92,7 +92,7 @@ namespace mecs::component
     struct reference
     {
         constexpr static auto   type_guid_v         { nullptr };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed reference") };
+        constexpr static auto   type_name_v         { xconst_universal_str("unnamed reference") };
         using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
         entity::guid m_Entity{ nullptr };
         static constexpr std::uint64_t getKey(const void* p) noexcept { return static_cast<const reference*>(p)->m_Entity.m_Value; }
@@ -102,7 +102,7 @@ namespace mecs::component
     struct share_reference : share
     {
         constexpr static auto   type_guid_v         { nullptr };
-        constexpr static auto   name_v              { xconst_universal_str("unnamed share reference") };
+        constexpr static auto   type_name_v         { xconst_universal_str("unnamed share reference") };
         using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
         entity::guid m_Entity{ nullptr };
         static constexpr std::uint64_t   getKey(const void* p) noexcept { return static_cast<const share_reference*>(p)->m_Entity.m_Value; }
@@ -178,7 +178,7 @@ namespace mecs::component
                 return descriptor
                 {
                         T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
-                    ,   T_COMPONENT::name_v
+                    ,   T_COMPONENT::type_name_v
                     ,   -1
                     ,   type::DATA
                     ,   construct_fn_v<T_COMPONENT>
@@ -197,7 +197,7 @@ namespace mecs::component
                 return descriptor
                 {
                         T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
-                    ,   T_COMPONENT::name_v
+                    ,   T_COMPONENT::type_name_v
                     ,   -1
                     ,   type::TAG
                     ,   nullptr
@@ -216,7 +216,7 @@ namespace mecs::component
                 return descriptor
                 {
                         T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
-                    ,   T_COMPONENT::name_v
+                    ,   T_COMPONENT::type_name_v
                     ,   -1
                     ,   type::SINGLETON
                     ,   []( void* pData )     constexpr noexcept { new(pData) std::unique_ptr<T_COMPONENT>{ new T_COMPONENT }; }
@@ -235,7 +235,7 @@ namespace mecs::component
                 return descriptor
                 {
                         T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
-                    ,   T_COMPONENT::name_v
+                    ,   T_COMPONENT::type_name_v
                     ,   -1
                     ,   type::SHARE
                     ,   construct_fn_v<T_COMPONENT>

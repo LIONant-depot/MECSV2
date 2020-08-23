@@ -6,26 +6,26 @@ namespace mecs::unit_test::functionality::queries
     //----------------------------------------------------------------------------------------------
     struct pepe : mecs::component::data
     {
-        constexpr static auto       name_v              = xconst_universal_str("pepe");
+        constexpr static auto       type_name_v         = xconst_universal_str("pepe");
         int m_Value = 11;
     };
 
     struct pepe2 : mecs::component::data
     {
-        constexpr static auto       name_v              = xconst_universal_str("pepe2");
+        constexpr static auto       type_name_v         = xconst_universal_str("pepe2");
         static constexpr auto       type_data_access_v  = type_data_access::DOUBLE_BUFFER;
         int m_Value = 54;
     };
 
     struct first : mecs::component::share
     {
-        constexpr static auto       name_v              = xconst_universal_str("first share component");
+        constexpr static auto       type_name_v         = xconst_universal_str("first share component");
         int m_Value = 1;
     };
 
     struct second : mecs::component::share
     {
-        constexpr static auto       name_v              = xconst_universal_str("second share component");
+        constexpr static auto       type_name_v         = xconst_universal_str("second share component");
         int m_Value = 2;
     };
 

@@ -3,20 +3,20 @@ namespace mecs::unit_test::functionality::simple_v2
 {
     struct simple : mecs::component::data
     {
-        constexpr static auto       name_v              = xconst_universal_str("simple");
+        constexpr static auto       type_name_v         = xconst_universal_str("simple");
         int m_Value{ 22 };
     };
 
     struct double_buff : mecs::component::data
     {
-        constexpr static auto       name_v              = xconst_universal_str("double_buff");
+        static constexpr auto       type_name_v         = xconst_universal_str("double_buff");
         static constexpr auto       type_data_access_v  = type_data_access::DOUBLE_BUFFER;
         int m_Value{ 123 };
     };
 
     struct my_tag : mecs::component::tag 
     {
-        constexpr static auto       name_v              = xconst_universal_str("my_tag");
+        constexpr static auto       type_name_v         = xconst_universal_str("my_tag");
     };
 
     struct my_system : mecs::system::instance
