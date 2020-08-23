@@ -19,6 +19,12 @@ namespace mecs::unit_test::functionality::simple_v2
         constexpr static auto       type_name_v         = xconst_universal_str("my_tag");
     };
 
+    struct some_share : mecs::component::share
+    {
+        constexpr static auto       type_name_v         = xconst_universal_str("share_component");
+        int m_Value{ 22 };
+    };
+
     struct my_system : mecs::system::instance
     {
         using instance::instance;
@@ -46,6 +52,14 @@ namespace mecs::unit_test::functionality::simple_v2
                     {
                         int a = 0;
                     });
+                });
+            else if ((R.RandU32() % 10) == 0)
+                getArchetypeBy< std::tuple<my_tag, some_share>, std::tuple<double_buff> >(Entity, [&](mecs::archetype::instance& Archetype) constexpr noexcept
+                {
+                    moveEntityToArchetype(Entity, Archetype, [](mecs::component::entity& Entity) constexpr noexcept
+                    {
+                        int a = 0;
+                    }, some_share{ {}, {44} } );
                 });
 
         }
@@ -81,6 +95,21 @@ namespace mecs::unit_test::functionality::simple_v2
         }
     };
 
+    struct my_system4 : mecs::system::instance
+    {
+        using instance::instance;
+        using query_t = std::tuple
+        <
+            all<simple, my_tag>
+        >;
+
+        xforceinline
+        void operator() (const mecs::component::entity& Entity, const some_share& Share ) noexcept
+        {
+            printf("Simple, Share and Tag\n");
+        }
+    };
+
     //----------------------------------------------------------------------------------------------
     // Test
     //----------------------------------------------------------------------------------------------
@@ -96,6 +125,7 @@ namespace mecs::unit_test::functionality::simple_v2
             simple
         ,   double_buff
         ,   my_tag
+        ,   some_share
         >();
 
         //
@@ -105,6 +135,7 @@ namespace mecs::unit_test::functionality::simple_v2
         auto& System        = DefaultWorld.m_GraphDB.CreateGraphConnection<my_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
         auto& System2       = DefaultWorld.m_GraphDB.CreateGraphConnection<my_system2>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
         auto& System3       = DefaultWorld.m_GraphDB.CreateGraphConnection<my_system3>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        auto& System4       = DefaultWorld.m_GraphDB.CreateGraphConnection<my_system4>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
 
         //
         // Create a few entities

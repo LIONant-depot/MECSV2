@@ -1396,13 +1396,11 @@ namespace mecs::archetype
 
             xassert(NewDescriptor.m_ShareDescriptorSpan.size() == sizeof...(T_SHARE_COMPONENTS) );
 
-            static constexpr std::array ShareKeys
-            { [&]() constexpr noexcept
-                {
-                   if constexpr ( !!sizeof...(T_SHARE_COMPONENTS) ) return std::array{ component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey( &ShareComponents ) ... };
-                   else                                             return std::array<std::uint64_t,0>{};
-                }()
-            };
+            const auto ShareKeys = [&]() constexpr noexcept
+            {
+               if constexpr ( !!sizeof...(T_SHARE_COMPONENTS) ) return std::array{ component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey( &ShareComponents ) ... };
+               else                                             return std::array<std::uint64_t,0>{};
+            }();
 
             //
             // Allocate the entity in the new pool
@@ -1453,7 +1451,7 @@ namespace mecs::archetype
 
                         (
                            ( mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnMove
-                                ( &MainPool.getComponentByIndex<T_SHARE_COMPONENTS>( Index, xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, sorter_tuple > )
+                                ( &MainPool.getComponentByIndex<T_SHARE_COMPONENTS>( Index, 1 + xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, sorter_tuple > )
                                 , &ShareComponents )
                            )
                            , ... 
