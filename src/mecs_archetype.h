@@ -1330,11 +1330,11 @@ namespace mecs::archetype
         }
 
         template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS >
-        void moveEntityToGroup( system::instance&           System
-                              , mecs::component::entity&    OldEntity
-                              , archetype::instance&        NewArchetype
-                              , T_CALLBACK&&                Callback = []{}
-                              , T_SHARE_COMPONENTS&&...     ShareComponents ) noexcept
+        void moveEntityToArchetype( system::instance&           System
+                                  , mecs::component::entity&    OldEntity
+                                  , archetype::instance&        NewArchetype
+                                  , T_CALLBACK&&                Callback = []{}
+                                  , T_SHARE_COMPONENTS&&...     ShareComponents ) noexcept
         {
             XCORE_PERF_ZONE_SCOPED()
 

@@ -270,7 +270,7 @@ namespace mecs::component
         }
 
         template< typename T_COMPONENT >
-        static constexpr auto descriptor_variable_v = details::MakeDescriptor<T_COMPONENT>();
+        inline static constexpr auto descriptor_variable_v = details::MakeDescriptor<T_COMPONENT>();
     }
 
     template< typename T_COMPONENT >

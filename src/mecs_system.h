@@ -143,7 +143,7 @@ namespace mecs::system
         void getArchetypeBy( mecs::component::entity& Entity, T_CALLBACK&& Callback ) noexcept;
 
         template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS > constexpr xforceinline
-        void moveEntityToGroup( mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback = []{}, T_SHARE_COMPONENTS&&... ShareComponents ) noexcept;
+        void moveEntityToArchetype( mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback = []{}, T_SHARE_COMPONENTS&&... ShareComponents ) noexcept;
 
         template< typename T_PARAMS > constexpr xforceinline
         void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept

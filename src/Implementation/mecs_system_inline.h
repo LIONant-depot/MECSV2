@@ -82,8 +82,8 @@ namespace mecs::system
     //----------------------------------------------------------------------------------------------------
 
     template< typename T_CALLBACK, typename...T_SHARE_COMPONENTS > constexpr xforceinline
-    void instance::moveEntityToGroup(mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback, T_SHARE_COMPONENTS&&... ShareComponents) noexcept
+    void instance::moveEntityToArchetype(mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback, T_SHARE_COMPONENTS&&... ShareComponents) noexcept
     {
-        m_World.m_ArchetypeDB.moveEntityToGroup(*this, Entity, ToNewArchetype, std::forward<T_CALLBACK>(Callback), std::forward<T_SHARE_COMPONENTS>(ShareComponents) ...);
+        m_World.m_ArchetypeDB.moveEntityToArchetype(*this, Entity, ToNewArchetype, std::forward<T_CALLBACK>(Callback), std::forward<T_SHARE_COMPONENTS>(ShareComponents) ...);
     }
 }

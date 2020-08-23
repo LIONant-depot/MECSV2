@@ -37,13 +37,13 @@ namespace mecs::unit_test::functionality::simple_v2
             if( (R.RandU32() % 10) == 0 )
                 getArchetypeBy< std::tuple<my_tag>, std::tuple<> >( Entity, [&]( mecs::archetype::instance& Archetype ) constexpr noexcept
                 {
-                    moveEntityToGroup( Entity, Archetype );
+                    moveEntityToArchetype( Entity, Archetype );
                 });
             else if ((R.RandU32() % 10) == 0)
                 getArchetypeBy< std::tuple<my_tag>, std::tuple<double_buff> >(Entity, [&](mecs::archetype::instance& Archetype) constexpr noexcept
-                    {
-                        moveEntityToGroup(Entity, Archetype);
-                    });
+                {
+                    moveEntityToArchetype(Entity, Archetype);
+                });
 
         }
     };
@@ -117,11 +117,11 @@ namespace mecs::unit_test::functionality::simple_v2
 
         DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<simple, double_buff, my_tag>()
             .CreateEntities(System, 100 XCORE_CMD_ASSERT(/ 10), {})([](simple& Simple, double_buff& Double)
-                {
-                    assert(Simple.m_Value == 22);
-                    assert(Double.m_Value == 123);
-                    Simple.m_Value = Double.m_Value = 0;
-                });
+            {
+                assert(Simple.m_Value == 22);
+                assert(Double.m_Value == 123);
+                Simple.m_Value = Double.m_Value = 0;
+            });
 
         //
         // Test systems
