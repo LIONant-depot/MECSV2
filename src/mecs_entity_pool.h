@@ -52,13 +52,12 @@ namespace mecs::entity_pool
         constexpr   auto                capacity                ( void ) const                                                      noexcept{ return m_MaxEntries;  }
         template< typename T_COMPONENT >
         inline      T_COMPONENT&        getComponentByIndex     ( const index Index, int iComponent )                               noexcept;
+        inline      std::byte*          getComponentByIndexRaw  ( const index Index, int iComponent )                               noexcept;
         xforceinline auto&              getDescriptors          ( void ) const                                                      noexcept {return m_Descriptors; }
 
-    protected:
 
         inline      void                DeletePendingEntries    ( void )                                                            noexcept;
 
-    protected:
 
         union counter
         {
@@ -72,7 +71,6 @@ namespace mecs::entity_pool
 
         using ptr_array = std::array<std::byte*, mecs::settings::max_data_components_per_entity>;
 
-    protected:
 
         std::atomic<counter>                                    m_NewCount              {{0}};
         index                                                   m_Count                 {0};

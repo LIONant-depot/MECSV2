@@ -69,6 +69,33 @@ namespace mecs::archetype
             std::uint8_t        m_nSharerWriters    {0};
             component_list_t    m_lComponentLocks   {};
         };
+
+        //-----------------------------------------------------------------------------------------
+        template< typename...T_ADD_ARGS1, typename...T_SUBTRACT_ARGS2 >
+        static constexpr xforceinline auto ComputeArchetypeGuid( std::uint64_t Value, std::tuple<T_ADD_ARGS1...>*, std::tuple<T_SUBTRACT_ARGS2...>* ) noexcept
+        {
+            if constexpr ( sizeof...(T_ADD_ARGS1) && sizeof...(T_SUBTRACT_ARGS2) )
+            {
+                return Value 
+                    + (( 0ull + mecs::component::descriptor_v<T_ADD_ARGS1>.m_Guid.m_Value ) + ... )
+                    - (( 0ull + mecs::component::descriptor_v<T_SUBTRACT_ARGS2>.m_Guid.m_Value ) + ... );
+            }
+            else if constexpr ( sizeof...(T_ADD_ARGS1) )
+            {
+                return Value 
+                    + (( 0ull + mecs::component::descriptor_v<T_ADD_ARGS1>.m_Guid.m_Value ) + ... );
+            
+            }
+            else if constexpr ( sizeof...(T_SUBTRACT_ARGS2) )
+            {
+                return Value 
+                    - (( 0ull + mecs::component::descriptor_v<T_SUBTRACT_ARGS2>.m_Guid.m_Value ) + ... );
+            }
+            else
+            {
+                return Value;
+            }
+        }
     }
 
     //----------------------------------------------------------------------------------------------
@@ -618,12 +645,20 @@ namespace mecs::archetype
         }
 
         template< typename...T_COMPONENTS >
+        constexpr auto ComputeGUID(std::tuple<T_COMPONENTS...>*) noexcept
+        {
+            return mecs::component::entity::guid
+            {
+                ((mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value) + ... + 0ull)
+            };
+        }
+
+        template< typename...T_COMPONENTS >
         constexpr auto getTupleDataComponents( std::tuple<T_COMPONENTS...>* ) noexcept
         {
             static_assert( sizeof...(T_COMPONENTS) < (mecs::settings::max_data_components_per_entity - 1) );
             static_assert( (std::is_same_v< xcore::types::decay_full_t<T_COMPONENTS>, T_COMPONENTS > && ...), "Make sure you only pass the component type (no const, *, & )" );
             static_assert( ((mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value != 0ull) && ...), "You are passing a component which have not a type_guid_v set" );
-            static_assert( ((mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value != 1ull) && ...), "You can not have an entity component in the given list" );
             static_assert( ((mecs::component::descriptor_v<T_COMPONENTS>.m_Type != mecs::component::type::TAG) && ...) );
             static_assert( hasDuplicateComponents<T_COMPONENTS...>() == false );
 
@@ -632,11 +667,15 @@ namespace mecs::archetype
                 mecs::component::smaller_guid
             ,   xcore::types::tuple_cat_t
                 <
-                    std::tuple<mecs::component::entity>
-                ,   std::conditional_t
-                    <
-                        mecs::component::descriptor_v<T_COMPONENTS>.m_isDoubleBuffer
-                    ,   std::tuple<T_COMPONENTS, T_COMPONENTS>
+                    std::conditional_t
+                    < 
+                        true //T_EXPAND_V
+                    ,   std::conditional_t
+                        <
+                            mecs::component::descriptor_v<T_COMPONENTS>.m_isDoubleBuffer
+                        ,   std::tuple<T_COMPONENTS, T_COMPONENTS>
+                        ,   std::tuple<T_COMPONENTS>
+                        >
                     ,   std::tuple<T_COMPONENTS>
                     > ...
                 >
@@ -644,9 +683,17 @@ namespace mecs::archetype
 
             return std::tuple
             {
-                mecs::component::entity::guid{ mecs::tools::hash::combine( mecs::component::descriptor_v<mecs::component::entity>.m_Guid.m_Value, mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value ... ) }
+                ComputeGUID( reinterpret_cast<expanded_tuple*>(nullptr) )
             ,   getComponentDescriptorArray( reinterpret_cast<expanded_tuple*>(nullptr) )
             };
+        }
+
+        template< typename...T_COMPONENTS >
+        constexpr auto getTupleDataComponentsAddEntity( std::tuple<T_COMPONENTS...>* ) noexcept
+        {
+            static_assert(((mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value != 1ull) && ...), "You can not have an entity component in the given list");
+            using my_tuple = xcore::types::tuple_cat_t< std::tuple<mecs::component::entity>, std::tuple<T_COMPONENTS...> >;
+            return getTupleDataComponents( reinterpret_cast<my_tuple*>(nullptr) );
         }
 
         template< typename...T_COMPONENTS >
@@ -661,7 +708,7 @@ namespace mecs::archetype
             using expanded_tuple = xcore::types::tuple_sort_t< mecs::component::smaller_guid, std::tuple<T_COMPONENTS ... > >;
             return std::tuple
             {
-                mecs::component::entity::guid{ mecs::tools::hash::combine( mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value ... ) }
+                mecs::component::entity::guid{ ( mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value + ... + 0ull ) }
             ,   getComponentDescriptorArray( reinterpret_cast<expanded_tuple*>(nullptr) )
             };
         }
@@ -677,9 +724,211 @@ namespace mecs::archetype
             using expanded_tuple = xcore::types::tuple_sort_t< mecs::component::smaller_guid, std::tuple<T_COMPONENTS...> >;
             return std::tuple
             {
-                mecs::component::entity::guid{ mecs::tools::hash::combine( mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value ... ) }
+                mecs::component::entity::guid{ ( mecs::component::descriptor_v<T_COMPONENTS>.m_Guid.m_Value + ... + 0ull ) }
             ,   getComponentDescriptorArray(reinterpret_cast<expanded_tuple*>(nullptr) )
             };
+        }
+
+        constexpr std::tuple<int, archetype::tag_sum_guid> FillArray (
+                    std::span<const mecs::component::descriptor*> Array
+            , const std::span<const mecs::component::descriptor* const> ToAdd
+            , const std::span<const mecs::component::descriptor* const> ToSub
+            , const std::span<const mecs::component::descriptor* const> Current ) noexcept
+        {
+            const int AddEnd    = static_cast<int>(ToAdd.size()); 
+            const int SubEnd    = static_cast<int>(ToSub.size());
+            const int CurEnd    = static_cast<int>(Current.size());
+            const int ArrayEnd  = static_cast<int>(Array.size());
+
+            if(SubEnd && AddEnd && CurEnd)
+            {
+                // Remove all the entries
+                int i    = ArrayEnd - 1;
+                int iSub = SubEnd - 1;
+                int iCur = CurEnd - 1;
+                while(iCur > 0)
+                {
+                    if( ToSub[iSub]->m_Guid.m_Value > Current[iCur]->m_Guid.m_Value )
+                    {
+                        iSub--;
+                        if (iSub < 0 )
+                        {
+                            while (iCur >=0)
+                            {
+                                Array[i] = Current[iCur];
+                                i--;
+                                iCur--;
+                            }
+                            break;
+                        }
+                    }
+                    else if (Current[iCur]->m_Guid.m_Value == ToSub[iSub]->m_Guid.m_Value)
+                    {
+                        iCur--;
+                        iSub--;
+                    }
+                    else
+                    {
+                        Array[i] = Current[iCur];
+                        i--;
+                        iCur--;
+                    }
+                }
+
+                // Add all entries
+                std::uint64_t Value = 0;
+                int    iAdd = 0;
+                iCur = i+1;
+                i    = 0;
+                while( iCur != ArrayEnd )
+                {
+                    if( ToAdd[iAdd]->m_Guid.m_Value < Array[iCur]->m_Guid.m_Value )
+                    {
+                        Array[i] = ToAdd[iAdd];
+                        i++;
+                        iAdd++;
+                        if(iAdd == AddEnd)
+                        {
+                            while(iCur != ArrayEnd)
+                            {
+                                Array[i] = Array[iCur];
+                                Value += Array[i]->m_Guid.m_Value;
+                                i++;
+                                iCur++;
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        Array[i] = Array[iCur];
+                        Value += Array[i]->m_Guid.m_Value;
+                        i++;
+                        iCur++;
+                    }
+                }
+
+                return { i, archetype::tag_sum_guid{Value} };
+            }
+            else if (AddEnd)
+            {
+                if (CurEnd) 
+                {
+                    std::uint64_t Value=0;
+                    int iAdd = 0;
+                    int iCur = 0;
+                    int i    = 0;
+
+                    do 
+                    {
+                        if (ToAdd[iAdd]->m_Guid.m_Value < Current[iCur]->m_Guid.m_Value)
+                        {
+                            Array[i] = ToAdd[iAdd];
+                            Value += Array[i]->m_Guid.m_Value;
+                            i++;
+                            iAdd++;
+                            if (iAdd == AddEnd)
+                            {
+                                while (iCur != CurEnd)
+                                {
+                                    Array[i] = Current[iCur];
+                                    i++;
+                                    iCur++;
+                                }
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            Array[i] = Current[iCur];
+                            Value += Array[i]->m_Guid.m_Value;
+                            i++;
+                            iCur++;
+                        }
+                    } while (iCur != CurEnd);
+
+                    return { i, archetype::tag_sum_guid{ Value } };
+                }
+                else
+                {
+                    std::uint64_t Value = 0;
+                    for (int i = 0; i < AddEnd; ++i)
+                    {
+                        Array[i] = ToAdd[i];
+                        Value += Array[i]->m_Guid.m_Value;
+                    }
+                    return { AddEnd, archetype::tag_sum_guid{ Value } };
+                }
+            }
+            else if(SubEnd)
+            {
+                if(CurEnd)
+                {
+                    std::uint64_t Value = 0;
+                    int iSub = 0;
+                    int iCur = 0;
+                    int i    = 0;
+
+                    do
+                    {
+                        if (Current[iCur]->m_Guid.m_Value > ToSub[iSub]->m_Guid.m_Value )
+                        {
+                            iSub++;
+                            if (iSub == SubEnd)
+                            {
+                                while (iCur != CurEnd)
+                                {
+                                    Array[i] = Current[iCur];
+                                    Value += Array[i]->m_Guid.m_Value;
+                                    i++;
+                                    iCur++;
+                                }
+                                break;
+                            }
+                        }
+                        else if (Current[iCur]->m_Guid.m_Value == ToSub[iSub]->m_Guid.m_Value)
+                        {
+                            iCur++;
+                            iSub++;
+                            if (iSub == SubEnd)
+                            {
+                                while (iCur != CurEnd)
+                                {
+                                    Array[i] = Current[iCur];
+                                    Value += Array[i]->m_Guid.m_Value;
+                                    i++;
+                                    iCur++;
+                                }
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            Array[i] = Current[iCur];
+                            Value += Array[i]->m_Guid.m_Value;
+                            i++;
+                            iCur++;
+                        }
+
+                    } while (iCur != CurEnd);
+
+                    return { i, archetype::tag_sum_guid{Value} };
+                }
+                else
+                {
+                    return { 0, archetype::tag_sum_guid{ 0ull } };
+                }
+            }
+            else
+            {
+                std::uint64_t Value = 0;
+                for( int i=0; i<CurEnd; ++i )
+                {
+                    Array[i] = Current[i];
+                    Value += Array[i]->m_Guid.m_Value;
+                }
+                return { CurEnd, archetype::tag_sum_guid{ Value } };
+            }
         }
     }
 
@@ -716,16 +965,55 @@ namespace mecs::archetype
         constexpr instance& getOrCreateArchitype( void ) noexcept
         {
             static_assert( ((mecs::component::descriptor_v<T_COMPONENTS>.m_Type < mecs::component::type::ENUM_COUNT) && ...) );
-            constexpr static auto DataTuple  = details::getTupleDataComponents ( reinterpret_cast<mecs::component::tuple_data_components <T_COMPONENTS...>*>(nullptr));
-            constexpr static auto TagTuple   = details::getTupleTagComponents  ( reinterpret_cast<mecs::component::tuple_tag_components  <T_COMPONENTS...>*>(nullptr));
-            constexpr static auto ShareTuple = details::getTupleShareComponents( reinterpret_cast<mecs::component::tuple_share_components<T_COMPONENTS...>*>(nullptr));
+            constexpr static auto DataTuple  = details::getTupleDataComponentsAddEntity ( reinterpret_cast<mecs::component::tuple_data_components <T_COMPONENTS...>*>(nullptr));
+            constexpr static auto TagTuple   = details::getTupleTagComponents           ( reinterpret_cast<mecs::component::tuple_tag_components  <T_COMPONENTS...>*>(nullptr));
+            constexpr static auto ShareTuple = details::getTupleShareComponents         ( reinterpret_cast<mecs::component::tuple_share_components<T_COMPONENTS...>*>(nullptr));
             return getOrCreateArchitypeDetails
             ( 
-                archetype::instance::guid{ mecs::tools::hash::combine( std::get<0>(DataTuple).m_Value, std::get<0>(TagTuple).m_Value, std::get<0>(ShareTuple).m_Value ) }
-            ,   archetype::tag_sum_guid  { std::get<0>(TagTuple).m_Value }
-            ,   { std::get<1>(DataTuple).data() , std::get<1>(DataTuple).size()     }
-            ,   { std::get<1>(ShareTuple).data(), std::get<1>(ShareTuple).size()    }
-            ,   { std::get<1>(TagTuple).data()  , std::get<1>(TagTuple).size()      }
+                archetype::instance::guid   { std::get<0>(DataTuple).m_Value + std::get<0>(TagTuple).m_Value + std::get<0>(ShareTuple).m_Value }
+            ,   archetype::tag_sum_guid     { std::get<0>(TagTuple).m_Value }
+            ,                               { std::get<1>(DataTuple).data() , std::get<1>(DataTuple).size()     }
+            ,                               { std::get<1>(ShareTuple).data(), std::get<1>(ShareTuple).size()    }
+            ,                               { std::get<1>(TagTuple).data()  , std::get<1>(TagTuple).size()      }
+            );
+        }
+
+        template< typename...T_ADD_COMPONENTS_AND_TAGS, typename...T_REMOVE_COMPONENTS_AND_TAGS> constexpr xforceinline
+        instance& getOrCreateGroupBy( instance& OldArchetype, std::tuple<T_ADD_COMPONENTS_AND_TAGS...>*, std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>* ) noexcept
+        {
+            // Make sure we are not adding the same component as deleting 
+            using remove_tuple = std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>;
+            static_assert((( xcore::types::tuple_has_type_v< T_ADD_COMPONENTS_AND_TAGS, remove_tuple> == false) && ... ));
+            static_assert( xcore::types::tuple_has_duplicates_v< std::tuple<T_ADD_COMPONENTS_AND_TAGS...   >> == false );
+            static_assert( xcore::types::tuple_has_duplicates_v< std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>> == false);
+            static_assert((( std::is_same_v<T_REMOVE_COMPONENTS_AND_TAGS, mecs::component::entity> == false ) && ... ));
+            static_assert((( std::is_same_v<T_ADD_COMPONENTS_AND_TAGS, mecs::component::entity> == false ) && ... ));
+
+            constexpr static auto AddDataTuple  = details::getTupleDataComponents   ( reinterpret_cast<mecs::component::tuple_data_components <T_ADD_COMPONENTS_AND_TAGS...>*>(nullptr));
+            constexpr static auto AddTagTuple   = details::getTupleTagComponents    ( reinterpret_cast<mecs::component::tuple_tag_components  <T_ADD_COMPONENTS_AND_TAGS...>*>(nullptr));
+            constexpr static auto AddShareTuple = details::getTupleShareComponents  ( reinterpret_cast<mecs::component::tuple_share_components<T_ADD_COMPONENTS_AND_TAGS...>*>(nullptr));
+            constexpr static auto SubDataTuple  = details::getTupleDataComponents   ( reinterpret_cast<mecs::component::tuple_data_components <T_REMOVE_COMPONENTS_AND_TAGS...>*>(nullptr));
+            constexpr static auto SubTagTuple   = details::getTupleTagComponents    ( reinterpret_cast<mecs::component::tuple_tag_components  <T_REMOVE_COMPONENTS_AND_TAGS...>*>(nullptr));
+            constexpr static auto SubShareTuple = details::getTupleShareComponents  ( reinterpret_cast<mecs::component::tuple_share_components<T_REMOVE_COMPONENTS_AND_TAGS...>*>(nullptr));
+
+            //
+            // Compute new descriptors
+            //
+            std::array<const mecs::component::descriptor*, settings::max_data_components_per_entity + 1>  ArrayDataComponents;
+            std::array<const mecs::component::descriptor*, settings::max_data_components_per_entity + 1>  ArrayShareComponents;
+            std::array<const mecs::component::descriptor*, settings::max_tag_components_per_entity  + 1>  ArrayTagComponents;
+
+            const auto DataTuple  = details::FillArray( ArrayDataComponents,   std::get<1>(AddDataTuple),  std::get<1>(SubDataTuple),  OldArchetype.m_Descriptor.m_DataDescriptorSpan  );
+            const auto ShareTuple = details::FillArray( ArrayShareComponents,  std::get<1>(AddShareTuple), std::get<1>(SubShareTuple), OldArchetype.m_Descriptor.m_ShareDescriptorSpan );
+            const auto TagTuple   = details::FillArray( ArrayTagComponents,    std::get<1>(AddTagTuple),   std::get<1>(SubTagTuple),   OldArchetype.m_Descriptor.m_TagDescriptorSpan   );
+
+            return getOrCreateArchitypeDetails
+            ( 
+                archetype::instance::guid{ std::get<1>(DataTuple).m_Value + std::get<1>(TagTuple).m_Value + std::get<1>(ShareTuple).m_Value }
+            ,   archetype::tag_sum_guid  { std::get<1>(TagTuple) }
+            ,                            { ArrayDataComponents.data() , static_cast<std::size_t>(std::get<0>(DataTuple))     }
+            ,                            { ArrayShareComponents.data(), static_cast<std::size_t>(std::get<0>(ShareTuple))    }
+            ,                            { ArrayTagComponents.data()  , static_cast<std::size_t>(std::get<0>(TagTuple))      }
             );
         }
 
@@ -1039,6 +1327,224 @@ namespace mecs::archetype
 
             if( QueryInstance.m_isInitialized ) return;
             QueryInstance.m_isInitialized = true;
+        }
+
+        template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS >
+        void moveEntityToGroup( system::instance&           System
+                              , mecs::component::entity&    OldEntity
+                              , archetype::instance&        NewArchetype
+                              , T_CALLBACK&&                Callback = []{}
+                              , T_SHARE_COMPONENTS&&...     ShareComponents ) noexcept
+        {
+            XCORE_PERF_ZONE_SCOPED()
+
+            // This entity has been mark for deletion.... there is nothing we can accomplish here 
+            xassert( OldEntity.isZombie() == false );
+
+                    auto& OldMapEntry  = OldEntity.getMapEntry();
+                    auto& OldSpecific  = *OldMapEntry.m_Value.m_pPool;
+                    auto& OldArchetype = *OldSpecific.m_pArchetypeInstance;
+            const   auto  OldIndex     = OldMapEntry.m_Value.m_Index;
+            const   auto  EntityGuid   = OldMapEntry.m_Key;
+
+            // If we are going to move it to the same group there is nothing to do
+            if( &NewArchetype == &OldArchetype ) return;
+
+            // Let anyone that is interested know
+            if (OldArchetype.m_Events.m_MovedOutEntity.hasSubscribers())
+                OldArchetype.m_Events.m_MovedOutEntity.NotifyAll(OldEntity, System);
+
+            // Mark the old entity as a zombie now... since it is about to move
+            OldEntity.MarkAsZombie();
+
+            auto& NewDescriptor = NewArchetype.m_Descriptor;
+            auto& OldDescriptor = OldArchetype.m_Descriptor;
+
+            xassert(NewDescriptor.m_ShareDescriptorSpan.size() == sizeof...(T_SHARE_COMPONENTS) );
+
+            static constexpr std::array ShareKeys
+            { [&]() constexpr noexcept
+                {
+                   if constexpr ( !!sizeof...(T_SHARE_COMPONENTS) ) return std::array{ component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey( &ShareComponents ) ... };
+                   else                                             return std::array<std::uint64_t,0>{};
+                }()
+            };
+
+            //
+            // Allocate the entity in the new pool
+            //
+            std::uint32_t       Index        = ~0u;
+            specialized_pool*   pSpecialized = nullptr;
+            if(!!sizeof...(T_SHARE_COMPONENTS))
+            {
+                auto& MainPool = NewArchetype.m_MainPool;
+                auto  FindPool = [&]
+                {
+                    for (int i = 0, end = static_cast<int>(NewArchetype.m_MainPool.size()); i != end; ++i)
+                    {
+                        auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(i,0);
+                        bool  bCompatible = true;
+                        for( int k=0, end2 = static_cast<int>(Specialized.m_ShareComponentKeysSpan.size()); k != end2; ++k )
+                        {
+                            if( Specialized.m_ShareComponentKeysSpan[k] != ShareKeys[k] )
+                            {
+                                bCompatible = false;
+                                break;
+                            }
+                        }
+
+                        if(bCompatible == false )
+                            continue;
+
+                        Index = Specialized.m_EntityPool.append();
+                        if (Index != ~0u) 
+                        {
+                            pSpecialized = &Specialized;
+                            break;
+                        }
+                    }
+                };
+
+                FindPool();
+                if(pSpecialized == nullptr)
+                {
+                    xcore::lock::scope Lk( NewArchetype.m_SemaphoreLock );
+                    FindPool();
+                    if (pSpecialized == nullptr)
+                    {
+                        using sorter_tuple = xcore::types::tuple_sort_t<mecs::component::smaller_guid, std::tuple<T_SHARE_COMPONENTS ...>>;
+
+                        auto& MainPool = NewArchetype.m_MainPool;
+                        Index = MainPool.append(1);
+
+                        (
+                           ( mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnMove
+                                ( &MainPool.getComponentByIndex<T_SHARE_COMPONENTS>( Index, xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, sorter_tuple > )
+                                , &ShareComponents )
+                           )
+                           , ... 
+                        );
+
+                        auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
+                        Specialized.m_pArchetypeInstance        = &NewArchetype;
+                        Specialized.m_TypeGuid.m_Value          = 0u;
+                        Specialized.m_ShareComponentKeysSpan    = std::span{ Specialized.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
+                        Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
+                        for (int k = 0, end2 = static_cast<int>(Specialized.m_ShareComponentKeysSpan.size()); k != end2; ++k) 
+                            Specialized.m_ShareComponentKeysMemory[k] = ShareKeys[k];
+
+                        pSpecialized = &Specialized;
+                        Index = pSpecialized->m_EntityPool.append(1);
+
+                        // Publish our archetype
+                        MainPool.MemoryBarrier();
+                    }
+                }
+            }
+            else
+            {
+                auto& MainPool = NewArchetype.m_MainPool;
+                auto  FindPool = [&]
+                {
+                    for (int i = 0, end = static_cast<int>(NewArchetype.m_MainPool.size()); i != end; ++i)
+                    {
+                        auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(i, 0);
+                        Index = Specialized.m_EntityPool.append();
+                        if (Index != ~0)
+                        {
+                            pSpecialized = &Specialized;
+                            break;
+                        }
+                    }
+                };
+
+                FindPool();
+                if (pSpecialized == nullptr)
+                {
+                    xcore::lock::scope Lk( NewArchetype.m_SemaphoreLock );
+                    FindPool();
+                    if (pSpecialized == nullptr)
+                    {
+                        auto& MainPool = NewArchetype.m_MainPool;
+                        Index = MainPool.append(1);
+
+                        auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
+                        Specialized.m_pArchetypeInstance        = &NewArchetype;
+                        Specialized.m_TypeGuid.m_Value          = 0u;
+                        Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
+
+                        pSpecialized = &Specialized;
+                        Index        = pSpecialized->m_EntityPool.append(1);
+
+                        // Publish our archetype
+                        MainPool.MemoryBarrier();
+                    }
+                }
+            }
+
+            //
+            // Move components to the new pool
+            //
+            m_EntityMap.find( EntityGuid, [&]( component::entity::reference& Value )
+            {
+                //
+                // Move all the components to the new entry
+                //
+                const int NewEnd = static_cast<int>(NewDescriptor.m_DataDescriptorSpan.size());
+                const int OldEnd = static_cast<int>(OldDescriptor.m_DataDescriptorSpan.size());
+                int iNew = 1, iOld = 1; // We can skip the entity so start at 1
+                do
+                {
+                    if( NewDescriptor.m_DataDescriptorSpan[iNew]->m_Guid.m_Value > OldDescriptor.m_DataDescriptorSpan[iOld]->m_Guid.m_Value ) 
+                    {
+                        ++iOld;
+                        if (iOld == OldEnd) break;
+                    }
+                    else if (NewDescriptor.m_DataDescriptorSpan[iNew]->m_Guid.m_Value < OldDescriptor.m_DataDescriptorSpan[iOld]->m_Guid.m_Value)
+                    {
+                        iNew++;
+                        if(iNew == NewEnd) break;
+                    }
+                    else
+                    {
+                        OldDescriptor.m_DataDescriptorSpan[iOld]->m_fnMove(
+                            pSpecialized->m_EntityPool.getComponentByIndexRaw( Index,   iNew)
+                        ,   OldSpecific.m_EntityPool.getComponentByIndexRaw  ( OldIndex,iOld) );
+
+                        ++iNew;
+                        ++iOld;
+                        if( iOld == OldEnd || iNew == NewEnd ) break;
+                    }
+
+                } while(true);
+
+                //
+                // Update entity with new data
+                //
+                auto& NewEntity = pSpecialized->m_EntityPool.getComponentByIndex<component::entity>( Index, 0 );
+                NewEntity.m_pInstance                   = &OldMapEntry;
+                NewEntity.m_pInstance->m_Value.m_pPool  = pSpecialized;
+                NewEntity.m_pInstance->m_Value.m_Index  = Index;
+
+                //
+                // Call the user callback
+                //
+                if constexpr( std::is_same_v< T_CALLBACK, void(*)() > == false )
+                {
+                    Callback( );
+                }
+
+                //
+                // Notify whoever is interested
+                //
+                if (NewArchetype.m_Events.m_MovedInEntity.hasSubscribers())
+                    NewArchetype.m_Events.m_MovedInEntity.NotifyAll(NewEntity, System);
+            });
+
+            //
+            // Lets tell the system to delete the old component
+            //
+            OldSpecific.m_EntityPool.deleteBySwap( OldIndex );
         }
 
         mecs::component::entity::map                                m_EntityMap;

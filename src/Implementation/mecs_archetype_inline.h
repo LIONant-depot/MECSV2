@@ -224,6 +224,8 @@ namespace mecs::archetype
     // ARCHETYPE INSTANCE
     //----------------------------------------------------------------------------------------------------
 
+    //----------------------------------------------------------------------------------------------------
+
     inline
     void instance::deleteEntity( mecs::system::instance& System, mecs::component::entity& Entity ) noexcept
     {

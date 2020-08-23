@@ -64,4 +64,26 @@ namespace mecs::system
         Entity.getReference().m_pPool->m_pArchetypeInstance->deleteEntity(*this, Entity);
     }
 
+    template< typename T_ADD_COMPONENTS_AND_TAGS, typename T_REMOVE_COMPONENTS_AND_TAGS, typename T_CALLBACK > constexpr xforceinline
+    void instance::getArchetypeBy(mecs::component::entity& Entity, T_CALLBACK&& Callback) noexcept
+    {
+        auto& OldArchetype  = *Entity.getReference().m_pPool->m_pArchetypeInstance;
+
+        // Ok we need to fill the cache
+        auto& NewArchetype = m_World.m_ArchetypeDB.getOrCreateGroupBy(
+              OldArchetype
+            , (T_ADD_COMPONENTS_AND_TAGS*)nullptr
+            , (T_REMOVE_COMPONENTS_AND_TAGS*)nullptr);
+
+        // Handle the callback
+        Callback(NewArchetype);
+    }
+
+    //----------------------------------------------------------------------------------------------------
+
+    template< typename T_CALLBACK, typename...T_SHARE_COMPONENTS > constexpr xforceinline
+    void instance::moveEntityToGroup(mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback, T_SHARE_COMPONENTS&&... ShareComponents) noexcept
+    {
+        m_World.m_ArchetypeDB.moveEntityToGroup(*this, Entity, ToNewArchetype, std::forward<T_CALLBACK>(Callback), std::forward<T_SHARE_COMPONENTS>(ShareComponents) ...);
+    }
 }
