@@ -729,6 +729,40 @@ namespace mecs::archetype
             };
         }
 
+        template< typename T_CALLBACK, typename...T_ARGS > xforceinline 
+        void CallFunction( mecs::component::entity::reference& Value, T_CALLBACK&& Callback, std::tuple<T_ARGS...>* ) noexcept
+        {
+            using                               function_tuple       = std::tuple<T_ARGS...>;
+            using                               function_tuple_decay = std::tuple< xcore::types::decay_full_t<T_ARGS>... >;
+
+            using                               sorted_tuple   = xcore::types::tuple_sort_t< mecs::component::smaller_guid, function_tuple_decay >;
+            static constexpr std::array         SortedDesc     { &mecs::component::descriptor_v< std::tuple_element_t< xcore::types::tuple_t2i_v< T_ARGS, function_tuple >, sorted_tuple>> ... };
+            static constexpr std::array         RemapArray     { xcore::types::tuple_t2i_v<      std::tuple_element_t< xcore::types::tuple_t2i_v< T_ARGS, function_tuple >, sorted_tuple>, function_tuple_decay > ... };
+            auto&                               Pool           = Value.m_pPool->m_EntityPool;
+            const auto&                         Desc           = Pool.m_Descriptors;
+            std::array<int, sizeof...(T_ARGS)>  Indices;
+
+            for( int i=0, c=0, end = static_cast<int>(Desc.size()); i<end; ++i )
+            {
+                if( Desc[i]->m_Guid.m_Value == SortedDesc[c]->m_Guid.m_Value)
+                {
+                    Indices[RemapArray[c++]] = i;
+                    if( c == static_cast<int>(sizeof...(T_ARGS))) break;
+                }
+            }
+
+            Callback
+            (
+                ([&]() constexpr noexcept -> T_ARGS
+                    {
+                        auto& C = Pool.getComponentByIndex<xcore::types::decay_full_t<T_ARGS>>( Value.m_Index, Indices[ xcore::types::tuple_t2i_v<T_ARGS,std::tuple<T_ARGS...>>] );
+
+                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(&C);
+                        else                                     return reinterpret_cast<T_ARGS>(C);
+                    }())...
+            );
+        }
+
         constexpr std::tuple<int, archetype::tag_sum_guid> FillArray (
                     std::span<const mecs::component::descriptor*> Array
             , const std::span<const mecs::component::descriptor* const> ToAdd
@@ -1531,7 +1565,7 @@ namespace mecs::archetype
                 //
                 if constexpr( std::is_same_v< T_CALLBACK, void(*)() > == false )
                 {
-                    Callback( );
+                    details::CallFunction( NewEntity.m_pInstance->m_Value, Callback, reinterpret_cast<typename xcore::function::traits<T_CALLBACK>::args_tuple*>(nullptr) );
                 }
 
                 //

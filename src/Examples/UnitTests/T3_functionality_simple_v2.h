@@ -42,7 +42,10 @@ namespace mecs::unit_test::functionality::simple_v2
             else if ((R.RandU32() % 10) == 0)
                 getArchetypeBy< std::tuple<my_tag>, std::tuple<double_buff> >(Entity, [&](mecs::archetype::instance& Archetype) constexpr noexcept
                 {
-                    moveEntityToArchetype(Entity, Archetype);
+                    moveEntityToArchetype(Entity, Archetype, []( mecs::component::entity& Entity ) constexpr noexcept
+                    {
+                        int a = 0;
+                    });
                 });
 
         }
