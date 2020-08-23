@@ -732,6 +732,9 @@ namespace mecs::archetype
         template< typename T_CALLBACK, typename...T_ARGS > xforceinline 
         void CallFunction( mecs::component::entity::reference& Value, T_CALLBACK&& Callback, std::tuple<T_ARGS...>* ) noexcept
         {
+            static_assert(( (std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>> == false) && ... ));
+            static_assert(( (mecs::component::descriptor_v< xcore::types::decay_full_t<T_ARGS> >.m_Type != mecs::component::type::SHARE) && ... ));
+
             using                               function_tuple       = std::tuple<T_ARGS...>;
             using                               function_tuple_decay = std::tuple< xcore::types::decay_full_t<T_ARGS>... >;
 
