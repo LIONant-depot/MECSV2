@@ -13,21 +13,13 @@ namespace mecs::world
         void Start(bool bContinuousPlay = false)
         {
             //
-            // Make sure that the scene is ready to go
-            // So we are going to loop thought all the archetypes and tell them to get ready
+            // First make sure the archetypes are ready to start
+            // This allows archetypes to update their double buffer components and such
             //
-            for (const auto& TagE : std::span{ m_ArchetypeDB.m_lTagEntries.data(), m_ArchetypeDB.m_nTagEntries } )
-            {
-                xcore::lock::scope Lk( TagE.m_ArchetypeDB );
-                for (auto& ArchetypeEntry : std::span{ TagE.m_ArchetypeDB.get().m_uPtr->data(), TagE.m_ArchetypeDB.get().m_nArchetypes} )
-                {
-                    ArchetypeEntry.m_upArchetype->Start();
-                }
-            }
+            m_ArchetypeDB.Start();
 
             //
             // Lets start the graph
-            //
             //
             m_GraphDB.Start(bContinuousPlay);
         }

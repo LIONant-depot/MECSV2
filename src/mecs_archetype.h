@@ -1071,6 +1071,22 @@ namespace mecs::archetype
         {
         }
 
+        void Start( void ) noexcept
+        {
+            //
+            // Make sure that the scene is ready to go
+            // So we are going to loop thought all the archetypes and tell them to get ready
+            //
+            for (const auto& TagE : std::span{ m_lTagEntries.data(), m_nTagEntries })
+            {
+                xcore::lock::scope Lk(TagE.m_ArchetypeDB);
+                for (auto& ArchetypeEntry : std::span{ TagE.m_ArchetypeDB.get().m_uPtr->data(), TagE.m_ArchetypeDB.get().m_nArchetypes })
+                {
+                    ArchetypeEntry.m_upArchetype->Start();
+                }
+            }
+        }
+
         template<typename T_FUNCTION, auto& Defined >
         void DoQuery( query::instance& Instance ) const noexcept
         {
