@@ -123,6 +123,16 @@ namespace mecs::graph
         virtual void qt_onRun(void) noexcept override
         {
             XCORE_PERF_FRAME_MARK_START("mecs::Frame")
+
+            //
+            // Update Time
+            //
+            if(m_FrameNumber == 0 )   m_Time.Start();
+            else                      m_Time.UpdateDeltaTimeRoundTrip();
+
+            //
+            // Frame counters, etc...
+            //
             m_bFrameStarted = true;
             m_FrameNumber++;
             m_Events.m_FrameStart.NotifyAll();
@@ -155,6 +165,7 @@ namespace mecs::graph
         bool                                    m_bContinuousPlay       { false };
         bool                                    m_bFrameStarted         { false };
         std::uint64_t                           m_FrameNumber           {0};
+        time                                    m_Time                  {};
 
         mecs::universe::instance&               m_Universe;
         mecs::world::instance&                  m_World;

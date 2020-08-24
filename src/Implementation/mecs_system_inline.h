@@ -86,4 +86,10 @@ namespace mecs::system
     {
         m_World.m_ArchetypeDB.moveEntityToArchetype(*this, Entity, ToNewArchetype, std::forward<T_CALLBACK>(Callback), std::forward<T_SHARE_COMPONENTS>(ShareComponents) ...);
     }
+
+    //----------------------------------------------------------------------------------------------------
+    const time& instance::getTime(void) const noexcept
+    {
+        return m_World.m_GraphDB.m_Time;
+    }
 }

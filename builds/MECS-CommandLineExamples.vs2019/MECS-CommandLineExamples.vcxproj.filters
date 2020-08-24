@@ -267,6 +267,14 @@
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_inline.h">
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E02_system_introduction.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E03_system_moving_entities.h" />
+    <ClInclude Include="..\..\src\mecs_time.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

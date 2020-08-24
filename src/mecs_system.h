@@ -145,6 +145,9 @@ namespace mecs::system
         template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS > constexpr xforceinline
         void moveEntityToArchetype( mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback = []{}, T_SHARE_COMPONENTS&&... ShareComponents ) noexcept;
 
+        inline
+        const time& getTime( void ) const noexcept;
+
         template< typename T_PARAMS > constexpr xforceinline
         void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
         {

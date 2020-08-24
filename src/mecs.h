@@ -67,6 +67,7 @@ namespace mecs::universe
 #include "mecs_archetype.h"
 #include "mecs_archetype_delegate.h"
 #include "mecs_delegate.h"
+#include "mecs_time.h"
 #include "mecs_system.h"
 #include "mecs_graph.h"
 #include "mecs_world.h"
