@@ -1,5 +1,5 @@
 
-namespace mecs::unit_test::functionality::simple_v2
+namespace mecs::unit_test::functionality::move
 {
     struct simple : mecs::component::data
     {
@@ -37,7 +37,7 @@ namespace mecs::unit_test::functionality::simple_v2
         xcore::random::small_generator R;
 
         xforceinline
-        void operator() ( mecs::component::entity& Entity, const double_buff& DB ) noexcept
+        void operator() ( mecs::component::entity& Entity, const double_buff& DBR, double_buff& DBW ) noexcept
         {
             // This is the equivalent of removing a component (double_buff) from the entity
             if( (R.RandU32() % 10) == 0 )
@@ -54,11 +54,12 @@ namespace mecs::unit_test::functionality::simple_v2
                     });
                 });
             else if ((R.RandU32() % 10) == 0)
-                getArchetypeBy< std::tuple<my_tag, some_share>, std::tuple<double_buff> >(Entity, [&](mecs::archetype::instance& Archetype) constexpr noexcept
+                getArchetypeBy< std::tuple<my_tag, some_share>, std::tuple<> >(Entity, [&](mecs::archetype::instance& Archetype) constexpr noexcept
                 {
-                    moveEntityToArchetype(Entity, Archetype, [](mecs::component::entity& Entity) constexpr noexcept
+                    moveEntityToArchetype(Entity, Archetype, [&](mecs::component::entity& Entity, double_buff& X) constexpr noexcept
                     {
                         int a = 0;
+                        xassert(X.m_Value == DBW.m_Value );
                     }, some_share{ {}, {44} } );
                 });
 

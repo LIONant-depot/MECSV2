@@ -754,14 +754,27 @@ namespace mecs::archetype
                 }
             }
 
+            const auto& Archetype = *Value.m_pPool->m_pArchetypeInstance;
             Callback
             (
                 ([&]() constexpr noexcept -> T_ARGS
                     {
-                        auto& C = Pool.getComponentByIndex<xcore::types::decay_full_t<T_ARGS>>( Value.m_Index, Indices[ xcore::types::tuple_t2i_v<T_ARGS,std::tuple<T_ARGS...>>] );
+                        using arg_t = xcore::types::decay_full_t<T_ARGS>;
+                        if constexpr (mecs::component::descriptor_v< arg_t>.m_isDoubleBuffer )
+                        {
+                            const auto Offset     = 1 - static_cast<int>((Archetype.m_DoubleBufferInfo.m_StateBits>>mecs::component::descriptor_v< arg_t>.m_BitNumber)&1);
+                            auto&      C          = Pool.getComponentByIndex<arg_t>(Value.m_Index, Offset + Indices[xcore::types::tuple_t2i_v<T_ARGS, std::tuple<T_ARGS...>>]);
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(&C);
-                        else                                     return reinterpret_cast<T_ARGS>(C);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(&C);
+                            else                                     return reinterpret_cast<T_ARGS>(C);
+                        }
+                        else
+                        {
+                            auto& C = Pool.getComponentByIndex<arg_t>(Value.m_Index, Indices[xcore::types::tuple_t2i_v<T_ARGS, std::tuple<T_ARGS...>>]);
+
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(&C);
+                            else                                     return reinterpret_cast<T_ARGS>(C);
+                        }
                     }())...
             );
         }
@@ -1530,25 +1543,69 @@ namespace mecs::archetype
                 int iNew = 1, iOld = 1; // We can skip the entity so start at 1
                 do
                 {
-                    if( NewDescriptor.m_DataDescriptorSpan[iNew]->m_Guid.m_Value > OldDescriptor.m_DataDescriptorSpan[iOld]->m_Guid.m_Value ) 
+                    const auto& DescNew = *NewDescriptor.m_DataDescriptorSpan[iNew];
+                    const auto& DescOld = *OldDescriptor.m_DataDescriptorSpan[iOld];
+                    if(DescNew.m_Guid.m_Value > DescOld.m_Guid.m_Value )
                     {
                         ++iOld;
                         if (iOld == OldEnd) break;
                     }
-                    else if (NewDescriptor.m_DataDescriptorSpan[iNew]->m_Guid.m_Value < OldDescriptor.m_DataDescriptorSpan[iOld]->m_Guid.m_Value)
+                    else if (DescNew.m_Guid.m_Value < DescOld.m_Guid.m_Value)
                     {
                         iNew++;
                         if(iNew == NewEnd) break;
                     }
                     else
                     {
-                        OldDescriptor.m_DataDescriptorSpan[iOld]->m_fnMove(
-                            pSpecialized->m_EntityPool.getComponentByIndexRaw( Index,   iNew)
-                        ,   OldSpecific.m_EntityPool.getComponentByIndexRaw  ( OldIndex,iOld) );
+                        if(DescNew.m_isDoubleBuffer )
+                        {
+                            if( (NewArchetype.m_DoubleBufferInfo.m_StateBits ^ OldArchetype.m_DoubleBufferInfo.m_StateBits) & (1ull << DescNew.m_BitNumber) )
+                            {
+                                const auto nNew = static_cast<int>((NewArchetype.m_DoubleBufferInfo.m_StateBits >> DescNew.m_BitNumber)&1);
+                                const auto nOld = static_cast<int>((OldArchetype.m_DoubleBufferInfo.m_StateBits >> DescNew.m_BitNumber)&1);
 
-                        ++iNew;
-                        ++iOld;
-                        if( iOld == OldEnd || iNew == NewEnd ) break;
+                                DescNew.m_fnMove(
+                                    pSpecialized->m_EntityPool.getComponentByIndexRaw(Index,    iNew + nNew)
+                                    , OldSpecific.m_EntityPool.getComponentByIndexRaw(OldIndex, iOld + nOld));
+
+                                DescNew.m_fnMove(
+                                    pSpecialized->m_EntityPool.getComponentByIndexRaw(Index,    iNew + (1-nNew))
+                                    , OldSpecific.m_EntityPool.getComponentByIndexRaw(OldIndex, iOld + (1-nOld)));
+
+                                iNew += 2;
+                                iOld += 2;
+
+                                if (iOld == OldEnd || iNew == NewEnd) break;
+                            }
+                            else
+                            {
+                                DescNew.m_fnMove(
+                                    pSpecialized->m_EntityPool.getComponentByIndexRaw(Index,    iNew)
+                                    , OldSpecific.m_EntityPool.getComponentByIndexRaw(OldIndex, iOld));
+
+                                ++iNew;
+                                ++iOld;
+
+                                DescNew.m_fnMove(
+                                    pSpecialized->m_EntityPool.getComponentByIndexRaw(Index,    iNew)
+                                    , OldSpecific.m_EntityPool.getComponentByIndexRaw(OldIndex, iOld));
+
+                                ++iNew;
+                                ++iOld;
+
+                                if (iOld == OldEnd || iNew == NewEnd) break;
+                            }
+                        }
+                        else
+                        {
+                            DescNew.m_fnMove(
+                                pSpecialized->m_EntityPool.getComponentByIndexRaw(Index,    iNew)
+                                , OldSpecific.m_EntityPool.getComponentByIndexRaw(OldIndex, iOld));
+
+                            ++iNew;
+                            ++iOld;
+                            if (iOld == OldEnd || iNew == NewEnd) break;
+                        }
                     }
 
                 } while(true);

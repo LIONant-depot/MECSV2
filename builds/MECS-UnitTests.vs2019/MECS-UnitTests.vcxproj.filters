@@ -267,7 +267,7 @@
     <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Examples\UnitTests\T3_functionality_simple_v2.h" />
+    <ClInclude Include="..\..\src\Examples\UnitTests\T3_functionality_move.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
