@@ -3,34 +3,22 @@ namespace mecs::archetype::delegate
     using type_guid = xcore::guid::unit<64, struct mecs_archetype_delegate_type_guid_tag>;
 
     //---------------------------------------------------------------------------------
-    // DELEGATE:: BASE CLASS
-    //---------------------------------------------------------------------------------
-    struct base
-    {
-        virtual                        ~base                    (void) noexcept = default;
-        virtual                 void    Disable                 (void) noexcept = 0;
-        virtual                 void    Enable                  (void) noexcept = 0;
-    };
-
-    //---------------------------------------------------------------------------------
     // DELEGATE:: INSTANCE OVERRIDE
     // This classes specify what the end user can override to extend the functionality
     // of the delegate.
     //---------------------------------------------------------------------------------
-    struct overrites : base
+    struct overrites
     {
-        template<typename...T> using    all                 = mecs::archetype::query::all<std::tuple<T...>>;
-        template<typename...T> using    any                 = mecs::archetype::query::any<std::tuple<T...>>;
-        template<typename...T> using    none                = mecs::archetype::query::none<std::tuple<T...>>;
-        using                           type_guid           = mecs::archetype::delegate::type_guid;
-        using                           entity              = mecs::component::entity;
-        using                           guid                = xcore::guid::unit<64, struct mecs_archetype_delegate_tag>;
+        template<typename...T> using    all                     = mecs::archetype::query::all<std::tuple<T...>>;
+        template<typename...T> using    any                     = mecs::archetype::query::any<std::tuple<T...>>;
+        template<typename...T> using    none                    = mecs::archetype::query::none<std::tuple<T...>>;
+        using                           type_guid               = mecs::archetype::delegate::type_guid;
+        using                           entity                  = mecs::component::entity;
+        using                           guid                    = xcore::guid::unit<64, struct mecs_archetype_delegate_tag>;
 
-        constexpr static auto           type_guid_v         = type_guid{ nullptr };
-        constexpr static auto           type_name_v         = xconst_universal_str("mecs::archetype::delegate(unnamed)");
-        constexpr static auto           max_attachments_v   = 32;
-        using                           query_t             = std::tuple<>;
-
+        constexpr static auto           type_guid_v             = type_guid{ nullptr };
+        constexpr static auto           type_name_v             = xconst_universal_str("mecs::archetype::delegate(unnamed)");
+        using                           query_t                 = std::tuple<>;
 
         xforceinline            void    msgInitializeQuery      (void)                                              noexcept {}
         xforceinline            void    msgGraphInit            (mecs::world::instance& World)                      noexcept {}
@@ -38,7 +26,11 @@ namespace mecs::archetype::delegate
         xforceinline            void    msgFrameDone            (void)                                              noexcept {}
         xforceinline            void    msgHandleEvents         (mecs::component::entity&,mecs::system::instance&)  noexcept {}
 
-        guid                            m_Guid{ nullptr };
+        virtual                        ~overrites               (void) noexcept = default;
+        virtual                 void    Disable                 (void) noexcept = 0;
+        virtual                 void    Enable                  (void) noexcept = 0;
+
+        guid                            m_Guid                  { nullptr };
     };
 
     //---------------------------------------------------------------------------------
@@ -137,7 +129,7 @@ namespace mecs::archetype::delegate
     }
 
     template< typename T_DELEGATE >
-    inline static constexpr auto descriptor_v = details::MakeDescriptor<xcore::types::decay_full_t<T_DELEGATE>>();
+    inline static constexpr auto descriptor_v = details::MakeDescriptor<T_DELEGATE>();
 
     //---------------------------------------------------------------------------------
     // DELEGATE:: DESCRIPTOR DATA BASE
