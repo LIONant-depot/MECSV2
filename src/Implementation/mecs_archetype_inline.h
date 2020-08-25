@@ -246,4 +246,23 @@ namespace mecs::archetype
         if (Archetype.m_Events.m_DeletedEntity.hasSubscribers())
             Archetype.m_Events.m_DeletedEntity.NotifyAll(Entity, System);
     }
+
+
+    //----------------------------------------------------------------------------------------------------
+    // ARCHETYPE QUERY
+    //----------------------------------------------------------------------------------------------------
+    namespace query
+    {
+        inline
+        bool instance::TryAppendArchetype(mecs::archetype::instance& Archetype) noexcept
+        {
+            if (false == Archetype.m_ArchitypeBits.Query(m_ComponentQuery.m_All, m_ComponentQuery.m_Any, m_ComponentQuery.m_None)) return false;
+            if (false == Archetype.m_ArchitypeBits.Query(m_TagQuery.m_All,       m_TagQuery.m_Any,       m_TagQuery.m_None)      ) return false;
+
+            auto& R = m_lResults.append();
+            R.m_pArchetype  = &Archetype;
+            R.m_nParameters = 0;
+            return true;
+        }
+    }
 }

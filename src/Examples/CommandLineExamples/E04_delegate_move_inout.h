@@ -77,7 +77,7 @@ namespace mecs::examples::E04_delegate_moveinout
     // Similar to systems delegates can filter out which types of entities will call the delegate using the query_t and
     // the parameters of its function.
     //-----------------------------------------------------------------------------------------
-    struct add_position_delegate : mecs::archetype::delegate::instance< mecs::archetype::event::moved_in<position> >
+    struct add_position_delegate : mecs::archetype::delegate::instance< mecs::archetype::event::moved_in >
     {
         // This function will be call ones per entity. Since we only will have one entity it will only be call ones per frame.
         // Note that by putting the position component in the parameter list we are asking for groups which have this component in it.
@@ -93,7 +93,7 @@ namespace mecs::examples::E04_delegate_moveinout
     //-----------------------------------------------------------------------------------------
     
     // This delegate will be call for each entity which gets moved out of a group.
-    struct remove_position_delegate : mecs::archetype::delegate::instance< mecs::archetype::event::moved_out<position> >
+    struct remove_position_delegate : mecs::archetype::delegate::instance< mecs::archetype::event::moved_out >
     {
         // We want entities which have or had positions
         using query_t = std::tuple
@@ -174,5 +174,7 @@ namespace mecs::examples::E04_delegate_moveinout
         //
         for (int i = 0; i < 10; i++)
             DefaultWorld.Resume();
+
+        xassert(true);
     }
 }

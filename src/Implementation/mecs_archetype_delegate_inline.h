@@ -79,9 +79,10 @@ namespace mecs::archetype::delegate
         template< typename T_USER_DELEGATE > inline
         void custom_instance< T_USER_DELEGATE >::eventAddNewArchetype(archetype::instance& Archetype) noexcept
         {
-            auto& R = m_Query.m_lResults.append();
-            R.m_pArchetype = &Archetype;
-            AttachToArchetype(Archetype);
+            if( m_Query.TryAppendArchetype( Archetype ) )
+            {
+                AttachToArchetype( Archetype );
+            }
         }
 
         template< typename T_USER_DELEGATE > inline
@@ -103,7 +104,7 @@ namespace mecs::archetype::delegate
             //
             // Handle the different types of events
             //
-            if      constexpr ( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::moved_in<void>::type_guid_v )
+            if      constexpr ( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::moved_in::type_guid_v )
             {
                 Archetype.m_Events.m_MovedInEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }
@@ -115,7 +116,7 @@ namespace mecs::archetype::delegate
             {
                 Archetype.m_Events.m_DeletedEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }
-            else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::moved_out<void>::type_guid_v )
+            else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::moved_out::type_guid_v )
             {
                 Archetype.m_Events.m_MovedOutEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }

@@ -625,6 +625,9 @@ namespace mecs::archetype
 
         guid                                            m_Guid                      {};
 
+        mecs::component::filter_bits                    m_ArchitypeBits             { nullptr };
+        mecs::component::filter_bits                    m_TagBits                   { nullptr };
+
         main_pool_descriptors                           m_MainPoolDescriptorData    {};
     };
 
@@ -890,6 +893,7 @@ namespace mecs::archetype
                                 while (iCur != CurEnd)
                                 {
                                     Array[i] = Current[iCur];
+                                    Value += Array[i]->m_Guid.m_Value;
                                     i++;
                                     iCur++;
                                 }
@@ -902,6 +906,17 @@ namespace mecs::archetype
                             Value += Array[i]->m_Guid.m_Value;
                             i++;
                             iCur++;
+                            if( iCur == CurEnd )
+                            {
+                                while (iAdd != AddEnd)
+                                {
+                                    Array[i] = ToAdd[iAdd];
+                                    Value += Array[i]->m_Guid.m_Value;
+                                    i++;
+                                    iAdd++;
+                                }
+                                break;
+                            }
                         }
                     } while (iCur != CurEnd);
 
@@ -1399,7 +1414,11 @@ namespace mecs::archetype
                 E.m_upArchetype = std::make_unique<mecs::archetype::instance>();
                 E.m_upArchetype->Init(DataDiscriptorList, ShareDiscriptorList, pt->m_TagDescriptors, &m_EntityMap );
                 E.m_upArchetype->m_Guid = Guid;
+                E.m_upArchetype->m_ArchitypeBits = E.m_ArchitypeBits;
+                E.m_upArchetype->m_TagBits       = pt->m_TagBits;
                 p = pInstance = E.m_upArchetype.get();
+                if(m_Event.m_CreatedArchetype.hasSubscribers()) 
+                    m_Event.m_CreatedArchetype.NotifyAll(*E.m_upArchetype);
             });
 
             return *p;
@@ -1576,19 +1595,17 @@ namespace mecs::archetype
                 const int NewEnd = static_cast<int>(NewDescriptor.m_DataDescriptorSpan.size());
                 const int OldEnd = static_cast<int>(OldDescriptor.m_DataDescriptorSpan.size());
                 int iNew = 1, iOld = 1; // We can skip the entity so start at 1
-                do
+                while( iOld != OldEnd && iNew != NewEnd )
                 {
                     const auto& DescNew = *NewDescriptor.m_DataDescriptorSpan[iNew];
                     const auto& DescOld = *OldDescriptor.m_DataDescriptorSpan[iOld];
                     if(DescNew.m_Guid.m_Value > DescOld.m_Guid.m_Value )
                     {
                         ++iOld;
-                        if (iOld == OldEnd) break;
                     }
                     else if (DescNew.m_Guid.m_Value < DescOld.m_Guid.m_Value)
                     {
                         iNew++;
-                        if(iNew == NewEnd) break;
                     }
                     else
                     {
@@ -1609,8 +1626,6 @@ namespace mecs::archetype
 
                                 iNew += 2;
                                 iOld += 2;
-
-                                if (iOld == OldEnd || iNew == NewEnd) break;
                             }
                             else
                             {
@@ -1627,8 +1642,6 @@ namespace mecs::archetype
 
                                 ++iNew;
                                 ++iOld;
-
-                                if (iOld == OldEnd || iNew == NewEnd) break;
                             }
                         }
                         else
@@ -1639,11 +1652,9 @@ namespace mecs::archetype
 
                             ++iNew;
                             ++iOld;
-                            if (iOld == OldEnd || iNew == NewEnd) break;
                         }
                     }
-
-                } while(true);
+                }
 
                 //
                 // Update entity with new data

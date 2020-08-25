@@ -25,20 +25,16 @@ namespace mecs::archetype::event
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::destroy_entity" );
     };
 
-    template< typename...T_COMPONENTS >
     struct moved_in final : details::base_event
     {
         constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::moved_in" };
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::moved_in" );
-        using                   components_t        = std::tuple<T_COMPONENTS...>;
     };
 
-    template< typename...T_COMPONENTS >
     struct moved_out final : details::base_event
     {
         constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::moved_out" };
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::moved_out" );
-        using                   components_t        = std::tuple<T_COMPONENTS...>;
     };
 
     template< typename...T_COMPONENTS >
@@ -60,8 +56,8 @@ namespace mecs::archetype::event
         {
             using created_entity  = xcore::types::make_unique< mecs::archetype::event::create_entity::event_t,   struct new_entity_tag           >;
             using deleted_entity  = xcore::types::make_unique< mecs::archetype::event::destroy_entity::event_t,  struct delete_entity_tag        >;
-            using move_out_entity = xcore::types::make_unique< mecs::archetype::event::moved_out<void>::event_t, struct move_out_entity_tag      >;
-            using move_in_entity  = xcore::types::make_unique< mecs::archetype::event::moved_in<void>::event_t,  struct move_in_entity_tag       >;
+            using move_out_entity = xcore::types::make_unique< mecs::archetype::event::moved_out::event_t,       struct move_out_entity_tag      >;
+            using move_in_entity  = xcore::types::make_unique< mecs::archetype::event::moved_in::event_t,        struct move_in_entity_tag       >;
 
             struct updated_component
             {

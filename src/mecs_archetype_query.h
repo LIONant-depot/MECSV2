@@ -354,6 +354,6 @@ namespace mecs::archetype::query
                 m_TagQuery.m_None.AddBit(std::get<0>(E).m_BitNumber);
         }
 
-
+        bool TryAppendArchetype( mecs::archetype::instance& Archetype ) noexcept;
     };
 }
