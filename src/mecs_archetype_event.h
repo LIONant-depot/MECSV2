@@ -1,5 +1,7 @@
 namespace mecs::archetype::event
 {
+    using type_guid = xcore::guid::unit<64, struct type_tag>;
+
     namespace details
     {
         struct base_event
@@ -13,39 +15,38 @@ namespace mecs::archetype::event
     //---------------------------------------------------------------------------------
     struct create_entity final : details::base_event
     {
-        constexpr static auto       guid_v          = mecs::system::event::type_guid    { "mecs::archetype::event::create_entity" };
-        constexpr static auto       name_v          = xconst_universal_str              ( "mecs::archetype::event::create_entity" );
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::create_entity" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::create_entity" );
     };
 
     struct destroy_entity final : details::base_event
     {
-        constexpr static auto       guid_v          = mecs::system::event::type_guid    { "mecs::archetype::event::destroy_entity" };
-        constexpr static auto       name_v          = xconst_universal_str              ( "mecs::archetype::event::destroy_entity" );
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::destroy_entity" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::destroy_entity" );
     };
 
     template< typename...T_COMPONENTS >
     struct moved_in final : details::base_event
     {
-        constexpr static auto       guid_v          = mecs::system::event::type_guid    { "mecs::archetype::event::moved_in" };
-        constexpr static auto       name_v          = xconst_universal_str              ( "mecs::archetype::event::moved_in" );
-        using                       components_t    = std::tuple<T_COMPONENTS...>;
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::moved_in" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::moved_in" );
+        using                   components_t        = std::tuple<T_COMPONENTS...>;
     };
 
     template< typename...T_COMPONENTS >
     struct moved_out final : details::base_event
     {
-        constexpr static auto       guid_v          = mecs::system::event::type_guid    { "mecs::archetype::event::moved_out" };
-        constexpr static auto       name_v          = xconst_universal_str              ( "mecs::archetype::event::moved_out" );
-        using                       components_t    = std::tuple<T_COMPONENTS...>;
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::moved_out" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::moved_out" );
+        using                   components_t        = std::tuple<T_COMPONENTS...>;
     };
 
     template< typename...T_COMPONENTS >
     struct updated_component final : details::base_event
     {
-//            constexpr static auto       components_v    = std::array<mecs::component::type_guid,sizeof...(T_COMPONENTS)>{ mecs::component::descriptor_v<T_COMPONENTS>.m_Guid ... >;
-        constexpr static auto       guid_v          = mecs::system::event::type_guid    { "mecs::archetype::event::updated_component" };
-        constexpr static auto       name_v          = xconst_universal_str              ( "mecs::archetype::event::updated_component" );
-        using                       components_t    = std::tuple<T_COMPONENTS...>;
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::updated_component" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::updated_component" );
+        using                   components_t        = std::tuple<T_COMPONENTS...>;
     };
 
     using updated_entity = updated_component<>;

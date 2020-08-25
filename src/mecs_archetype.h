@@ -479,14 +479,21 @@ namespace mecs::archetype
             }
         }
 
-        template< typename T, typename...T_SHARE_COMPONENTS > xforceinline 
-        void CreateEntity( mecs::system::instance& Instance, T&& CallBack, T_SHARE_COMPONENTS&&...ShareComponents) noexcept
+        template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS > xforceinline
+        void CreateEntity( mecs::system::instance& Instance, T_CALLBACK&& CallBack = []{}, T_SHARE_COMPONENTS&&...ShareComponents) noexcept
         {
             // Make sure the first parameter is a function and must not have a return
-            static_assert( std::is_same_v<xcore::function::traits<T>::return_type, void> );
+            static_assert( std::is_same_v<xcore::function::traits<T_CALLBACK>::return_type, void> );
 
             std::array< mecs::component::entity::guid,1> GuidList { mecs::component::entity::guid{ xcore::not_null } };
-            CreateEntities( Instance, 1, GuidList, std::forward<T_SHARE_COMPONENTS&&>(ShareComponents) ... )(CallBack);
+            if constexpr( std::is_same_v< T_CALLBACK, void(*)() > )
+            {
+                CreateEntities(Instance, 1, GuidList, std::forward<T_SHARE_COMPONENTS&&>(ShareComponents) ...)();
+            }
+            else
+            {
+                CreateEntities(Instance, 1, GuidList, std::forward<T_SHARE_COMPONENTS&&>(ShareComponents) ...)(CallBack);
+            }
         }
 
         inline void deleteEntity( mecs::system::instance& System, mecs::component::entity& Entity ) noexcept;
@@ -729,8 +736,8 @@ namespace mecs::archetype
             };
         }
 
-        template< typename T_CALLBACK, typename...T_ARGS > xforceinline 
-        void CallFunction( mecs::component::entity::reference& Value, T_CALLBACK&& Callback, std::tuple<T_ARGS...>* ) noexcept
+        template< typename T_CALLBACK, typename...T_ARGS, typename...T_EXTRA_ARGS > xforceinline
+        void CallFunction( mecs::component::entity::reference& Value, T_CALLBACK&& Callback, std::tuple<T_ARGS...>*, T_EXTRA_ARGS&... ExtraArgs ) noexcept
         {
             static_assert(( (std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>> == false) && ... ));
             static_assert(( (mecs::component::descriptor_v< xcore::types::decay_full_t<T_ARGS> >.m_Type != mecs::component::type::SHARE) && ... ));
@@ -757,7 +764,8 @@ namespace mecs::archetype
             const auto& Archetype = *Value.m_pPool->m_pArchetypeInstance;
             Callback
             (
-                ([&]() constexpr noexcept -> T_ARGS
+                ExtraArgs...
+                , ([&]() constexpr noexcept -> T_ARGS
                     {
                         using arg_t = xcore::types::decay_full_t<T_ARGS>;
                         if constexpr (mecs::component::descriptor_v< arg_t>.m_isDoubleBuffer )
@@ -980,13 +988,7 @@ namespace mecs::archetype
                 return { CurEnd, archetype::tag_sum_guid{ Value } };
             }
         }
-    }
 
-    //---------------------------------------------------------------------------------
-    // ARCHETYPE::INSTANCE DATA BASE
-    //---------------------------------------------------------------------------------
-    struct data_base
-    {
         struct tag_entry
         {
             struct archetype_db
@@ -1008,8 +1010,25 @@ namespace mecs::archetype
             xcore::unique_span<const mecs::component::descriptor*>                                    m_TagDescriptors  {};
         };
 
+        struct events
+        {
+            using created_archetype = xcore::types::make_unique< mecs::tools::event<archetype::instance&>,  struct created_archetype_tag  >;
+            using deleted_archetype = xcore::types::make_unique< mecs::tools::event<archetype::instance&>,  struct delete_archetype_tag   >;
+
+            created_archetype   m_CreatedArchetype;
+            deleted_archetype   m_DeletedArchetype;
+        };
+    }
+
+    //---------------------------------------------------------------------------------
+    // ARCHETYPE::INSTANCE DATA BASE
+    //---------------------------------------------------------------------------------
+    struct data_base
+    {
+        details::events m_Event;
+
         using map_archetypes = mecs::tools::fixed_map<mecs::archetype::instance::guid, mecs::archetype::instance*,  mecs::settings::max_archetype_types >;
-        using map_tags       = mecs::tools::fixed_map<mecs::archetype::tag_sum_guid,   tag_entry*,                  mecs::settings::max_archetype_types >;
+        using map_tags       = mecs::tools::fixed_map<mecs::archetype::tag_sum_guid,   details::tag_entry*,         mecs::settings::max_archetype_types >;
 
         template< typename...T_COMPONENTS >
         constexpr instance& getOrCreateArchitype( void ) noexcept
@@ -1348,15 +1367,15 @@ namespace mecs::archetype
             }
             , [&]( auto& pInstance ) constexpr noexcept
             {
-                tag_entry* pt;
+                details::tag_entry* pt;
                 const auto TagGuid = TagSumGuid.isValid() ? TagSumGuid : mecs::archetype::tag_sum_guid{1};
 
                 m_mapTags.getOrCreate(TagGuid
-                , [&]( tag_entry*& pEntry ) constexpr noexcept
+                , [&]( details::tag_entry*& pEntry ) constexpr noexcept
                 {
                     pt = pEntry;
                 }
-                , [&]( tag_entry*& pEntry ) constexpr noexcept
+                , [&]( details::tag_entry*& pEntry ) constexpr noexcept
                 {
                     pt = pEntry = &m_lTagEntries[m_nTagEntries++];
                     if(TagDiscriptorList.size())
@@ -1659,6 +1678,6 @@ namespace mecs::archetype
         map_archetypes                                              m_mapArchetypes;
         map_tags                                                    m_mapTags;
         std::uint16_t                                               m_nTagEntries{0};
-        std::array<tag_entry, mecs::settings::max_archetype_types>  m_lTagEntries{};
+        std::array<details::tag_entry, mecs::settings::max_archetype_types>  m_lTagEntries{};
     };
 }

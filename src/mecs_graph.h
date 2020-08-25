@@ -49,7 +49,9 @@ namespace mecs::graph
             }
             , m_Universe{ Universe }
             , m_World(World)
-            , m_SystemDB(World){}
+            , m_SystemDB(World)
+            , m_ArchetypeDelegateDB{World}
+            {}
 
         void Init( void ) noexcept
         {
@@ -108,17 +110,9 @@ namespace mecs::graph
         template< typename T_SYSTEM, typename...T_END_SYNC_POINTS >
         T_SYSTEM& CreateGraphConnection( mecs::sync_point::instance& StartSyncpoint, T_END_SYNC_POINTS&...EndSyncpoints ) noexcept;
 
-        template< typename T_DELEGATE >
-        void registerDelegate( void )
-        {
-            
-        }
+        template< typename T_ARCHETYPE_DELEGATE >
+        T_ARCHETYPE_DELEGATE& CreateArchetypeDelegate(mecs::archetype::delegate::overrites::guid Guid = mecs::archetype::delegate::overrites::guid{ xcore::not_null }) noexcept;
 
-        template< typename T_DELEGATE >
-        void registerDelegate( mecs::system::delegate::type_guid Guid )
-        {
-            
-        }
 
         virtual void qt_onRun(void) noexcept override
         {
@@ -162,17 +156,17 @@ namespace mecs::graph
             if(false == m_bContinuousPlay) xcore::get().m_Scheduler.MainThreadStopWorking();
         }
 
-        bool                                    m_bContinuousPlay       { false };
-        bool                                    m_bFrameStarted         { false };
-        std::uint64_t                           m_FrameNumber           {0};
-        time                                    m_Time                  {};
+        bool                                            m_bContinuousPlay       { false };
+        bool                                            m_bFrameStarted         { false };
+        std::uint64_t                                   m_FrameNumber           {0};
+        time                                            m_Time                  {};
 
-        mecs::universe::instance&               m_Universe;
-        mecs::world::instance&                  m_World;
-        mecs::system::instance_data_base        m_SystemDB;
-        mecs::sync_point::instance_data_base    m_SyncpointDB           {};
-        mecs::system::event::instance_data_base m_SystemEventDB         {};
-//        mecs::archetype::data_base              m_ArchetypeDB           {};
+        mecs::universe::instance&                       m_Universe;
+        mecs::world::instance&                          m_World;
+        mecs::system::instance_data_base                m_SystemDB;
+        mecs::sync_point::instance_data_base            m_SyncpointDB           {};
+        mecs::system::event::instance_data_base         m_SystemEventDB         {};
+        mecs::archetype::delegate::instance_data_base   m_ArchetypeDelegateDB;
 
         xcore::lock::object<std::vector<lock_error>, xcore::lock::spin> m_LockErrors{};
     };

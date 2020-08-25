@@ -3,6 +3,8 @@ namespace mecs::tools
     template< typename ...T_ARGS >
     struct event
     {
+        using arguments_tuple_t = std::tuple< T_ARGS... >;
+
         struct entry
         {
             using fn = void(void* pThis, T_ARGS&&...) noexcept;

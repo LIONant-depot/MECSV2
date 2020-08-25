@@ -38,6 +38,10 @@ namespace mecs::universe
                 {
                     I.m_ComponentDescriptorsDB.registerComponent<t>();
                 }
+                else if constexpr (std::is_base_of_v<mecs::archetype::delegate::overrites, t>)
+                {
+                    I.m_ArchetypeDelegateDescriptorsDB.Register<t>();
+                }
                 else
                 {
                     static_assert(xcore::types::always_false_v<t>);

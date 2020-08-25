@@ -1,6 +1,6 @@
 namespace mecs::system::delegate
 {
-    using type_guid = xcore::guid::unit<64, struct mecs_delegate_type_guid_tag>;
+    using type_guid = xcore::guid::unit<64, struct mecs_system_delegate_type_guid_tag>;
 
     //---------------------------------------------------------------------------------
     // DELEGATE:: BASE CLASS
@@ -27,7 +27,7 @@ namespace mecs::system::delegate
         xforceinline            void    msgFrameDone            (void)                          noexcept {}
         // Can also override:   void    msgHandleEvents         ( Event Arguments )             noexcept {}
 
-        constexpr static auto   type_guid_v = mecs::system::delegate::type_guid{ nullptr };
+        constexpr static auto   type_guid_v = type_guid{ nullptr };
         constexpr static auto   name_v      = xconst_universal_str("mecs::event::delegate(custom_instance_base)");
     };
 
@@ -37,7 +37,7 @@ namespace mecs::system::delegate
     struct descriptor
     {
         using fn_create = base*( void ) noexcept;
-        type_guid                               m_Guid;
+        const type_guid                         m_Guid;
         const xcore::string::const_universal    m_Name;
         fn_create                               m_fnCreate;
     };
@@ -127,7 +127,7 @@ namespace mecs::system::delegate
         {
             return mecs::system::event::descriptor
             {
-                T_DELEGATE::type_guid_v
+                T_DELEGATE::type_guid_v.isValid() ? T_DELEGATE::type_guid_v : type_guid{ __FUNCSIG__ }
             ,   T_DELEGATE::name_v
             ,   []( void ) noexcept { new make_instance<T_DELEGATE>; }
             };

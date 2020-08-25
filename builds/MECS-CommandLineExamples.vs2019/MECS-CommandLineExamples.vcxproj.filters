@@ -275,6 +275,10 @@
     <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E04_delegate_move_inout.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

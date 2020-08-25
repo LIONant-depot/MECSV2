@@ -12,6 +12,7 @@ namespace mecs::settings
     static constexpr std::uint32_t max_graph_connections            = 8;
     static constexpr std::uint32_t max_sync_points                  = 512;
     static constexpr std::uint32_t max_event_types                  = 1024;
+    static constexpr std::uint32_t max_archetype_delegates          = 1024;
 
     constexpr static std::uint32_t fixed_deltatime_microseconds_v   = 16 * 1000;
 }

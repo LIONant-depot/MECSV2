@@ -30,6 +30,7 @@ namespace mecs::system
         template<typename...T> using    none        = mecs::archetype::query::none<std::tuple<T...>>;
         using                           job_t       = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
         using                           guid        = xcore::guid::unit<64, struct mecs_system_tag>;
+        using                           archetype   = mecs::archetype::instance;
 
         using job_t::job_t;
 
@@ -149,7 +150,7 @@ namespace mecs::system
         const time& getTime( void ) const noexcept;
 
         template< typename T_PARAMS > constexpr xforceinline
-        void ProcessResult( T_PARAMS& Params, archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
+        void ProcessResult( T_PARAMS& Params, mecs::archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
         {
             auto&  SpecializedPool = MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
             for( int end=static_cast<int>(SpecializedPool.m_EntityPool.size()), i=0; i<end; )

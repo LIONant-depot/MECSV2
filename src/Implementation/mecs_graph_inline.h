@@ -61,4 +61,13 @@ namespace mecs::graph
     }
 
 
+    template< typename T_ARCHETYPE_DELEGATE >
+    T_ARCHETYPE_DELEGATE& instance::CreateArchetypeDelegate(mecs::archetype::delegate::overrites::guid Guid ) noexcept
+    {
+        using custom_delegate_t = typename mecs::archetype::delegate::details::custom_instance<T_ARCHETYPE_DELEGATE>;
+        auto& Delegate = static_cast<custom_delegate_t&>(m_ArchetypeDelegateDB.Create<T_ARCHETYPE_DELEGATE>(Guid));
+        return Delegate;
+    }
+
+
 }
