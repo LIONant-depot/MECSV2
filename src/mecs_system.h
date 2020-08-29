@@ -63,70 +63,6 @@ namespace mecs::system
     //----------------------------------------------------------------------------
     // SYSTEM:: INSTANCE
     //----------------------------------------------------------------------------
-    namespace details
-    {
-        template< typename T_CALLBACK >
-        struct process_resuts_params
-        {
-            using call_back_t = T_CALLBACK;
-
-            xcore::scheduler::channel&              m_Channel;
-            const T_CALLBACK&&                      m_Callback;
-            const int                               m_nEntriesPerJob;
-        };
-
-        template< typename T, typename...T_ARGS> constexpr xforceinline
-        auto ProcessInitArray( std::tuple<T_ARGS...>*, int iStart, int Index, archetype::query::result_entry& R, T& Params ) noexcept
-        {
-            using       func_tuple  = std::tuple<T_ARGS...>;
-            auto&       Specialized = R.m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
-            const auto  Decide      = [&]( int iArg, auto Arg ) constexpr noexcept
-            {
-                using       t = xcore::types::decay_full_t<decltype(Arg)>;
-                const auto& I = R.m_lFunctionToArchetype[iArg];
-
-                if( I.m_Index == mecs::archetype::query::result_entry::invalid_index) return reinterpret_cast<std::byte*>(nullptr);
-
-                if( I.m_isShared ) return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_MainPool.getComponentByIndex<t>( Index, I.m_Index ));
-
-                return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t>( iStart, I.m_Index ));
-            };
-            
-            return std::array<std::byte*, sizeof...(T_ARGS)>
-            {
-                Decide( xcore::types::tuple_t2i_v<T_ARGS, func_tuple>, reinterpret_cast<xcore::types::decay_full_t<T_ARGS>*>(nullptr) ) ...
-            };
-        }
-
-        template< typename T, typename...T_ARGS> constexpr xforceinline
-        void ProcesssCall(std::tuple<T_ARGS...>*, std::span<std::byte*> Span, T& Params, int iStart, const int iEnd ) noexcept
-        {
-            using func_tuple    = std::tuple<T_ARGS...>;
-
-            xassert(iStart != iEnd);
-
-            // Call the system
-            do
-            {
-                Params.m_Callback
-                (
-                    ([&]() constexpr noexcept -> T_ARGS
-                    {
-                        auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
-                        auto  pBackup   = p;
-                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
-                        {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
-                        }
-
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
-                    }())...
-                );
-            } while( ++iStart != iEnd );
-        }
-    }
 
     struct instance : overrides
     {
@@ -191,74 +127,6 @@ namespace mecs::system
         // details::cache      m_Cache;
     };
 
-    //---------------------------------------------------------------------------------
-    // SYSTEM:: DETAILS::CUSTOM_SYSTEM
-    //---------------------------------------------------------------------------------
-    namespace details
-    {
-        
-        template< bool T_IS_GLOBAL_V, typename...T_ARGS >
-        auto GetRealEventsTuple( std::tuple<T_ARGS...>* )
-        {
-            if constexpr (T_IS_GLOBAL_V)
-            {
-                if constexpr (!!sizeof...(T_ARGS))
-                {
-                    return std::tuple< typename T_ARGS::real_event_t* ... >{};
-                }
-                else
-                {
-                    return std::tuple<>{};
-                }
-            }
-            else
-            {
-                if constexpr ( !!sizeof...(T_ARGS) )
-                {
-                    return std::tuple< typename T_ARGS::real_event_t ... >{};
-                }
-                else
-                {
-                    return std::tuple<>{};
-                }
-            }         //std::conditional_t< !!sizeof...(T_ARGS), xcore::types::tuple_cat_t< std::tuple<xcore::types::make_unique< typename T_ARGS::event_t, T_ARGS >>>, std::tuple<>>;
-        }
-
-        template< typename event_type, typename...T_ARGS >
-        auto FilterEventsTuple( std::tuple<T_ARGS...>* ) ->
-            xcore::types::tuple_cat_t< std::conditional_t< std::is_base_of_v< event_type, T_ARGS>, std::tuple<T_ARGS>, std::tuple<> > ... >;
-
-        template< typename...T_ARGS > xforceinline constexpr
-        auto GetEventDescriptorArray(std::tuple<T_ARGS...>*) noexcept
-        {
-            if constexpr (!!sizeof...(T_ARGS))  return std::array{ &mecs::system::event::descriptor_v<T_ARGS> ... };
-            else                                return std::array< const mecs::system::event::descriptor*, 0>{};
-        }
-
-        //---------------------------------------------------------------------------------
-        // SYSTEM::CUSTOM SYSTEM 
-        //---------------------------------------------------------------------------------
-        template< typename T_SYSTEM >
-        struct custom_system final : T_SYSTEM
-        {
-            using                           user_system_t                   = T_SYSTEM;
-            inline static constexpr auto    query_v                         = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
-            using                           global_event_tuple_t            = decltype(FilterEventsTuple<system::event::global>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
-            using                           global_real_events_t            = decltype(GetRealEventsTuple<true>(reinterpret_cast<global_event_tuple_t*>(nullptr)));
-            inline static constexpr auto    global_events_descriptors_v     = GetEventDescriptorArray(reinterpret_cast<global_event_tuple_t*>(nullptr));
-            using                           exclusive_event_tuple_t         = decltype(FilterEventsTuple<system::event::exclusive>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
-            using                           exclusive_real_events_t         = decltype(GetRealEventsTuple<false>(reinterpret_cast<exclusive_event_tuple_t*>(nullptr)));
-            inline static constexpr auto    exclusive_events_descriptors_v  = GetEventDescriptorArray(reinterpret_cast<exclusive_event_tuple_t*>(nullptr));
-            
-            exclusive_real_events_t     m_ExclusiveEvents   {};
-            global_real_events_t        m_GlobalEvents      {};
-
-            constexpr       custom_system               ( const typename T_SYSTEM::construct&& Settings )                   noexcept;
-            virtual void    qt_onRun                    ( void )                                                            noexcept override;
-            inline  void    msgSyncPointDone            ( mecs::sync_point::instance& Syncpoint )                           noexcept;
-            virtual void*   DetailsGetExclusiveRealEvent( const system::event::type_guid )                                  noexcept;
-        };
-    }
 
     //---------------------------------------------------------------------------------
     // SYSTEM:: descriptor
@@ -277,24 +145,8 @@ namespace mecs::system
     namespace details
     {
         template< typename T_SYSTEM >
-        constexpr auto MakeDescriptor( void ) noexcept
-        {
-            using sys = mecs::system::details::custom_system<T_SYSTEM>;
-            static_assert( std::is_same_v<decltype(T_SYSTEM::type_guid_v), const mecs::system::type_guid> );
-
-            return mecs::system::descriptor
-            {
-                T_SYSTEM::type_guid_v.isValid() ? T_SYSTEM::type_guid_v : type_guid{ __FUNCSIG__ }
-            ,   []( const mecs::system::overrides::construct&& C ) noexcept
-                {
-                    auto p = new sys{ std::move(C) };
-                    return std::unique_ptr<mecs::system::instance>{ static_cast<mecs::system::instance*>(p) };
-                }
-            ,   T_SYSTEM::name_v
-            ,   sys::exclusive_events_descriptors_v
-            ,   sys::global_events_descriptors_v
-            };
-        }
+        xforceinline constexpr
+        auto MakeDescriptor( void ) noexcept;
     }
 
     template< typename T_SYSTEM >
@@ -311,25 +163,7 @@ namespace mecs::system
         void Init( void ) noexcept {}
 
         template< typename...T_SYSTEMS >
-        void Register( mecs::system::event::descriptors_data_base& EventDescriptionDataBase ) noexcept
-        {
-            static_assert(!!sizeof...(T_SYSTEMS));
-
-            if((m_mapDescriptors.alloc(descriptor_v<T_SYSTEMS>.m_Guid, [&](const descriptor*& Ptr)
-            {
-                m_lDescriptors.push_back(Ptr = &descriptor_v<T_SYSTEMS>);
-
-                // Register all the events types
-                using sys = details::custom_system<T_SYSTEMS>;
-                EventDescriptionDataBase.TupleRegister( reinterpret_cast<typename sys::exclusive_event_tuple_t*>(nullptr) );
-                EventDescriptionDataBase.TupleRegister(reinterpret_cast<typename sys::global_event_tuple_t*>(nullptr));
-
-            }) || ...))
-            {
-                // Make sure that someone did not forget the set the right guid
-                xassert( ((m_mapDescriptors.get(descriptor_v<T_SYSTEMS>.m_Guid) == &descriptor_v<T_SYSTEMS>) && ... ) );
-            }
-        }
+        void Register( mecs::system::event::descriptors_data_base& EventDescriptionDataBase ) noexcept;
 
         std::vector<const descriptor*>      m_lDescriptors;
         map_system_types                    m_mapDescriptors;
@@ -354,49 +188,12 @@ namespace mecs::system
     {
         using map_systems = mecs::tools::fixed_map< mecs::system::type_guid, std::unique_ptr<mecs::system::instance>, mecs::settings::max_systems >;
 
-        details::events m_Event;
-
         instance_data_base( mecs::world::instance& World ) : m_World(World) {}
 
         void Init( void ) noexcept {}
 
-        instance& Create( const mecs::system::descriptor& Descriptor, mecs::system::instance::guid Guid ) noexcept
-        {
-            instance* p = nullptr;
-            mecs::system::instance::construct Construct
-            {
-                Guid
-            ,   m_World
-            ,   Descriptor.m_Name
-            ,   { xcore::scheduler::definition::definition::Flags
-                    (
-                        xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE
-                        , xcore::scheduler::jobtype::NORMAL
-                        , xcore::scheduler::affinity::NORMAL
-                        , xcore::scheduler::priority::NORMAL
-                        , xcore::scheduler::triggers::DONT_CLEAN_COUNT
-                    )
-                }
-            };
-
-            m_mapInstances.getOrCreate( Descriptor.m_Guid, [&](map_systems::value& E ) noexcept
-            {
-                p = E.get();
-            }
-            , [&]( map_systems::value& E ) noexcept
-            {
-                E = Descriptor.m_fnCreate(std::move(Construct));
-                p = E.get();
-
-                m_lInstance.push_back(p);
-
-                if (m_Event.m_CreatedSystem.hasSubscribers())
-                    m_Event.m_CreatedSystem.NotifyAll(*p);
-            });
-
-            xassert(p);
-            return *p;
-        }
+        inline
+        instance& Create( const mecs::system::descriptor& Descriptor, mecs::system::instance::guid Guid ) noexcept;
 
         template< typename T_SYSTEM >
         instance& Create( instance::guid Guid ) noexcept
@@ -404,6 +201,7 @@ namespace mecs::system
             return Create( descriptor_v<T_SYSTEM>, Guid );
         }
 
+        details::events                     m_Event;
         mecs::world::instance&              m_World;
         std::vector<instance*>              m_lInstance;
         map_systems                         m_mapInstances;

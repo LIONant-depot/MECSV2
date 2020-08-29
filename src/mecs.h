@@ -76,8 +76,8 @@ namespace mecs::universe
 
 #include "Implementation/mecs_entity_pool_inline.h"
 #include "Implementation/mecs_archetype_inline.h"
-#include "Implementation/mecs_graph_inline.h"
 #include "Implementation/mecs_system_inline.h"
+#include "Implementation/mecs_graph_inline.h"
 #include "Implementation/mecs_archetype_delegate_inline.h"
 #include "Implementation/mecs_system_delegate_inline.h"
 
