@@ -18,19 +18,20 @@ namespace mecs::system
     }
 
     //----------------------------------------------------------------------------
-    // SYSTEM:: INSTANCE OVERWRITES
+    // SYSTEM:: INSTANCE OVERRIDES
     //----------------------------------------------------------------------------
-
-    struct overrites : xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>
+    
+    struct overrides : xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>
     {
-        using                           type_guid   = mecs::system::type_guid;
-        using                           entity      = mecs::component::entity;
-        template<typename...T> using    all         = mecs::archetype::query::all<std::tuple<T...>>;
-        template<typename...T> using    any         = mecs::archetype::query::any<std::tuple<T...>>;
-        template<typename...T> using    none        = mecs::archetype::query::none<std::tuple<T...>>;
-        using                           job_t       = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
-        using                           guid        = xcore::guid::unit<64, struct mecs_system_tag>;
-        using                           archetype   = mecs::archetype::instance;
+        using                           type_guid       = mecs::system::type_guid;
+        using                           entity          = mecs::component::entity;
+        template<typename...T> using    all             = mecs::archetype::query::all<std::tuple<T...>>;
+        template<typename...T> using    any             = mecs::archetype::query::any<std::tuple<T...>>;
+        template<typename...T> using    none            = mecs::archetype::query::none<std::tuple<T...>>;
+        using                           job_t           = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
+        using                           guid            = xcore::guid::unit<64, struct mecs_system_tag>;
+        using                           archetype       = mecs::archetype::instance;
+        using                           exclusive_event = mecs::system::event::exclusive;
 
         using job_t::job_t;
 
@@ -127,64 +128,66 @@ namespace mecs::system
         }
     }
 
-    struct instance : overrites
+    struct instance : overrides
     {
-        instance(const construct&& Settings) noexcept;
+        inline
+                                            instance                ( const construct&& Settings) noexcept;
 
         template< typename...T_SHARE_COMPONENTS >
-        mecs::archetype::entity_creation createEntities(mecs::archetype::instance::guid gArchetype, int nEntities, std::span<entity::guid> gEntitySpan, T_SHARE_COMPONENTS&&... ShareComponents) noexcept;
+        inline
+        mecs::archetype::entity_creation    createEntities          ( mecs::archetype::instance::guid   gArchetype
+                                                                    , int                               nEntities
+                                                                    , std::span<entity::guid>           gEntitySpan
+                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents ) noexcept;
 
         inline
-        void deleteEntity( mecs::component::entity& Entity );
+        void                                deleteEntity            ( mecs::component::entity&          Entity ) noexcept;
 
-        template< typename T_CALLBACK > constexpr xforceinline
-        void ForEach( mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob ) noexcept;
+        template< typename T_CALLBACK >
+        constexpr xforceinline
+        void                                ForEach                 ( mecs::archetype::query::instance& QueryI
+                                                                    , T_CALLBACK&&                      Functor
+                                                                    , int                               nEntitiesPerJob ) noexcept;
 
-        template< typename T_ADD_COMPONENTS_AND_TAGS, typename T_REMOVE_COMPONENTS_AND_TAGS, typename T_CALLBACK > constexpr xforceinline
-        void getArchetypeBy( mecs::component::entity& Entity, T_CALLBACK&& Callback ) noexcept;
+        template< typename T_ADD_COMPONENTS_AND_TAGS
+                , typename T_REMOVE_COMPONENTS_AND_TAGS
+                , typename T_CALLBACK >
+        constexpr xforceinline
+        void                                getArchetypeBy          ( mecs::component::entity&          Entity
+                                                                    , T_CALLBACK&&                      Callback ) noexcept;
 
-        template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS > constexpr xforceinline
-        void moveEntityToArchetype( mecs::component::entity& Entity, mecs::archetype::instance& ToNewArchetype, T_CALLBACK&& Callback = []{}, T_SHARE_COMPONENTS&&... ShareComponents ) noexcept;
+        template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS >
+        constexpr xforceinline
+        void                                moveEntityToArchetype   ( mecs::component::entity&          Entity
+                                                                    , mecs::archetype::instance&        ToNewArchetype
+                                                                    , T_CALLBACK&&                      Callback = []{}
+                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents ) noexcept;
 
         inline
-        const time& getTime( void ) const noexcept;
+        const time&                         getTime                 ( void ) const noexcept;
 
-        template< typename T_PARAMS > constexpr xforceinline
-        void ProcessResult( T_PARAMS& Params, mecs::archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
-        {
-            auto&  SpecializedPool = MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
-            for( int end=static_cast<int>(SpecializedPool.m_EntityPool.size()), i=0; i<end; )
-            {
-                const int MyEnd = std::min<int>(i+Params.m_nEntriesPerJob, end);
-                Params.m_Channel.SubmitJob(
-                [
-                    iStart  = i
-                ,   iEnd    = MyEnd
-                ,   &R
-                ,   &Params
-                ,   Index
-                ] () constexpr noexcept
-                {
-                    using function_arg_tuple = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
-                    auto  Pointers           = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, R, Params);
+        template< typename      T_EVENT
+                , typename      T_SYSTEM = typename T_EVENT::system_t
+                , typename...   T_ARGS >
+        xforceinline constexpr
+        void                                EventNotify             ( T_ARGS&&...Args ) noexcept;
 
-                    details::ProcesssCall
-                    (
-                        reinterpret_cast<function_arg_tuple*>(nullptr)
-                    ,   Pointers
-                    ,   Params
-                    ,   iStart
-                    ,   iEnd );
-                });
-                i = MyEnd;
-            }
-        }
+        // Details functions
+        virtual
+        void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid ) noexcept = 0;
+
+        template< typename T_PARAMS >
+        constexpr xforceinline
+        void                                ProcessResult           ( T_PARAMS&                             Params
+                                                                    , mecs::archetype::query::result_entry& R
+                                                                    , mecs::entity_pool::instance&          MainPool
+                                                                    , const int                             Index ) noexcept;
 
         // TODO: This will be private
         mecs::world::instance&              m_World;
         mecs::system::instance::guid        m_Guid;
         mecs::archetype::query::instance    m_Query{};
-
+        mecs::system::instance::type_guid   m_TypeGuid;
         // details::cache      m_Cache;
     };
 
@@ -193,18 +196,43 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     namespace details
     {
-        //---------------------------------------------------------------------------------
-
-        template< typename...T_ARGS >
-        std::tuple< xcore::types::make_unique< typename T_ARGS::event_t, T_ARGS >... > GetEventTuple(std::tuple<T_ARGS...>*);
-
-        //---------------------------------------------------------------------------------
-
-        template< typename...T_ARGS > constexpr 
-        auto GetEventGuids(std::tuple<T_ARGS...>*) noexcept
+        
+        template< bool T_IS_GLOBAL_V, typename...T_ARGS >
+        auto GetRealEventsTuple( std::tuple<T_ARGS...>* )
         {
-            if constexpr ( !!sizeof...(T_ARGS)) return std::array{ T_ARGS::type_guid_v ... };
-            else                                return std::array<mecs::system::event::type_guid, 0>{};
+            if constexpr (T_IS_GLOBAL_V)
+            {
+                if constexpr (!!sizeof...(T_ARGS))
+                {
+                    return std::tuple< typename T_ARGS::real_event_t* ... >{};
+                }
+                else
+                {
+                    return std::tuple<>{};
+                }
+            }
+            else
+            {
+                if constexpr ( !!sizeof...(T_ARGS) )
+                {
+                    return std::tuple< typename T_ARGS::real_event_t ... >{};
+                }
+                else
+                {
+                    return std::tuple<>{};
+                }
+            }         //std::conditional_t< !!sizeof...(T_ARGS), xcore::types::tuple_cat_t< std::tuple<xcore::types::make_unique< typename T_ARGS::event_t, T_ARGS >>>, std::tuple<>>;
+        }
+
+        template< typename event_type, typename...T_ARGS >
+        auto FilterEventsTuple( std::tuple<T_ARGS...>* ) ->
+            xcore::types::tuple_cat_t< std::conditional_t< std::is_base_of_v< event_type, T_ARGS>, std::tuple<T_ARGS>, std::tuple<> > ... >;
+
+        template< typename...T_ARGS > xforceinline constexpr
+        auto GetEventDescriptorArray(std::tuple<T_ARGS...>*) noexcept
+        {
+            if constexpr (!!sizeof...(T_ARGS))  return std::array{ &mecs::system::event::descriptor_v<T_ARGS> ... };
+            else                                return std::array< const mecs::system::event::descriptor*, 0>{};
         }
 
         //---------------------------------------------------------------------------------
@@ -213,77 +241,22 @@ namespace mecs::system
         template< typename T_SYSTEM >
         struct custom_system final : T_SYSTEM
         {
-            using                   user_system_t       = T_SYSTEM;
-            using                   world_instance_t    = std::decay_t< decltype(user_system_t::m_World) >;
-            static constexpr auto   query_v             = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
-            using                   events_tuple_t      = decltype(GetEventTuple(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
-            static constexpr auto   events_guids_v      = GetEventGuids(reinterpret_cast<typename user_system_t::events_t*>(nullptr));
+            using                           user_system_t                   = T_SYSTEM;
+            inline static constexpr auto    query_v                         = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
+            using                           global_event_tuple_t            = decltype(FilterEventsTuple<system::event::global>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
+            using                           global_real_events_t            = decltype(GetRealEventsTuple<true>(reinterpret_cast<global_event_tuple_t*>(nullptr)));
+            inline static constexpr auto    global_events_descriptors_v     = GetEventDescriptorArray(reinterpret_cast<global_event_tuple_t*>(nullptr));
+            using                           exclusive_event_tuple_t         = decltype(FilterEventsTuple<system::event::exclusive>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
+            using                           exclusive_real_events_t         = decltype(GetRealEventsTuple<false>(reinterpret_cast<exclusive_event_tuple_t*>(nullptr)));
+            inline static constexpr auto    exclusive_events_descriptors_v  = GetEventDescriptorArray(reinterpret_cast<exclusive_event_tuple_t*>(nullptr));
+            
+            exclusive_real_events_t     m_ExclusiveEvents   {};
+            global_real_events_t        m_GlobalEvents      {};
 
-            using user_system_t::user_system_t;
-
-            events_tuple_t m_Events{};
-
-            virtual void qt_onRun(void) noexcept override
-            {
-                XCORE_PERF_ZONE_SCOPED_N(user_system_t::name_v.m_Str)
-                if constexpr ( &user_system_t::msgUpdate != &system::overrites::msgUpdate )
-                {
-                    user_system_t::msgUpdate();
-                }
-                else
-                {
-                    user_system_t::m_World.m_ArchetypeDB.template DoQuery< user_system_t, query_v >(user_system_t::m_Query);
-                    user_system_t::ForEach( user_system_t::m_Query, *this, user_system_t::entities_per_job_v );
-                }
-            }
-
-            void msgSyncPointDone( mecs::sync_point::instance& Syncpoint ) noexcept
-            {
-                // Call the user function if he overwrote it
-                if constexpr ( &user_system_t::msgSyncPointDone != &system::overrites::msgSyncPointDone )
-                {
-                    user_system_t::msgSyncPointDone(Syncpoint);
-                }
-
-                //
-                // unlock all the groups that we need to work with so that no one tries to add/remove entities
-                //
-                mecs::archetype::details::safety::UnlockQueryComponents(*this, user_system_t::m_Query);
-
-                //
-                // unlock and sync groups from the cache
-                //
-                /*
-                for( const auto& E : user_system_t::m_Cache.m_Lines )
-                {
-                    bool bFound = false;
-                    std::as_const(E.m_pGroup->m_SemaphoreLock).unlock();
-
-                    for( const auto& Q : user_system_t::m_Query.m_lResults )
-                    {
-                        if( E.m_pGroup == Q.m_pGroup )
-                        {
-                            bFound = true;
-                            break;
-                        }
-                    }
-
-                    if( bFound == false ) E.m_pGroup->MemoryBarrierSync( Syncpoint );
-                }
-                */
-
-                //
-                // Let the archetypes that we used do their memory barriers
-                //
-                for( auto& R : user_system_t::m_Query.m_lResults )
-                {
-                    R.m_pArchetype->MemoryBarrierSync( Syncpoint );
-                }
-
-                //user_system_t::m_Cache.m_Lines.clear();
-                user_system_t::m_Query.m_lResults.clear();
-            }
-
+            constexpr       custom_system               ( const typename T_SYSTEM::construct&& Settings )                   noexcept;
+            virtual void    qt_onRun                    ( void )                                                            noexcept override;
+            inline  void    msgSyncPointDone            ( mecs::sync_point::instance& Syncpoint )                           noexcept;
+            virtual void*   DetailsGetExclusiveRealEvent( const system::event::type_guid )                                  noexcept;
         };
     }
 
@@ -292,13 +265,13 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     struct descriptor
     {
-        using fn_create = std::unique_ptr<mecs::system::instance>( mecs::system::instance::construct&& C ) noexcept;
+        using fn_create = std::unique_ptr<mecs::system::instance>( const mecs::system::instance::construct&& C ) noexcept;
 
-        mecs::system::type_guid                         m_Guid;
-        fn_create*                                      m_fnCreate;
-        xcore::string::const_universal                  m_Name;
-        std::uint32_t                                   m_EventOffset;
-        std::span<const mecs::system::event::type_guid> m_EventTypeGuids;
+        mecs::system::type_guid                             m_Guid;
+        fn_create*                                          m_fnCreate;
+        xcore::string::const_universal                      m_Name;
+        std::span<const system::event::descriptor* const >  m_ExclusiveEvents;
+        std::span<const system::event::descriptor* const >  m_GlobalEvents;
     };
     
     namespace details
@@ -312,20 +285,20 @@ namespace mecs::system
             return mecs::system::descriptor
             {
                 T_SYSTEM::type_guid_v.isValid() ? T_SYSTEM::type_guid_v : type_guid{ __FUNCSIG__ }
-            ,   []( mecs::system::overrites::construct&& C ) noexcept
+            ,   []( const mecs::system::overrides::construct&& C ) noexcept
                 {
                     auto p = new sys{ std::move(C) };
                     return std::unique_ptr<mecs::system::instance>{ static_cast<mecs::system::instance*>(p) };
                 }
             ,   T_SYSTEM::name_v
-            ,   static_cast<std::uint32_t>(offsetof( sys, m_Events ))
-            ,   sys::events_guids_v
+            ,   sys::exclusive_events_descriptors_v
+            ,   sys::global_events_descriptors_v
             };
         }
     }
 
     template< typename T_SYSTEM >
-    static constexpr auto descriptor_v = details::MakeDescriptor<T_SYSTEM>();
+    inline static constexpr auto descriptor_v = details::MakeDescriptor<T_SYSTEM>();
 
     //---------------------------------------------------------------------------------
     // SYSTEM:: DESCRIPTOR DATA BASE
@@ -348,7 +321,8 @@ namespace mecs::system
 
                 // Register all the events types
                 using sys = details::custom_system<T_SYSTEMS>;
-                EventDescriptionDataBase.TupleRegister( reinterpret_cast<typename sys::events_tuple_t*>(nullptr) );
+                EventDescriptionDataBase.TupleRegister( reinterpret_cast<typename sys::exclusive_event_tuple_t*>(nullptr) );
+                EventDescriptionDataBase.TupleRegister(reinterpret_cast<typename sys::global_event_tuple_t*>(nullptr));
 
             }) || ...))
             {
@@ -364,9 +338,23 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     // SYSTEM:: INSTANCE DATA BASE
     //---------------------------------------------------------------------------------
+    namespace details
+    {
+        struct events
+        {
+            using created_system = xcore::types::make_unique< mecs::tools::event<system::instance&>, struct created_system_tag  >;
+            using deleted_system = xcore::types::make_unique< mecs::tools::event<system::instance&>, struct delete_system_tag   >;
+
+            created_system   m_CreatedSystem;
+            deleted_system   m_DeletedSystem;
+        };
+    }
+
     struct instance_data_base
     {
-        using map_systems = mecs::tools::fixed_map< mecs::system::type_guid, std::vector<std::unique_ptr<mecs::system::instance>>, mecs::settings::max_systems >;
+        using map_systems = mecs::tools::fixed_map< mecs::system::type_guid, std::unique_ptr<mecs::system::instance>, mecs::settings::max_systems >;
+
+        details::events m_Event;
 
         instance_data_base( mecs::world::instance& World ) : m_World(World) {}
 
@@ -391,38 +379,29 @@ namespace mecs::system
                 }
             };
 
-            auto AddIt = [&](map_systems::value& Vec) noexcept
+            m_mapInstances.getOrCreate( Descriptor.m_Guid, [&](map_systems::value& E ) noexcept
             {
-                xassert_block_basic()
-                {
-                    for( const auto& E : Vec ) xassert( E->m_Guid == Guid );
-                }
+                p = E.get();
+            }
+            , [&]( map_systems::value& E ) noexcept
+            {
+                E = Descriptor.m_fnCreate(std::move(Construct));
+                p = E.get();
 
-                // Create the entry
-                {
-                    std::unique_ptr<mecs::system::instance> I = Descriptor.m_fnCreate(std::move(Construct));
-                    p = I.get();
-                    Vec.push_back(std::move(I));
-                }
-
-                p->m_Guid = Guid;
                 m_lInstance.push_back(p);
 
-                for( auto& E : Descriptor.m_EventTypeGuids )
-                {
-                }
-            };
-
-            m_mapInstances.getOrCreate( Descriptor.m_Guid, AddIt, AddIt );
+                if (m_Event.m_CreatedSystem.hasSubscribers())
+                    m_Event.m_CreatedSystem.NotifyAll(*p);
+            });
 
             xassert(p);
             return *p;
         }
 
         template< typename T_SYSTEM >
-        instance& Create(instance::guid Guid)
+        instance& Create( instance::guid Guid ) noexcept
         {
-            return Create(descriptor_v<T_SYSTEM>, Guid);
+            return Create( descriptor_v<T_SYSTEM>, Guid );
         }
 
         mecs::world::instance&              m_World;

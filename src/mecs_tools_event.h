@@ -32,7 +32,7 @@ namespace mecs::tools
         }
 
         xforceinline constexpr bool hasSubscribers      (void)            const noexcept { return m_lDelegates.empty() == false; }
-        xforceinline constexpr void NotifyAll           (T_ARGS... Args)    const noexcept
+        xforceinline constexpr void NotifyAll           (T_ARGS... Args)  const noexcept
         {
             for (auto& E : m_lDelegates) E.m_pCallBack(E.m_pThis, std::forward<T_ARGS>(Args) ...);
         }

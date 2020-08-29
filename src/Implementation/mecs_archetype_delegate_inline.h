@@ -18,17 +18,17 @@ namespace mecs::archetype::delegate
             //
             // Register to Graph messages
             //
-            if constexpr( &custom_instance::msgGraphInit != &overrites::msgGraphInit )
+            if constexpr( &custom_instance::msgGraphInit != &overrides::msgGraphInit )
             {
                 m_World.m_GraphDB.m_Events.m_GraphInit.AddDelegate<&custom_instance::msgGraphInit>(*this);
             }
 
-            if constexpr( &custom_instance::msgFrameStart != &overrites::msgFrameStart )
+            if constexpr( &custom_instance::msgFrameStart != &overrides::msgFrameStart )
             {
                 m_World.m_GraphDB.m_Events.m_FrameStart.AddDelegate<&custom_instance::msgFrameStart>(*this);
             }
 
-            if constexpr( &custom_instance::msgFrameDone != &overrites::msgFrameDone )
+            if constexpr( &custom_instance::msgFrameDone != &overrides::msgFrameDone )
             {
                 m_World.m_GraphDB.m_Events.m_FrameDone.AddDelegate<&custom_instance::msgFrameDone>(*this);
             }
@@ -42,7 +42,7 @@ namespace mecs::archetype::delegate
             //
             // Do query to collect all relevant archetypes
             //
-            if constexpr( &custom_instance::msgInitializeQuery != &overrites::msgInitializeQuery )
+            if constexpr( &custom_instance::msgInitializeQuery != &overrides::msgInitializeQuery )
             {
                 custom_instance::msgInitializeQuery();
             }
@@ -53,7 +53,7 @@ namespace mecs::archetype::delegate
                 {
                     World.m_ArchetypeDB. template DoQuery
                     < 
-                        function_helper<std::tuple<const overrites::entity&>>
+                        function_helper<std::tuple<const overrides::entity&>>
                     ,   query_v
                     >( m_Query );
                 }
@@ -148,7 +148,7 @@ namespace mecs::archetype::delegate
         template< typename T_USER_DELEGATE > inline
         void custom_instance< T_USER_DELEGATE >::HandleEvents(mecs::component::entity& Entity, mecs::system::instance& System) noexcept
         {
-            if constexpr ( &custom_instance::msgHandleEvents != &overrites::msgHandleEvents )
+            if constexpr ( &custom_instance::msgHandleEvents != &overrides::msgHandleEvents )
             {
                 custom_instance::msgHandleEvents(Entity, System);
             }
@@ -177,22 +177,22 @@ namespace mecs::archetype::delegate
     }
 
     template< typename T_ARCHETYPE_DELEGATE >
-    T_ARCHETYPE_DELEGATE& instance_data_base::Create(overrites::guid Guid) noexcept
+    T_ARCHETYPE_DELEGATE& instance_data_base::Create(overrides::guid Guid) noexcept
     {
         m_World.m_Universe.registerTypes<T_ARCHETYPE_DELEGATE>();
         return static_cast<T_ARCHETYPE_DELEGATE&>(Create(descriptor_v<T_ARCHETYPE_DELEGATE>.m_Guid, Guid));
     }
 
     inline
-    overrites& instance_data_base::Create( type_guid gTypeGuid, overrites::guid InstanceGuid ) noexcept
+    overrides& instance_data_base::Create( type_guid gTypeGuid, overrides::guid InstanceGuid ) noexcept
     {
-        overrites* p;
+        overrides* p;
         m_mapInstance.alloc(InstanceGuid, [&](map_delegate_instance_t::value& Entry )
         {
             auto& Delegate = m_World.m_Universe.m_ArchetypeDelegateDescriptorsDB.Create( m_World, gTypeGuid);
 
             Delegate.m_Guid = InstanceGuid;
-            Entry = std::unique_ptr<overrites>{ p = &Delegate };
+            Entry = std::unique_ptr<overrides>{ p = &Delegate };
         });
 
         return *p;

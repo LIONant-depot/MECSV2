@@ -36,7 +36,7 @@ namespace mecs::tools
             xcore::lock::object< entry_magic_offset, xcore::lock::semaphore > m_iHeadEntryOrEmpty{ end_linklist_v }; // can be: end_linklist_v, or any other value is the offset to the entry
         };                                                                                                      
 
-        fixed_map()
+        constexpr fixed_map()
         {
             // Allocate the memory
             m_Map.New(max_size_v).CheckError();

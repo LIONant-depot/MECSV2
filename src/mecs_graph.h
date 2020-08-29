@@ -18,15 +18,6 @@ namespace mecs::graph
         frame_done  m_FrameDone;
     };
 
-    namespace details
-    {
-        template< typename...T_ARGS > xforceinline
-        void RegisterSystemEventTuple( mecs::system::instance::guid Guid, mecs::system::event::instance_data_base& SystemEventDB, std::tuple<T_ARGS...>& Events ) noexcept
-        {
-            ( SystemEventDB.AddSystemEvent( Guid, mecs::system::event::descriptor_v<T_ARGS>.m_Guid,  &std::get<T_ARGS>(Events) ), ... );
-        }
-    }
-
     struct instance : xcore::scheduler::job<1>
     {
       //  template< typename T_SYSTEM >
@@ -50,7 +41,9 @@ namespace mecs::graph
             , m_Universe{ Universe }
             , m_World(World)
             , m_SystemDB(World)
+            , m_SystemGlobalEventDB{World}
             , m_ArchetypeDelegateDB{World}
+            , m_SystemDelegateDB{World}
             {}
 
         void Init( void ) noexcept
@@ -111,8 +104,10 @@ namespace mecs::graph
         T_SYSTEM& CreateGraphConnection( mecs::sync_point::instance& StartSyncpoint, T_END_SYNC_POINTS&...EndSyncpoints ) noexcept;
 
         template< typename T_ARCHETYPE_DELEGATE >
-        T_ARCHETYPE_DELEGATE& CreateArchetypeDelegate(mecs::archetype::delegate::overrites::guid Guid = mecs::archetype::delegate::overrites::guid{ xcore::not_null }) noexcept;
+        T_ARCHETYPE_DELEGATE& CreateArchetypeDelegate(mecs::archetype::delegate::overrides::guid Guid = mecs::archetype::delegate::overrides::guid{ xcore::not_null }) noexcept;
 
+        template< typename T_SYSTEM_DELEGATE >
+        T_SYSTEM_DELEGATE& CreateSystemDelegate(mecs::system::delegate::overrides::guid Guid = mecs::system::delegate::overrides::guid{ xcore::not_null }) noexcept;
 
         virtual void qt_onRun(void) noexcept override
         {
@@ -165,8 +160,9 @@ namespace mecs::graph
         mecs::world::instance&                          m_World;
         mecs::system::instance_data_base                m_SystemDB;
         mecs::sync_point::instance_data_base            m_SyncpointDB           {};
-        mecs::system::event::instance_data_base         m_SystemEventDB         {};
+        mecs::system::event::instance_data_base         m_SystemGlobalEventDB;
         mecs::archetype::delegate::instance_data_base   m_ArchetypeDelegateDB;
+        mecs::system::delegate::instance_data_base      m_SystemDelegateDB;
 
         xcore::lock::object<std::vector<lock_error>, xcore::lock::spin> m_LockErrors{};
     };

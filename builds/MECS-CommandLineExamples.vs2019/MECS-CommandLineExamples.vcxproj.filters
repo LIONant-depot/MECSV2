@@ -279,6 +279,10 @@
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h">
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_system_delegate_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E05_custom_delegate_update_entity.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

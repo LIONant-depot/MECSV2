@@ -22,11 +22,11 @@ namespace mecs::universe
             static constexpr auto Reg = []( mecs::universe::instance& I, auto* p ) noexcept
             {
                 using t = xcore::types::decay_full_t<decltype(p)>;
-                if constexpr (std::is_base_of_v<mecs::sync_point::overrites, t>)
+                if constexpr (std::is_base_of_v<mecs::sync_point::overrides, t>)
                 {
                     I.m_SyncpointDB.Register<t>();
                 }
-                else if constexpr (std::is_base_of_v<mecs::system::overrites, t>)
+                else if constexpr (std::is_base_of_v<mecs::system::overrides, t>)
                 {
                     I.m_SystemDescriptorsDB.Register<t>( I.m_SystemEventDescriptorsDB );
                 }
@@ -38,9 +38,13 @@ namespace mecs::universe
                 {
                     I.m_ComponentDescriptorsDB.registerComponent<t>();
                 }
-                else if constexpr (std::is_base_of_v<mecs::archetype::delegate::overrites, t>)
+                else if constexpr (std::is_base_of_v<mecs::archetype::delegate::overrides, t>)
                 {
                     I.m_ArchetypeDelegateDescriptorsDB.Register<t>();
+                }
+                else if constexpr (std::is_base_of_v<mecs::system::delegate::overrides, t>)
+                {
+                    I.m_SystemDelegateDescriptorsDB.Register<t>();
                 }
                 else
                 {

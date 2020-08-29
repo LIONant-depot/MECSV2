@@ -7,7 +7,7 @@ namespace mecs::archetype::delegate
     // This classes specify what the end user can override to extend the functionality
     // of the delegate.
     //---------------------------------------------------------------------------------
-    struct overrites
+    struct overrides
     {
         template<typename...T> using    all                     = mecs::archetype::query::all<std::tuple<T...>>;
         template<typename...T> using    any                     = mecs::archetype::query::any<std::tuple<T...>>;
@@ -26,7 +26,7 @@ namespace mecs::archetype::delegate
         xforceinline            void    msgFrameDone            (void)                                              noexcept {}
         xforceinline            void    msgHandleEvents         (mecs::component::entity&,mecs::system::instance&)  noexcept {}
 
-        virtual                        ~overrites               (void) noexcept = default;
+        virtual                        ~overrides               (void) noexcept = default;
         virtual                 void    Disable                 (void) noexcept = 0;
         virtual                 void    Enable                  (void) noexcept = 0;
 
@@ -37,7 +37,7 @@ namespace mecs::archetype::delegate
     // DELEGATE:: INSTANCE
     //---------------------------------------------------------------------------------
     template< typename T_EVENT >
-    struct instance : overrites
+    struct instance : overrides
     {
         static_assert( std::is_base_of_v<mecs::archetype::event::details::base_event, T_EVENT> );
         using event_t = T_EVENT;
@@ -48,7 +48,7 @@ namespace mecs::archetype::delegate
     //---------------------------------------------------------------------------------
     struct descriptor
     {
-        using fn_create = overrites&( mecs::world::instance& ) noexcept;
+        using fn_create = overrides&( mecs::world::instance& ) noexcept;
         const type_guid                         m_Guid;
         const xcore::string::const_universal    m_Name;
         fn_create*                              m_fnCreate;
@@ -123,7 +123,7 @@ namespace mecs::archetype::delegate
             {
                 T_DELEGATE::type_guid_v.isValid() ? T_DELEGATE::type_guid_v : type_guid{ __FUNCSIG__ }
             ,   T_DELEGATE::type_name_v
-            ,   []( mecs::world::instance& World ) constexpr noexcept -> overrites& { return *new custom_instance<T_DELEGATE>{ World }; }
+            ,   []( mecs::world::instance& World ) constexpr noexcept -> overrides& { return *new custom_instance<T_DELEGATE>{ World }; }
             };
         }
     }
@@ -155,7 +155,7 @@ namespace mecs::archetype::delegate
             ( Register<T_DELEGATE>(), ... );
         }
 
-        overrites& Create( mecs::world::instance& World, type_guid gTypeGuid ) noexcept
+        overrides& Create( mecs::world::instance& World, type_guid gTypeGuid ) noexcept
         {
             return m_mapDescriptors.get(gTypeGuid)->m_fnCreate(World);
         }
@@ -165,12 +165,12 @@ namespace mecs::archetype::delegate
 
     struct instance_data_base
     {
-        using map_delegate_instance_t = mecs::tools::fixed_map<overrites::guid, std::unique_ptr<overrites>, mecs::settings::max_archetype_delegates >;
+        using map_delegate_instance_t = mecs::tools::fixed_map<overrides::guid, std::unique_ptr<overrides>, mecs::settings::max_archetype_delegates >;
 
         template< typename T_ARCHETYPE_DELEGATE >
-        T_ARCHETYPE_DELEGATE& Create( overrites::guid Guid ) noexcept;
+        T_ARCHETYPE_DELEGATE& Create( overrides::guid Guid ) noexcept;
 
-        overrites& Create( type_guid gTypeGuid, overrites::guid InstanceGuid ) noexcept;
+        overrides& Create( type_guid gTypeGuid, overrides::guid InstanceGuid ) noexcept;
         instance_data_base(mecs::world::instance& World ) : m_World{ World } {}
 
         mecs::world::instance&  m_World;

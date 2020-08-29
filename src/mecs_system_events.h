@@ -13,11 +13,32 @@ namespace mecs::system::event
     //      the delegates which register to these events types are filter by the query_t
     //
     //---------------------------------------------------------------------------------
-    using type_guid = xcore::guid::unit<64, struct mecs_event_tag>;
+    using type_guid = xcore::guid::unit<64, struct mecs_system_event_type_tag>;
 
     //---------------------------------------------------------------------------------
-    // EVENT:: TYPE
+    // EVENT:: TYPES
     //---------------------------------------------------------------------------------
+
+    struct overrides
+    {
+        using                                   type_guid           = mecs::system::event::type_guid;
+        template< typename...T_ARGS > using     define_real_event   = mecs::tools::event< mecs::system::instance&, T_ARGS... >;
+
+        // Override these fields
+        static constexpr auto                   type_guid_v         = type_guid{ nullptr };
+        static constexpr auto                   type_name_v         = xconst_universal_str("mecs::system::event (unnamed)");
+        using                                   real_event_t        = void; 
+        using                                   system_t            = void;
+    };
+
+    //TODO: exclusive event
+    struct exclusive : overrides
+    {
+    };
+
+    struct global : overrides
+    {
+    };
 
     //---------------------------------------------------------------------------------
     // EVENT:: DESCRIPTORS
@@ -27,7 +48,7 @@ namespace mecs::system::event
         using fn_emplace = void(mecs::tools::event<>&);
         type_guid                               m_Guid;
         const xcore::string::const_universal    m_Name;
-        fn_emplace                              m_fnEmplace;
+        fn_emplace*                             m_fnEmplace;
     };
 
     namespace details
@@ -37,9 +58,9 @@ namespace mecs::system::event
         {
             return mecs::system::event::descriptor
             {
-                T_EVENT::type_guid_v
-            ,   T_EVENT::name_v
-            ,   [](mecs::tools::event<>& Type ) noexcept { new(&Type) typename T_EVENT::event_t; }
+                T_EVENT::type_guid_v.isValid() ? T_EVENT::type_guid_v : type_guid{ __FUNCSIG__ }
+            ,   T_EVENT::type_name_v
+            ,   [](mecs::tools::event<>& Type ) noexcept { new(&Type) typename T_EVENT::real_event_t; }
             };
         }
     }
@@ -99,6 +120,17 @@ namespace mecs::system::event
         template< typename...T_COMPONENTS >
         static constexpr auto choose_v = detail::choose<sizeof...(T_COMPONENTS), T_COMPONENTS...>::components_v;
         */
+
+        //---------------------------------------------------------------------------------
+
+        struct event
+        {
+            using created_system = xcore::types::make_unique< mecs::tools::event<system::instance&>, struct created_system_tag  >;
+            using deleted_system = xcore::types::make_unique< mecs::tools::event<system::instance&>, struct delete_system_tag   >;
+
+            created_system   m_CreatedSystem;
+            deleted_system   m_DeletedSystem;
+        };
     }
 
     struct instance
@@ -106,17 +138,16 @@ namespace mecs::system::event
         constexpr static auto       type_guid_v = mecs::component::type_guid{ "mecs::event::system_event" };
     };
 
-
     struct descriptors_data_base
     {
-        using map_event_type_t = mecs::tools::fixed_map<mecs::system::event::type_guid, descriptor*, mecs::settings::max_event_types >;
+        using map_event_type_t = mecs::tools::fixed_map<mecs::system::event::type_guid, const mecs::system::event::descriptor*, mecs::settings::max_event_types >;
 
         void Init(void){}
 
         template< typename T_EVENT >
         void Register( void ) noexcept
         {
-            m_mapDescriptors.alloc(T_EVENT::guid_v, [](descriptor*& pDescriptor )
+            m_mapDescriptors.alloc( descriptor_v<T_EVENT>.m_Guid, [](const descriptor*& pDescriptor )
             {
                 pDescriptor = &mecs::system::event::descriptor_v<T_EVENT>;
             });
@@ -134,24 +165,35 @@ namespace mecs::system::event
     struct instance_data_base
     {
         using system_instance_guid  = std::uint64_t;
-        using system_with_event     = std::tuple< system_instance_guid, void* >;
-        using type                  = std::variant< int, std::vector<system_with_event>, mecs::tools::event<> >;
-        using map_event_t           = mecs::tools::fixed_map< mecs::system::event::type_guid, type, mecs::settings::max_event_types >;
+        using map_event_t           = mecs::tools::fixed_map< mecs::system::event::type_guid, std::unique_ptr<std::byte>, mecs::settings::max_event_types >;
 
-        void AddSystemEvent(system_instance_guid SystemGuid, mecs::system::event::type_guid EventTypeGuid, void* pEvent ) noexcept
+        template< typename T_EVENT >
+        typename T_EVENT::real_event_t& getOrCreate( type_guid Guid ) noexcept
         {
-            m_mapEvent.getOrCreate( EventTypeGuid
-            , [&](map_event_t::value& Type) noexcept
+            std::byte*p;
+            m_mapEvent.getOrCreate( Guid
+            , [&](std::unique_ptr<std::byte>& Ptr )
             {
-                auto& Vec = Type.emplace<std::vector<system_with_event>>();
-                Vec.push_back( system_with_event{ SystemGuid, pEvent } );
+                p = Ptr.get();
             }
-            , [&](map_event_t::value& Type ) noexcept
+            , [&](std::unique_ptr<std::byte>& Ptr)
             {
-                auto& Vec = std::get<std::vector<system_with_event>>(Type);
-                Vec.push_back(system_with_event{ SystemGuid, pEvent });
+                Ptr = std::unique_ptr<std::byte>{ new typename T_EVENT::real_event_t };
+                p = Ptr.get();
             });
+
+            return *reinterpret_cast<typename T_EVENT::real_event_t>(p);
         }
+
+        mecs::world::instance&  m_World;
+        map_event_t             m_mapEvent;
+        
+
+        /*
+        details::event m_Events;
+
+
+
 
         void AddGlobalEvent( mecs::system::event::type_guid EventTypeGuid )
         {
@@ -184,5 +226,6 @@ namespace mecs::system::event
 
         map_event_t             m_mapEvent;
         descriptors_data_base*  m_pDescriptorDataBase;
+        */
     };
 }

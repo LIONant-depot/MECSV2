@@ -25,49 +25,28 @@ namespace mecs::graph
             MainEndSyncPoint.m_Events.m_Done.AddDelegate<&custom_system_t::msgSyncPointDone>(System);
         }
 
-        if constexpr (&custom_system_t::msgSyncPointStart != &system::instance::msgSyncPointStart)
+        if constexpr (&custom_system_t::msgSyncPointStart != &system::overrides::msgSyncPointStart)
         {
-            System.m_WorldStartDelegate.setupThis(System);
-            System.m_SyncPointStartDelegate.Connect(StartSyncpoint.m_Events.m_Start);
+            StartSyncpoint.m_Events.m_Start.AddDelegate<&custom_system_t::msgSyncPointStart>(System);
         }
-
-        //
-        // Register to World Instances messages
-        //
-        if constexpr (&custom_system_t::msgGraphInit != &system::instance::msgGraphInit)
-        {
-            System.m_WorldStartDelegate.setupThis(System);
-            System.m_WorldStartDelegate.Connect(m_Events.m_GraphInit);
-        }
-
-        if constexpr (&custom_system_t::msgFrameStart != &system::instance::msgFrameStart)
-        {
-            System.m_FrameStartDelegate.setupThis(System);
-            System.m_FrameStartDelegate.Connect(m_Events.m_FrameStart);
-        }
-
-        if constexpr (&custom_system_t::msgFrameDone != &system::instance::msgFrameDone)
-        {
-            System.m_FrameDoneDelegate.setupThis(System);
-            System.m_FrameDoneDelegate.Connect(m_Events.m_FrameDone);
-        }
-
-        //
-        // Register all the events
-        //
-        details::RegisterSystemEventTuple( System.m_Guid, m_SystemEventDB, System.m_Events );
 
         return System;
     }
 
 
     template< typename T_ARCHETYPE_DELEGATE >
-    T_ARCHETYPE_DELEGATE& instance::CreateArchetypeDelegate(mecs::archetype::delegate::overrites::guid Guid ) noexcept
+    T_ARCHETYPE_DELEGATE& instance::CreateArchetypeDelegate(mecs::archetype::delegate::overrides::guid Guid ) noexcept
     {
         using custom_delegate_t = typename mecs::archetype::delegate::details::custom_instance<T_ARCHETYPE_DELEGATE>;
         auto& Delegate = static_cast<custom_delegate_t&>(m_ArchetypeDelegateDB.Create<T_ARCHETYPE_DELEGATE>(Guid));
         return Delegate;
     }
 
-
+    template< typename T_SYSTEM_DELEGATE >
+    T_SYSTEM_DELEGATE& instance::CreateSystemDelegate(mecs::system::delegate::overrides::guid Guid) noexcept
+    {
+        m_Universe.registerTypes<T_SYSTEM_DELEGATE>();
+        auto& Delegate = static_cast<T_SYSTEM_DELEGATE&>(m_SystemDelegateDB.Create( mecs::system::delegate::descriptor_v<T_SYSTEM_DELEGATE>.m_Guid, Guid ));
+        return Delegate;
+    }
 }

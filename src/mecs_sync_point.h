@@ -2,7 +2,7 @@ namespace mecs::sync_point
 {
     using type_guid = xcore::guid::unit<64, struct type_tag>;
 
-    struct overrites
+    struct overrides
     {
         constexpr static auto       type_guid_v = type_guid{ nullptr };
         constexpr static auto       name_v      = xconst_universal_str("unnamed sync-point type");
@@ -20,7 +20,7 @@ namespace mecs::sync_point
         };
     }
 
-    struct instance : xcore::scheduler::trigger<mecs::settings::max_graph_connections>, overrites
+    struct instance : xcore::scheduler::trigger<mecs::settings::max_graph_connections>, overrides
     {
         using                       parent_t        = xcore::scheduler::trigger<mecs::settings::max_graph_connections>;
         using                       guid            = xcore::guid::unit<64, struct sync_point_tag >;
