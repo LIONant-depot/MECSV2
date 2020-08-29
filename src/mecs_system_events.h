@@ -178,11 +178,11 @@ namespace mecs::system::event
             }
             , [&](std::unique_ptr<std::byte>& Ptr)
             {
-                Ptr = std::unique_ptr<std::byte>{ new typename T_EVENT::real_event_t };
+                Ptr = std::unique_ptr<std::byte>{ reinterpret_cast<std::byte*>( new typename T_EVENT::real_event_t ) };
                 p = Ptr.get();
             });
 
-            return *reinterpret_cast<typename T_EVENT::real_event_t>(p);
+            return *reinterpret_cast<typename T_EVENT::real_event_t*>(p);
         }
 
         mecs::world::instance&  m_World;

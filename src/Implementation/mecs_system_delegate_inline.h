@@ -53,7 +53,12 @@ namespace mecs::system::delegate
             //
             if constexpr (is_exclusive_v)
             {
-                const auto& ExpectedDesc = system::descriptor_v<custom_instance::event_t::system_t>;
+                const auto& ExpectedDesc = system::descriptor_v
+                <
+                    std::conditional_t< std::is_same_v<custom_instance::event_t::system_t, void>
+                        , mecs::system::details::default_system
+                        , custom_instance::event_t::system_t >
+                >;
 
                 for( auto& E : m_World.m_GraphDB.m_SystemDB.m_lInstance )
                 {

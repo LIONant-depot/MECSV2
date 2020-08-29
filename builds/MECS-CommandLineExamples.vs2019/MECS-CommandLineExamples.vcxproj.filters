@@ -283,6 +283,7 @@
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E05_custom_delegate_update_entity.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E06_global_system_events.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

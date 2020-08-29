@@ -5,6 +5,15 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     namespace details
     {
+        struct default_system : mecs::system::instance
+        {
+            using instance::instance;
+
+            void msgUpdate() noexcept
+            {
+            }
+        };
+
         template< bool T_IS_GLOBAL_V, typename...T_ARGS >
         auto GetRealEventsTuple( std::tuple<T_ARGS...>* )
         {
@@ -53,7 +62,8 @@ namespace mecs::system
         {
             return typename T_CUSTOM_SYSTEM::global_real_events_t
             {
-                &System.m_World.m_Graph.m_SystemGlobalEventDB.getOrCreate(mecs::system::event::descriptor_v<xcore::types::decay_full_t<T_ARGS>>.m_Guid)
+                &System.m_World.m_GraphDB.m_SystemGlobalEventDB.getOrCreate< xcore::types::decay_full_t<T_ARGS> >
+                    (mecs::system::event::descriptor_v<xcore::types::decay_full_t<T_ARGS>>.m_Guid)
                 ...
             };
         }
@@ -367,12 +377,12 @@ namespace mecs::system
         if constexpr ( std::is_base_of_v<mecs::system::event::exclusive, T_EVENT> )
         {
             static_assert( !!std::tuple_size_v<self::exclusive_real_events_t> );
-            auto& Event = std::get< T_EVENT::real_event_t >( This.m_ExclusiveEvents );
+            auto& Event = std::get< typename T_EVENT::real_event_t >( This.m_ExclusiveEvents );
             Event.NotifyAll( *this, std::forward<T_ARGS>(Args)... );
         }
         else
         {
-            auto& Event = *std::get<T_EVENT*>(This.m_GlobalEvents);
+            auto& Event = *std::get< typename T_EVENT::real_event_t* >( This.m_GlobalEvents );
             Event.NotifyAll( *this, std::forward<T_ARGS>(Args)... );
         }
     }
@@ -387,8 +397,7 @@ namespace mecs::system
         constexpr auto MakeDescriptor(void) noexcept
         {
             using sys = mecs::system::details::custom_system<T_SYSTEM>;
-            static_assert(std::is_same_v<decltype(T_SYSTEM::type_guid_v), const mecs::system::type_guid>);
-
+            
             return mecs::system::descriptor
             {
                 T_SYSTEM::type_guid_v.isValid() ? T_SYSTEM::type_guid_v : type_guid{ __FUNCSIG__ }
@@ -396,7 +405,7 @@ namespace mecs::system
                 {
                     auto p = new sys{ std::move(C) };
                     return std::unique_ptr<mecs::system::instance>{ static_cast<mecs::system::instance*>(p) };
-            }
+                }
                 , T_SYSTEM::name_v
                 , sys::exclusive_events_descriptors_v
                 , sys::global_events_descriptors_v
