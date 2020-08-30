@@ -9,7 +9,6 @@ namespace mecs::examples::E08_quantum_mutable_components
     struct value : mecs::component::data
     {
         static constexpr auto type_data_access_v = type_data_access::QUANTUM;
-        value& operator = ( value&& E ) noexcept { m_Value = E.m_Value.load(); return *this; }// = default;
         std::atomic<int> m_Value{ 0 };
     };
 

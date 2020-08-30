@@ -154,7 +154,17 @@ namespace mecs::component
         static constexpr descriptor::fn_move* movable_fn_v = std::is_move_assignable_v<T_COMPONENT> == false
                                                            ? reinterpret_cast<descriptor::fn_move*>(nullptr)
                                                            : []( void* pDest, void* pSrc) noexcept
-                                                             { *reinterpret_cast<T_COMPONENT*>(pDest) = std::move(*reinterpret_cast<T_COMPONENT*>(pSrc)); };
+                                                           {
+                                                               if constexpr( T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
+                                                               || T_COMPONENT::type_data_access_v            == type_data_access::QUANTUM )
+                                                               {
+                                                                   memcpy(pDest, pSrc, sizeof(T_COMPONENT) );
+                                                               }
+                                                               else
+                                                               {
+                                                                   *reinterpret_cast<T_COMPONENT*>(pDest) = std::move(*reinterpret_cast<T_COMPONENT*>(pSrc));
+                                                               }
+                                                           };
 
         template< typename T_COMPONENT >
         static constexpr descriptor::fn_destruct* destruct_fn_v = std::is_trivially_destructible_v<T_COMPONENT>
