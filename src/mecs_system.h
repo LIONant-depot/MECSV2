@@ -31,9 +31,13 @@ namespace mecs::system
         using                           job_t           = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
         using                           guid            = xcore::guid::unit<64, struct mecs_system_tag>;
         using                           archetype       = mecs::archetype::instance;
-        using                           exclusive_event = mecs::system::event::exclusive;
 
-        using job_t::job_t;
+        template< typename T_SYSTEM, typename...T_PARAMETERS >
+        struct exclusive_event : mecs::system::event::exclusive
+        {
+            using   real_event_t = define_real_event< T_PARAMETERS... >;
+            using   system_t     = T_SYSTEM;
+        };
 
         // Structure used for the construction of the hierarchy 
         struct construct
@@ -51,6 +55,8 @@ namespace mecs::system
         using                               query_t             = std::tuple<>;
         using                               events_t            = std::tuple<>;
 
+        using job_t::job_t;
+
         // Messages that we can handle, these can be overwritten by the user
         inline void msgSyncPointDone    (mecs::sync_point::instance&)   noexcept {}
         inline void msgSyncPointStart   (mecs::sync_point::instance&)   noexcept {}
@@ -66,8 +72,8 @@ namespace mecs::system
 
     struct instance : overrides
     {
-        inline
-                                            instance                ( const construct&& Settings) noexcept;
+        
+        inline                              instance                ( const construct&& Settings) noexcept;
 
         template< typename...T_SHARE_COMPONENTS >
         inline

@@ -15,6 +15,7 @@ namespace mecs::archetype::delegate
         using                           type_guid               = mecs::archetype::delegate::type_guid;
         using                           entity                  = mecs::component::entity;
         using                           guid                    = xcore::guid::unit<64, struct mecs_archetype_delegate_tag>;
+        using                           system                  = mecs::system::instance;
 
         constexpr static auto           type_guid_v             = type_guid{ nullptr };
         constexpr static auto           type_name_v             = xconst_universal_str("mecs::archetype::delegate(unnamed)");

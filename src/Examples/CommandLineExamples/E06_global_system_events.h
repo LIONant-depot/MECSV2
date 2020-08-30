@@ -9,7 +9,7 @@ namespace mecs::examples::E06_global_system_events
     };
 
     //-----------------------------------------------------------------------------------------
-    // General Custom Events
+    // System Global Events
     //-----------------------------------------------------------------------------------------
     struct my_sound_event : mecs::system::event::global
     {
@@ -23,6 +23,7 @@ namespace mecs::examples::E06_global_system_events
     {
         using instance::instance;
 
+        // Tells MECS which events this system can send
         using events_t = std::tuple
         <
             my_sound_event
@@ -47,33 +48,36 @@ namespace mecs::examples::E06_global_system_events
     };
 
     //-----------------------------------------------------------------------------------------
+    // a pretend global API for audio
+    //-----------------------------------------------------------------------------------------
+    static void PlaySound(const char* pSoundFile) noexcept
+    {
+        printf("Playing a sound: %s \n", pSoundFile);
+    }
+
+    //-----------------------------------------------------------------------------------------
     // General Custom Delegates
     //-----------------------------------------------------------------------------------------
     // These delegates are exactly the same as the custom delegates
     //-----------------------------------------------------------------------------------------
     struct my_sound_delegate : mecs::system::delegate::instance< my_sound_event >
     {
-        static void PlaySound( const char* pSoundFile ) noexcept
-        {
-            printf("Playing a sound: %s \n", pSoundFile );
-        }
-
-        void operator() ( mecs::system::instance& System, const char* pSoundFile ) const noexcept
+        void operator() ( system& System, const char* pSoundFile ) const noexcept
         {
             PlaySound(pSoundFile);
         }
     };
 
     //-----------------------------------------------------------------------------------------
-    // Delegates
+    // Archetype Delegates
     //-----------------------------------------------------------------------------------------
     struct spawn_delegate : mecs::archetype::delegate::instance< mecs::archetype::event::create_entity >
     {
         // Any entity will trigger this sound right now... we could filter which kinds of entities we want.
-        void operator() ( mecs::system::instance& System ) const noexcept
+        void operator() ( system& System ) const noexcept
         {
             // Route all sound playing to the sound_delegate
-            my_sound_delegate::PlaySound("Spawn Sound.wav");
+            PlaySound("Spawn Sound.wav");
         }
     };
 

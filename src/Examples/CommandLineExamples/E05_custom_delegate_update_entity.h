@@ -15,15 +15,12 @@ namespace mecs::examples::E05_custom_delegate_updated_entity
     {
         using instance::instance;
 
-        // System can define their own custom events. They work similar to the standard MECS events.
-        // Note that events need to have a GUID and also a name. The name is used for debugging and
-        // for visual editors. Also you need to specify which system this event belongs.
-        // This event could be defined outside the scope of the structure if we wanted to.
-        struct my_event : exclusive_event
-        {
-            using   real_event_t    = define_real_event< int >;
-            using   system_t        = move_system;
-        };
+        // System can define their own custom events.
+        // They are call exclusive events because they are exclusive to this system.
+        // They are very easy to define and very fast to execute.
+        // There is a more verbose way to define them as well, where you can
+        // specify a type_name and a guid if you wanted to. Most times there is not need.
+        using my_event = exclusive_event< move_system, int >;
 
         // This is how MECS knows which events this system have.
         using events_t = std::tuple
