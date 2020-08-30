@@ -84,7 +84,7 @@ namespace mecs::component
         xforceinline      bool              isZombie      ( void ) const noexcept { return reinterpret_cast<std::size_t>(m_pInstance) & 1; }
         xforceinline      map::entry&       getMapEntry   ( void ) const noexcept { return *reinterpret_cast<map::entry*>(reinterpret_cast<std::size_t>(m_pInstance) & (~std::size_t(1))); }
         xforceinline      const reference&  getReference  ( void ) const noexcept { return getMapEntry().m_Value; }
-        xforceinline      guid              getGuid       ( void ) const noexcept { return getMapEntry().m_Key; }
+        xforceinline      guid              getGUID       ( void ) const noexcept { return getMapEntry().m_Key; }
         xforceinline      void              MarkAsZombie  ( void )       noexcept { reinterpret_cast<std::size_t&>(m_pInstance) = reinterpret_cast<std::size_t>(m_pInstance) | 1; }
     };
 

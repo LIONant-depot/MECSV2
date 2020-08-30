@@ -40,7 +40,9 @@ namespace mecs::examples::E06_global_system_events
             }
 
             // Tell where is our entity
-            printf("Entity[%I64X] Walking (%d) \n", Entity.getGuid().m_Value, Position.m_X );
+            printf("Entity[%s] Walking (%d) \n"
+            , Entity.getGUID().getStringHex<char>().c_str()
+            , Position.m_X );
 
             // Send general events
             EventNotify< my_sound_event, move_system >( "Step sound.wav" );

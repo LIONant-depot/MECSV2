@@ -40,9 +40,12 @@ namespace mecs::archetype::event
     template< typename...T_COMPONENTS >
     struct updated_component final : details::base_event
     {
+        using                   components_t        = std::tuple<T_COMPONENTS...>;
+        static_assert(std::is_same_v< components_t, std::tuple<void> > == false);
+
         constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::updated_component" };
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::updated_component" );
-        using                   components_t        = std::tuple<T_COMPONENTS...>;
+        constexpr static auto   components_v        = std::array<const mecs::component::descriptor*, sizeof...(T_COMPONENTS)>{ &mecs::component::descriptor_v<T_COMPONENTS>... };
     };
 
     using updated_entity = updated_component<>;
@@ -61,7 +64,7 @@ namespace mecs::archetype::event
 
             struct updated_component
             {
-                using event_t = xcore::types::make_unique< event::updated_component<void>::event_t, struct updated_component_tag    >;
+                using event_t = xcore::types::make_unique< event::updated_component<>::event_t, struct updated_component_tag    >;
                 event_t                     m_Event;
                 std::vector<tools::bits>    m_Bits;
             };

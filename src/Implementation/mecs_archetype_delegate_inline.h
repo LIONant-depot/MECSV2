@@ -120,21 +120,20 @@ namespace mecs::archetype::delegate
             {
                 Archetype.m_Events.m_MovedOutEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }
-            else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::updated_component<void>::type_guid_v )
+            else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::updated_component<>::type_guid_v )
             {
-                Archetype.m_Events.m_UpdateComponent.m_Event.AddDelegate<&custom_instance::HandleEvents>(*this );
+                Archetype.m_Events.m_UpdateComponent.m_Event.AddDelegate<&custom_instance::HandleEvents>( *this );
 
-                static const tools::bits Bits{[&]
+                static const tools::bits Bits{[&]()
                 {
-                    if( event_t::components_v.size() )
+                    if constexpr ( event_t::components_v.size() )
                     {
                         tools::bits Bits{nullptr};
                         for( auto k : event_t::components_v )
-                            Bits.AddBit( m_World.m_Universe.m_ComponentDescriptorsDB.m_mapDescriptors.get( k )->m_BitNumber );
+                            Bits.AddBit( k->m_BitNumber );
                         return Bits;
                     }
-
-                    return tools::bits{xcore::not_null};
+                    else return tools::bits{xcore::not_null};
                 }()};
                 
                 Archetype.m_Events.m_UpdateComponent.m_Bits.push_back(Bits);

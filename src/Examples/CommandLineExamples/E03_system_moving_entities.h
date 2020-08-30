@@ -32,9 +32,9 @@ namespace mecs::examples::E03_system_moving_entities
         void operator()( const entity& Entity, position& Position, const velocity& Velocity ) const noexcept
         {
             Position.m_Value += Velocity.m_Value * getTime().m_DeltaTime;
-            
-            printf( "%I64X moved to {.x = %f, .y = %f}\n"
-            , Entity.getGuid().m_Value
+
+            printf( "%s moved to {.x = %f, .y = %f}\n"
+            , Entity.getGUID().getStringHex<char>().c_str()
             , Position.m_Value.m_X
             , Position.m_Value.m_Y );
         }

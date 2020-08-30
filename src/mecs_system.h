@@ -2,6 +2,8 @@ namespace mecs::system
 {
     using type_guid = xcore::guid::unit<64, struct type_tag>;
 
+    struct descriptor;
+
     namespace details
     {
         struct cache
@@ -29,7 +31,7 @@ namespace mecs::system
         template<typename...T> using    any             = mecs::archetype::query::any<std::tuple<T...>>;
         template<typename...T> using    none            = mecs::archetype::query::none<std::tuple<T...>>;
         using                           job_t           = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
-        using                           guid            = xcore::guid::unit<64, struct mecs_system_tag>;
+        using                           guid            = xcore::guid::unit<64, struct mecs_system_instance_tag>;
         using                           archetype       = mecs::archetype::instance;
 
         template< typename T_SYSTEM, typename...T_PARAMETERS >
@@ -75,6 +77,9 @@ namespace mecs::system
         
         inline                              instance                ( const construct&& Settings) noexcept;
 
+        constexpr
+        auto                                getGUID                 ( void ) const noexcept { return m_Guid; }
+
         template< typename...T_SHARE_COMPONENTS >
         inline
         mecs::archetype::entity_creation    createEntities          ( mecs::archetype::instance::guid   gArchetype
@@ -113,6 +118,10 @@ namespace mecs::system
                 , typename...   T_ARGS >
         xforceinline constexpr
         void                                EventNotify             ( T_ARGS&&...Args ) noexcept;
+
+        // This function implementation will be provided by MECS
+        virtual
+        const descriptor&                   getDescriptor           ( void ) const noexcept = 0;
 
         // Details functions
         virtual

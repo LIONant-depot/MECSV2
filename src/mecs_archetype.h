@@ -742,7 +742,7 @@ namespace mecs::archetype
         template< typename T_CALLBACK, typename...T_ARGS, typename...T_EXTRA_ARGS > xforceinline
         void CallFunction( mecs::component::entity::reference& Value, T_CALLBACK&& Callback, std::tuple<T_ARGS...>*, T_EXTRA_ARGS&... ExtraArgs ) noexcept
         {
-            static_assert(( (std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>> == false) && ... ));
+          //  static_assert(( (std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>> == false) && ... ));
             static_assert(( (mecs::component::descriptor_v< xcore::types::decay_full_t<T_ARGS> >.m_Type != mecs::component::type::SHARE) && ... ));
 
             using                               function_tuple       = std::tuple<T_ARGS...>;
@@ -773,7 +773,8 @@ namespace mecs::archetype
                         using arg_t = xcore::types::decay_full_t<T_ARGS>;
                         if constexpr (mecs::component::descriptor_v< arg_t>.m_isDoubleBuffer )
                         {
-                            const auto Offset     = 1 - static_cast<int>((Archetype.m_DoubleBufferInfo.m_StateBits>>mecs::component::descriptor_v< arg_t>.m_BitNumber)&1);
+                            const auto isNotConst = !(std::is_const_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>>);
+                            const auto Offset     = isNotConst - static_cast<int>((Archetype.m_DoubleBufferInfo.m_StateBits>>mecs::component::descriptor_v< arg_t>.m_BitNumber)&1);
                             auto&      C          = Pool.getComponentByIndex<arg_t>(Value.m_Index, Offset + Indices[xcore::types::tuple_t2i_v<T_ARGS, std::tuple<T_ARGS...>>]);
 
                             if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(&C);

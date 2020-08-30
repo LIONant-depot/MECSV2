@@ -8,6 +8,8 @@
 #include "E04_delegate_move_inout.h"
 #include "E05_custom_delegate_update_entity.h"
 #include "E06_global_system_events.h"
+#include "E07_double_buffer_components.h"
+#include "E08_quantum_mutable_components.h"
 
 
 //------------------------------------------------------------------------------------
@@ -24,7 +26,9 @@ int main(void)
     if(0) mecs::examples::E03_system_moving_entities::Test();
     if(0) mecs::examples::E04_delegate_moveinout::Test();
     if(0) mecs::examples::E05_custom_delegate_updated_entity::Test();
-    if(1) mecs::examples::E06_global_system_events::Test();
+    if(0) mecs::examples::E06_global_system_events::Test();
+    if(0) mecs::examples::E07_double_buffer_components::Test();
+    if(1) mecs::examples::E08_quantum_mutable_components::Test();
 
     xcore::Kill();
     return 0;

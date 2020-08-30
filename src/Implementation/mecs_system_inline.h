@@ -55,6 +55,10 @@ namespace mecs::system
             virtual void    qt_onRun                    ( void )                                                            noexcept override;
             inline  void    msgSyncPointDone            ( mecs::sync_point::instance& Syncpoint )                           noexcept;
             virtual void*   DetailsGetExclusiveRealEvent( const system::event::type_guid )                                  noexcept;
+            virtual const descriptor& getDescriptor     ( void ) const noexcept
+            {
+                return descriptor_v<T_SYSTEM>;
+            }
         };
 
         template< typename T_CUSTOM_SYSTEM, typename...T_ARGS> constexpr xforceinline

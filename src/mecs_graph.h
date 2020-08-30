@@ -109,6 +109,15 @@ namespace mecs::graph
         template< typename T_SYSTEM_DELEGATE >
         T_SYSTEM_DELEGATE& CreateSystemDelegate(mecs::system::delegate::overrides::guid Guid = mecs::system::delegate::overrides::guid{ xcore::not_null }) noexcept;
 
+        template< typename T_DELEGATE > xforceinline
+        auto& CreateDelegate( void ) noexcept
+        {
+            if constexpr ( std::is_base_of_v< mecs::archetype::delegate::overrides, T_DELEGATE > )
+                return CreateArchetypeDelegate<T_DELEGATE>();
+            else
+                return CreateSystemDelegate<T_DELEGATE>();
+        }
+
         virtual void qt_onRun(void) noexcept override
         {
             XCORE_PERF_FRAME_MARK_START("mecs::Frame")

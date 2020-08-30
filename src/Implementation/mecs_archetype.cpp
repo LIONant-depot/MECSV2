@@ -210,9 +210,21 @@ namespace mecs::archetype
                 }
                 else
                 {
-                    xassert(Entry.m_pWritingSystem == &System);
-                    Entry.m_pWritingSystem = nullptr ;
-                    if (Desc.m_Type == mecs::component::type::SHARE) Safety.m_nSharerWriters--;
+                    if(Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM 
+                    || Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM_DOUBLE_BUFFER )
+                    {
+                        Entry.m_pWritingSystem = nullptr;
+                    }
+                    else
+                    {
+                        xassert(Entry.m_pWritingSystem == &System);
+                        Entry.m_pWritingSystem = nullptr;
+
+                        if (Desc.m_Type == mecs::component::type::SHARE)
+                        {
+                            Safety.m_nSharerWriters--;
+                        }
+                    }
                 }
             }
         }
