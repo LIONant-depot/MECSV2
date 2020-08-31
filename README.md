@@ -64,6 +64,7 @@ The main concept of this ECS is to leverage all the features of the hardware to 
 * **Command Line examples** Minimizes dependencies and keeps the project simple to follow.
 * **Visual Examples** Shows how MECS can be used with a multi-core graphics APIs.
 * **Step by step execution** So that it is easy to integrate with editor, or continuous execution for speed.
+* **Procedure + Data Oriented APIs** Procedure API for speed and simplicity + Data Oriented APIs for editors.
 
 # Code Example
 
@@ -83,6 +84,12 @@ The main concept of this ECS is to leverage all the features of the hardware to 
         }
     };
 ```
+<br>
+
+# Dependencies
+
+* XCORE - https://gitlab.com/LIONant/xcore ( low level API, hard dependency)
+* DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the examples)
 
 # Similar Projects
 
