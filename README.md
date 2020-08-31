@@ -18,8 +18,6 @@
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://gitlab.com/LIONant/properties)
 [              ![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-<br>
-
 ## (MECS) Mulicore Events Component and Systems
 Simple yet powerful **ECS** system in **C++ 17**. It leverages many of the C++ features to provide a simple
 to use API to the end user yet deliver near optimum code. It is also design to the user does not need to know
