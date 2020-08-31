@@ -180,9 +180,16 @@ namespace mecs::system
         {
             using call_back_t = T_CALLBACK;
 
+            mecs::system::instance&                 m_System;
             xcore::scheduler::channel&              m_Channel;
             const T_CALLBACK&&                      m_Callback;
             const int                               m_nEntriesPerJob;
+        };
+
+        struct params_per_archetype
+        {
+            mecs::archetype::query::result_entry*   m_pResult;
+            std::span<std::uint8_t>                 m_DelegateSpan;
         };
 
         template< typename T, typename...T_ARGS> constexpr xforceinline
@@ -236,11 +243,74 @@ namespace mecs::system
                 );
             } while( ++iStart != iEnd );
         }
+
+        template< typename T, typename...T_ARGS> constexpr xforceinline
+        void ProcesssCall(std::tuple<T_ARGS...>*, std::span<std::byte*> Span, component::entity* pEntityPool, T& Params, params_per_archetype& Params2, int iStart, const int iEnd ) noexcept
+        {
+            using func_tuple    = std::tuple<T_ARGS...>;
+
+            xassert(iStart != iEnd);
+
+            auto&               UpdateComponents = Params2.m_pResult->m_pArchetype->m_Events.m_UpdateComponent;
+            const std::uint8_t  end              = static_cast<std::uint8_t>(Params2.m_DelegateSpan.size());
+
+            // Call the system
+            do
+            {
+                Params.m_Callback
+                (
+                    ([&]() constexpr noexcept -> T_ARGS
+                    {
+                        auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
+                        auto  pBackup   = p;
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
+                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                        }
+
+                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                    }())...
+                );
+
+                // Deal with delegates 
+                for (std::uint8_t i = 0u; i != end; ++i)
+                    UpdateComponents.m_Event.Notify( Params2.m_DelegateSpan[i], *pEntityPool, Params.m_System );
+
+                pEntityPool++;
+
+            } while( ++iStart != iEnd );
+        }
+
     }
 
     //----------------------------------------------------------------------------
     // SYSTEM:: INSTANCE
     //----------------------------------------------------------------------------
+
+    template< typename...T_ARGS, typename T_CALLBACK > constexpr
+    auto tuple_type_apply(std::tuple<T_ARGS...>*, T_CALLBACK&& Callback ) noexcept
+    {
+        // Types must be wrapped around a tuple in case of references
+        return Callback( static_cast<std::tuple<T_ARGS>*>(nullptr) ... );
+    }
+
+    template< typename...T_ARGS > constexpr
+    auto ComputeUpdateBits( std::tuple<T_ARGS...>* ) noexcept
+    {
+        tools::bits Bits{ nullptr };
+
+        (( [&]()
+        {
+            if constexpr ( std::is_const_v< std::remove_pointer_t<std::remove_reference_t<T_ARGS>> > == false )
+            {
+                Bits.AddBit( mecs::component::descriptor_v<T_ARGS>.m_BitNumber );
+            }
+        }()), ... );
+        
+        return Bits;
+    };
 
     xforceinline
     instance::instance( const construct&& Settings) noexcept
@@ -252,6 +322,16 @@ namespace mecs::system
     template< typename T_CALLBACK > constexpr xforceinline
     void instance::ForEach(mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob) noexcept
     {
+        using func_args_tuple = typename xcore::function::traits<T_CALLBACK>::args_tuple;
+        static constexpr auto is_writing_v = tuple_type_apply
+        (
+            static_cast<func_args_tuple*>(nullptr)
+            , []( auto... x ) constexpr
+            {
+                return ((std::is_same_v< std::tuple_element<0, decltype(*x)>, const std::tuple_element<0, decltype(*x)> > == false) || ...);
+            }
+        );
+
         // If there is nothing to do then lets bail out
         if (QueryI.m_lResults.size() == 0)
             return;
@@ -272,18 +352,51 @@ namespace mecs::system
         using                           params_t = details::process_resuts_params<T_CALLBACK>;
         params_t                        Params
         {
-            Channel
+              *this
+            , Channel
             , std::forward<T_CALLBACK>(Functor)
             , nEntitiesPerJob
         };
 
-        for (auto& R : QueryI.m_lResults)
+        int                                             DelegateStackIndex = 0;
+        std::array<std::array<std::uint8_t, 16>, 128 >  DelegateStack;
+        std::array<details::params_per_archetype, 16 >  ArchetypeParams;
+        int                                             iArchetypeParam = 0;
+
+        for( auto& R : QueryI.m_lResults )
         {
             auto& MainPool = R.m_pArchetype->m_MainPool;
             xassert(MainPool.size());
+
+            // If we need to call events per each entity update then lets precompute as much as we can
+            auto& ArchetypeParam = ArchetypeParams[iArchetypeParam++];
+            ArchetypeParam.m_pResult    = &R;
+
+            if constexpr (is_writing_v)
+            {
+                auto& UpdateComponent = R.m_pArchetype->m_Events.m_UpdateComponent;
+                if(UpdateComponent.m_Event.hasSubscribers() )
+                {
+                    const static tools::bits Bits = ComputeUpdateBits( static_cast<func_args_tuple*>(nullptr) );
+
+                    const auto& UpdateComponentBits = UpdateComponent.m_Bits;
+                    auto& StackEntry = DelegateStack[ DelegateStackIndex++ ];
+                    int   nDelegates = 0;
+
+                    for (int i = 0, end = static_cast<int>(UpdateComponentBits.size()); i != end; ++i)
+                    {
+                        if( UpdateComponentBits[i].isMatchingBits(Bits) )
+                            StackEntry[nDelegates++] = static_cast<std::uint8_t>(i);
+                    }
+
+                    if(nDelegates) ArchetypeParam.m_DelegateSpan = std::span<std::uint8_t>{ StackEntry.data(), static_cast<std::size_t>(nDelegates) };
+                }
+            }
+
+            // Process the results
             for (int end = static_cast<int>(MainPool.size()), i = 0; i < end; ++i)
             {
-                ProcessResult(Params, R, MainPool, i);
+                ProcessResult(Params, ArchetypeParam, i );
             }
         }
 
@@ -335,32 +448,53 @@ namespace mecs::system
     }
 
     //----------------------------------------------------------------------------------------------------
-    template< typename T_PARAMS > constexpr xforceinline
-    void instance::ProcessResult( T_PARAMS& Params, mecs::archetype::query::result_entry& R, mecs::entity_pool::instance& MainPool, const int Index ) noexcept
+    template< typename T_PARAMS, typename T_PARAMS2 > constexpr xforceinline
+    void instance::ProcessResult( T_PARAMS& Params, T_PARAMS2& Params2, const int Index ) noexcept
     {
-        auto&  SpecializedPool = MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+        auto&  SpecializedPool = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
         for( int end=static_cast<int>(SpecializedPool.m_EntityPool.size()), i=0; i<end; )
         {
             const int MyEnd = std::min<int>(i+Params.m_nEntriesPerJob, end);
             Params.m_Channel.SubmitJob(
             [
-                iStart  = i
+                &Params
+            ,   &Params2
+            ,   iStart  = i
             ,   iEnd    = MyEnd
-            ,   &R
-            ,   &Params
             ,   Index
             ] () constexpr noexcept
             {
                 using function_arg_tuple = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
-                auto  Pointers           = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, R, Params);
+                auto  Pointers           = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult, Params);
 
-                details::ProcesssCall
-                (
-                    reinterpret_cast<function_arg_tuple*>(nullptr)
-                ,   Pointers
-                ,   Params
-                ,   iStart
-                ,   iEnd );
+                if( Params2.m_DelegateSpan.size() )
+                {
+                    auto&                    SpecializedPool = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+                    mecs::component::entity* pEntityPool     = &SpecializedPool.m_EntityPool.getComponentByIndex<mecs::component::entity>( iStart, 0 );
+
+                    details::ProcesssCall
+                    (
+                        reinterpret_cast<function_arg_tuple*>(nullptr)
+                        , Pointers
+                        , pEntityPool
+                        , Params
+                        , Params2
+                        , iStart
+                        , iEnd
+                    );
+                    
+                }
+                else
+                {
+                    details::ProcesssCall
+                    (
+                        reinterpret_cast<function_arg_tuple*>(nullptr)
+                        , Pointers
+                        , Params
+                        , iStart
+                        , iEnd
+                    );
+                }
             });
             i = MyEnd;
         }

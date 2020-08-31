@@ -37,6 +37,12 @@ namespace mecs::tools
             for (auto& E : m_lDelegates) E.m_pCallBack(E.m_pThis, std::forward<T_ARGS>(Args) ...);
         }
 
+        xforceinline constexpr void Notify              (int Index, T_ARGS... Args)  const noexcept
+        {
+            auto& E = m_lDelegates[Index];
+            E.m_pCallBack(E.m_pThis, std::forward<T_ARGS>(Args) ...);
+        }
+
         std::vector<entry>       m_lDelegates;
     };
 }

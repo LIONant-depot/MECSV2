@@ -127,11 +127,10 @@ namespace mecs::system
         virtual
         void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid ) noexcept = 0;
 
-        template< typename T_PARAMS >
+        template< typename T_PARAMS, typename T_PARAMS2 >
         constexpr xforceinline
         void                                ProcessResult           ( T_PARAMS&                             Params
-                                                                    , mecs::archetype::query::result_entry& R
-                                                                    , mecs::entity_pool::instance&          MainPool
+                                                                    , T_PARAMS2&                            Params2
                                                                     , const int                             Index ) noexcept;
 
         // TODO: This will be private

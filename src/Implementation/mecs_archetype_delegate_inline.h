@@ -122,8 +122,6 @@ namespace mecs::archetype::delegate
             }
             else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::updated_component<>::type_guid_v )
             {
-                Archetype.m_Events.m_UpdateComponent.m_Event.AddDelegate<&custom_instance::HandleEvents>( *this );
-
                 static const tools::bits Bits{[&]()
                 {
                     if constexpr ( event_t::components_v.size() )
@@ -136,6 +134,7 @@ namespace mecs::archetype::delegate
                     else return tools::bits{xcore::not_null};
                 }()};
                 
+                Archetype.m_Events.m_UpdateComponent.m_Event.AddDelegate<&custom_instance::HandleEvents>(*this);
                 Archetype.m_Events.m_UpdateComponent.m_Bits.push_back(Bits);
             }
             else
