@@ -55,8 +55,8 @@ namespace mecs::examples::E08_quantum_mutable_components
             // The value of value will be undetermined since it lives in the quantum world.
             // However we know that the range will be from -1 to 1 because for a given frame it is been incremented and decremented 
             printf("System: %s, Entity: %s, New Value %d\n"
-                , System.getDescriptor().m_Guid == counter_down::type_guid_v ? "CountDown"
-                                                                             : "CountUp  "
+                , System.getDescriptor().m_Guid == counter_up::type_guid_v ? "CountUp  "
+                                                                           : "CountDown"
                 , Entity.getGUID().getStringHex<char>().c_str()
                 , Value.m_Value.load( std::memory_order_relaxed ) );
         }
