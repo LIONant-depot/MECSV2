@@ -20,15 +20,15 @@
 
 ## (MECS) Mulicore Events Component and Systems
 Simple yet powerful **ECS** system in **C++ 17**. It leverages many of the C++ features to provide a simple
-to use API to the end user yet deliver near optimum code. It is also design to the user does not need to know
-very much about multi-core and when the user makes a mistake the MECS should be able to detected.
+to use API to the end user yet deliver near optimum code. It is also designed so the user does not need to know
+very much about multi-core and when the user makes a mistake MECS should be able to detected.
 It also allows advance users to take advantage of complex multi-core features easily and cleanly. 
 <img src="https://i.imgur.com/9a5d2ee.png" align="right" width="150px" />
 
 The project is meant to serve as a reference/bench mark for other ECS system out there.
 The code should be able to be inserted in game engines and applications without a problem.
 
-Any feedback is welcome. Please follow us and help support the project.
+Any feedback is more than welcome. Please follow us and help support the project.
 
 [              ![Twitter](https://img.shields.io/twitter/follow/nickreal03.svg?label=Follow&style=social)](https://twitter.com/nickreal03)
 [                 ![chat](https://img.shields.io/discord/552344404258586644.svg?logo=discord)](https://discord.gg/fqaFSRE)
@@ -43,7 +43,7 @@ Any feedback is welcome. Please follow us and help support the project.
 
 
 # Features
-The main concept of this ECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
+The main concept of MECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
 
 * **MIT license**. Not need to worry is all yours.
 * **Lockless architecture**. Utilizes all the hardware threads, and remains completely safe for the end user.
@@ -88,7 +88,7 @@ The main concept of this ECS is to leverage all the features of the hardware to 
 
 # Dependencies
 
-* XCORE - https://gitlab.com/LIONant/xcore ( low level API, hard dependency)
+* XCORE - https://gitlab.com/LIONant/xcore (low level API, hard dependency)
 * DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the examples)
 
 # Similar Projects
