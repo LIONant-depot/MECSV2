@@ -34,7 +34,10 @@ namespace mecs::sync_point
         details::events             m_Events        {};
         xcore::string::ref<char>    m_Name          {};
 
-        xforceinline instance( void ) noexcept : parent_t{ xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE, xcore::scheduler::triggers::DONT_CLEAN_COUNT } {}
+        xforceinline instance( guid Guid ) noexcept
+        : parent_t{ xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE, xcore::scheduler::triggers::DONT_CLEAN_COUNT }
+        , m_Guid{ Guid }
+        {}
 
         virtual void qt_onTriggered (void) noexcept override
         {
@@ -51,7 +54,7 @@ namespace mecs::sync_point
 
     struct descriptor
     {
-        using fn_create = std::unique_ptr<mecs::sync_point::instance>(void) noexcept;
+        using fn_create = std::unique_ptr<mecs::sync_point::instance>(mecs::sync_point::instance::guid) noexcept;
 
         const type_guid                         m_Guid;
         const xcore::string::const_universal    m_Name;
@@ -70,9 +73,9 @@ namespace mecs::sync_point
             {
                 T_SYNC_POINT::type_guid_v
             ,   T_SYNC_POINT::name_v
-            ,   []() noexcept -> std::unique_ptr<mecs::sync_point::instance>
+            ,   []( mecs::sync_point::instance::guid Guid ) noexcept -> std::unique_ptr<mecs::sync_point::instance>
                 {
-                    auto p = static_cast<mecs::sync_point::instance*>(new T_SYNC_POINT);
+                    auto p = static_cast<mecs::sync_point::instance*>(new T_SYNC_POINT{ Guid });
                     return std::unique_ptr<mecs::sync_point::instance>{ p };
                 }
             };
@@ -113,21 +116,24 @@ namespace mecs::sync_point
     {
         using map_sync_point        = mecs::tools::fixed_map<mecs::sync_point::instance::guid,  std::unique_ptr<mecs::sync_point::instance>,    mecs::settings::max_sync_points>;
 
-        void Init(void){}
+        instance_data_base( mecs::world::instance& World ) noexcept : m_World{ World } {}
 
         template< typename T_SYNC_POINT >
         instance& Create( instance::guid Guid )
         {
             instance* p = nullptr;
-            m_mapInstances.alloc(Guid, [&](std::unique_ptr<mecs::sync_point::instance>& I)
+            m_mapInstances.alloc(Guid, [&](std::unique_ptr<mecs::sync_point::instance>& I )
             {
-                m_lInstance.push_back(p = I = std::make_unique<T_SYNC_POINT>());
-                I.m_Guid = Guid;
+                I = std::make_unique<T_SYNC_POINT>( Guid );
+                p = I.get();
+                m_lInstance.push_back(p);
             });
+
             xassert(p);
             return *p;
         }
 
+        mecs::world::instance&              m_World;
         std::vector<instance*>              m_lInstance;
         map_sync_point                      m_mapInstances;
     };

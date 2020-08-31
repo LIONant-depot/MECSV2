@@ -10,7 +10,7 @@
 #include "E06_global_system_events.h"
 #include "E07_double_buffer_components.h"
 #include "E08_quantum_mutable_components.h"
-
+#include "E09_quantum_double_buffer_components.h"
 
 //------------------------------------------------------------------------------------
 // main
@@ -28,7 +28,8 @@ int main(void)
     if(0) mecs::examples::E05_custom_delegate_updated_entity::Test();
     if(0) mecs::examples::E06_global_system_events::Test();
     if(0) mecs::examples::E07_double_buffer_components::Test();
-    if(1) mecs::examples::E08_quantum_mutable_components::Test();
+    if(0) mecs::examples::E08_quantum_mutable_components::Test();
+    if(1) mecs::examples::E09_quantum_double_buffer_components::Test();
 
     xcore::Kill();
     return 0;

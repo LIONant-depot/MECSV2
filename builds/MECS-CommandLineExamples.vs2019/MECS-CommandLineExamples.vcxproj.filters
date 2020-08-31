@@ -286,6 +286,7 @@
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E06_global_system_events.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E07_double_buffer_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E08_quantum_mutable_components.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E09_quantum_double_buffer_components.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

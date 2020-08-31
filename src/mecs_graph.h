@@ -23,9 +23,10 @@ namespace mecs::graph
       //  template< typename T_SYSTEM >
         //void AddGraphConnection( mecs::syncpin)
 
+        static constexpr auto start_sync_point_v = mecs::sync_point::instance::guid{ 1ull };
+        static constexpr auto end_sync_point_v   = mecs::sync_point::instance::guid{ 2ull };
+
         events                      m_Events;
-        mecs::sync_point::instance  m_StartSyncPoint;
-        mecs::sync_point::instance  m_EndSyncPoint;
 
         instance( mecs::world::instance& World, mecs::universe::instance& Universe )
             : xcore::scheduler::job<1>
@@ -44,12 +45,14 @@ namespace mecs::graph
             , m_SystemGlobalEventDB{World}
             , m_ArchetypeDelegateDB{World}
             , m_SystemDelegateDB{World}
+            , m_SyncpointDB{ World }
+            , m_StartSyncPoint { m_SyncpointDB.Create<mecs::sync_point::instance>(start_sync_point_v) }
+            , m_EndSyncPoint   { m_SyncpointDB.Create<mecs::sync_point::instance>(end_sync_point_v) }
             {}
 
         void Init( void ) noexcept
         {
             m_SystemDB.Init();
-            m_SyncpointDB.Init();
 
             //
             // Add the graph as the core of the graph
@@ -118,6 +121,12 @@ namespace mecs::graph
                 return CreateSystemDelegate<T_DELEGATE>();
         }
 
+        template< typename T_SYNC_POINT = mecs::sync_point::instance >
+        T_SYNC_POINT& CreateSyncPoint( mecs::sync_point::instance::guid Guid = mecs::sync_point::instance::guid{ xcore::not_null} ) noexcept
+        {
+            return m_SyncpointDB.Create<T_SYNC_POINT>(Guid);
+        }
+
         virtual void qt_onRun(void) noexcept override
         {
             XCORE_PERF_FRAME_MARK_START("mecs::Frame")
@@ -168,10 +177,13 @@ namespace mecs::graph
         mecs::universe::instance&                       m_Universe;
         mecs::world::instance&                          m_World;
         mecs::system::instance_data_base                m_SystemDB;
-        mecs::sync_point::instance_data_base            m_SyncpointDB           {};
+        mecs::sync_point::instance_data_base            m_SyncpointDB;
         mecs::system::event::instance_data_base         m_SystemGlobalEventDB;
         mecs::archetype::delegate::instance_data_base   m_ArchetypeDelegateDB;
         mecs::system::delegate::instance_data_base      m_SystemDelegateDB;
+
+        mecs::sync_point::instance&                     m_StartSyncPoint;
+        mecs::sync_point::instance&                     m_EndSyncPoint;
 
         xcore::lock::object<std::vector<lock_error>, xcore::lock::spin> m_LockErrors{};
     };
