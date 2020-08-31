@@ -162,7 +162,6 @@
     <ClInclude Include="..\..\src\mecs_archetype_event.h" />
     <ClInclude Include="..\..\src\mecs_archetype_query.h" />
     <ClInclude Include="..\..\src\mecs_component.h" />
-    <ClInclude Include="..\..\src\mecs_delegate.h" />
     <ClInclude Include="..\..\src\mecs_entity_mgr.h" />
     <ClInclude Include="..\..\src\mecs_entity_pool.h" />
     <ClInclude Include="..\..\src\mecs_examples.h" />

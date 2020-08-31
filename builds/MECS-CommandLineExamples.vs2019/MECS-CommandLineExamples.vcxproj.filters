@@ -207,9 +207,6 @@
     <ClInclude Include="..\..\src\mecs_component.h">
       <Filter>MECS</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\mecs_delegate.h">
-      <Filter>MECS</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\mecs_entity_mgr.h">
       <Filter>MECS</Filter>
     </ClInclude>

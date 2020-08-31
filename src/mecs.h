@@ -30,7 +30,7 @@ namespace mecs::archetype
 
 namespace mecs::entity_pool
 {
-    class instance;
+    struct instance;
     using index = std::uint32_t;
 }
 
@@ -66,7 +66,6 @@ namespace mecs::universe
 #include "mecs_archetype_query.h"
 #include "mecs_archetype.h"
 #include "mecs_archetype_delegate.h"
-#include "mecs_delegate.h"
 #include "mecs_time.h"
 #include "mecs_system.h"
 #include "mecs_graph.h"

@@ -3,39 +3,11 @@ namespace mecs::entity_pool
     //---------------------------------------------------------------------------------
     // POOLS::EVENTS
     //---------------------------------------------------------------------------------
-    class instance
+    struct instance
     {
-    public:
-
         constexpr static auto           page_size_v     = 4096;
         constexpr static auto           page_size_pow_v = xcore::bits::Log2Int(page_size_v);
         using                           self            = instance;
-
-        /*
-        struct iterator
-        {
-            self&       m_This;
-            std::size_t m_I;
-
-            inline      auto operator   ++  (void)                    noexcept { m_I++; return *this; }
-            constexpr   bool operator   !=  (std::nullptr_t)  const   noexcept { return m_This.m_Count != m_I; }
-            constexpr   auto operator   *   (void)            const   noexcept { return std::tuple<const T_TYPES&...> { std::get<T_TYPES*>(m_This.m_Pointers)[m_I]... }; }
-            constexpr   auto operator   *   (void)                    noexcept { return std::tuple<T_TYPES&...>       { std::get<T_TYPES*>(m_This.m_Pointers)[m_I]... }; }
-        };
-        */
-
-        /*
-        static bool b = true;
-        if (b)
-        {
-            SYSTEM_INFO sSysInfo;
-            GetSystemInfo(&sSysInfo);
-            b = false;
-            xassert(page_size_v <= sSysInfo.dwPageSize);
-        }
-        */
-
-    public:
 
         inline                         ~instance                ( void )                                                            noexcept;
         inline      void                Init                    ( mecs::archetype::instance& Archetype, const std::span<const mecs::component::descriptor* const> Descriptors, index MaxEntries )          noexcept;
