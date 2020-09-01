@@ -41,7 +41,7 @@ Any feedback is more than welcome. Please follow us and help support the project
 [              ![Patreon](https://img.shields.io/badge/Patreon-Donate-blue.svg)](https://www.patreon.com/LIONant)
 --->
 
-# Features :eyes:
+# Features :suspect:
 The main concept of MECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
 
 ### Legal
@@ -78,7 +78,7 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **Visual Examples**. Shows how MECS can be used with a multi-core graphics APIs.
 * **Follows Unity3D**. Name of concepts follows unity3D when possible.
 
-# Code Example
+# Code Example :eyes:
 
 ```c++
     struct position : mecs::component::data {
@@ -98,12 +98,12 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 ```
 <br>
 
-# Dependencies
+# Dependencies :rage3:
 
 * XCORE - https://gitlab.com/LIONant/xcore (low level API, hard dependency)
 * DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the Graphical Examples)
 
-# Similar Projects
+# Similar Projects :trollface:
 
 * Previous version (0.1) of MECS: https://gitlab.com/LIONant/MECS
 * https://github.com/alecthomas/entityx
