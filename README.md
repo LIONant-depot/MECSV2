@@ -47,14 +47,14 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 ### Legal
 * **MIT license**. Not need to worry is all yours.
 
-### Archetecture
+### Architecture
 * **Lockless architecture**. Utilizes all the hardware threads, and remains completely safe for the end user.
 * **Virtual memory support**. Provide super fast memory manipulations and minimizes wasted memory.
 * **Archetypes support**. Groups entities into flat arrays to provide near zero cache misses.
 * **Single CPP/H**. It is not a library is a module. Just include a single cpp/h into your project directly.
-* **GPU support**. You can create systems that run entirely in the GPU, yet is able to play nice with the CPU systems.
-* **System Events/Delegates**. The events are lighting fast and use to extended systems to keep cache efficiency.
-* **Archetype Events/Delegates**.
+* **[WIP :construction: &#128338;] GPU support**. You can create systems that run entirely in the GPU, yet is able to play nice with the CPU systems.
+* **System Events/Delegates**. Simple generic way to extended systems, and lighting fast with hot cache efficiency.
+* **Archetype Events/Delegates**. Add functionality on key events from Archetypes, adding, updating, move-in, etc.
 * **C++ 17 meta-programming**. Makes the compiler work hard so that the run time doesn't + keeps API simple.
 * **GUID for entities**. Helps identify entities across different levels, scripts, versions, etc.
 * **Game Graph**. Simple multi-core graph allows user to define order dependencies easily and flexibly. 
@@ -63,17 +63,20 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **Step by step execution**. So that it is easy to integrate with editor, or continuous execution for speed.
 * **Procedure + Data Oriented APIs**. Procedure API for speed and simplicity + Data Oriented APIs for editors.
 
-### Component types
-* **Quantum components**. Support direct multi-core access components, for advance users.
-* **Share components**. Factors out components which are share across multiple entities.
-* **Tag components**. Helps user group entities easily. 
-* **Singleton components**. Allows to build supporting systems, complex components, and still plays nice with MECS.
-* **Reference components**. references to other entities in a safe, simple and elegant way. Great for resources.
+### Component Types
+* **Linear**. Simple and easy to use components with plenty of debug features.
+* **Quantum**. Support direct multi-core access components, for advance users.
+* **Double Buffer**. To allow simultaneous Read/Write operation for linear and quantum components.
+* **Share**. Factors out components which are share across multiple entities.
+* **Tags**. Helps user group entities easily. 
+* **Singleton**. Allows to build supporting systems, complex components, and still plays nice with MECS.
+* **[WIP :construction: &#128338;] Reference**. references to other entities in a safe, simple and elegant way. Great for assets/resources.
 
 ### Pipeline / Documentation
 * **Unit-test**. to make sure everything is working.
 * **Command Line examples**. Minimizes dependencies and keeps the project simple to follow.
 * **Visual Examples**. Shows how MECS can be used with a multi-core graphics APIs.
+* **Follows Unity3D**. Name of concepts follows unity3D when possible.
 
 # Code Example
 
@@ -98,7 +101,7 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 # Dependencies
 
 * XCORE - https://gitlab.com/LIONant/xcore (low level API, hard dependency)
-* DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the examples)
+* DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the Graphical Examples)
 
 # Similar Projects
 
