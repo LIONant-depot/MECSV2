@@ -59,7 +59,7 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **GUID for entities**. Helps identify entities across different levels, scripts, versions, etc.
 * **Game Graph**. Simple multi-core graph allows user to define order dependencies easily and flexibly. 
 * **Universe/Worlds**. Simple way to organize your project flexibly. Can run multiple worlds at the same time.
-* **Data worlds**. for blasting fast streaming of worlds. Think Playstation 5.
+* **[WIP :construction:] Data worlds**. for blasting fast streaming of worlds. Think Playstation 5.
 * **Step by step execution**. So that it is easy to integrate with editor, or continuous execution for speed.
 * **Procedure + Data Oriented APIs**. Procedure API for speed and simplicity + Data Oriented APIs for editors.
 

@@ -42,18 +42,21 @@ namespace mecs::examples::E11_complex_system_queries
         void operator() ( entity& Entity, position& Position, const velocity* pVelocity, health* pHealth ) noexcept
         {
             xcore::vector2 RndVel = { Rnd.RandF32(-1, 1 ), Rnd.RandF32(-1, 1) };
+            std::array<char,256> String;
+            int                  L = 0;
+
             RndVel.NormalizeSafe();
 
             // if we have a velocity component we will take it into consideration
             if(pVelocity)
             {
                 Position.m_Value += RndVel * pVelocity->m_Value * getTime().m_DeltaTime;
-                printf("Shaking Movable Entity %s ", Entity.getGUID().getStringHex<char>().c_str());
+                L += sprintf_s( &String[L], String.size() - L, "Shaking Movable Entity %s ", Entity.getGUID().getStringHex<char>().c_str());
             }
             else
             {
                 Position.m_Value += RndVel * getTime().m_DeltaTime;
-                printf("Shaking unMovable Entity %s ", Entity.getGUID().getStringHex<char>().c_str());
+                L += sprintf_s( &String[L], String.size() - L, "Shaking unMovable Entity %s ", Entity.getGUID().getStringHex<char>().c_str());
             }
 
             // Entities with health will get damage
@@ -62,7 +65,7 @@ namespace mecs::examples::E11_complex_system_queries
                 pHealth->m_Value -= 1.0f;
                 if( pHealth->m_Value <= 0 )
                 {
-                    printf("Killing Entity...");
+                    L += sprintf_s( &String[L], String.size() - L, "Killing Entity...");
                     getArchetypeBy<std::tuple<dead_tag>, std::tuple<>>(Entity, [&](archetype& Archetype)
                     {
                         moveEntityToArchetype(Entity, Archetype);
@@ -70,11 +73,11 @@ namespace mecs::examples::E11_complex_system_queries
                 }
                 else
                 {
-                    printf("With health %f ", pHealth->m_Value );
+                    L += sprintf_s( &String[L], String.size() - L, "With health %f ", pHealth->m_Value );
                 }
             }
 
-            printf("\n");
+            printf("%s\n", String.data() );
         }
     };
 

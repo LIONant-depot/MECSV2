@@ -1211,7 +1211,7 @@ namespace mecs::archetype
                                 Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
                             }
                         }
-                        else 
+                        else if(iArchetypeDataCompDesc < ArchetypeDataCompDescSpan.size() )
                         {
                             // Lets find the right data component
                             while( SortedFunctionComponent.m_Guid.m_Value > ArchetypeDataCompDescSpan[iArchetypeDataCompDesc]->m_Guid.m_Value )
@@ -1264,6 +1264,12 @@ namespace mecs::archetype
 
                             // Move to the next component
                             iArchetypeDataCompDesc++;
+                        }
+                        else
+                        {
+                            // This should be an optional component that was not found
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index    = mecs::archetype::query::result_entry::invalid_index;
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared = false;
                         }
                     }
 

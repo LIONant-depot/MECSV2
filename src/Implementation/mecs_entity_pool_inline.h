@@ -298,7 +298,7 @@ namespace mecs::entity_pool
     template< typename T_COMPONENT > xforceinline
     T_COMPONENT& instance::getComponentByIndex ( const index Index, int iComponentIndex ) noexcept
     {
-        xassert(mecs::component::descriptor_v <T_COMPONENT>.m_Guid == m_Descriptors[iComponentIndex]->m_Guid );
+        xassert(mecs::component::descriptor_v<T_COMPONENT>.m_Guid == m_Descriptors[iComponentIndex]->m_Guid );
 
         auto p = m_Pointers[iComponentIndex] + Index * mecs::component::descriptor_v<T_COMPONENT>.m_Size;
         if constexpr ( mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SINGLETON )
