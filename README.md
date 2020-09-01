@@ -41,7 +41,7 @@ Any feedback is more than welcome. Please follow us and help support the project
 [              ![Patreon](https://img.shields.io/badge/Patreon-Donate-blue.svg)](https://www.patreon.com/LIONant)
 --->
 
-# Features
+# Features :eyes:
 The main concept of MECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
 
 ### Legal
@@ -52,13 +52,13 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **Virtual memory support**. Provide super fast memory manipulations and minimizes wasted memory.
 * **Archetypes support**. Groups entities into flat arrays to provide near zero cache misses.
 * **Single CPP/H**. It is not a library is a module. Just include a single cpp/h into your project directly.
-* **[WIP :construction: &#128338;] GPU support**. You can create systems that run entirely in the GPU, yet is able to play nice with the CPU systems.
+* **[WIP :construction:] GPU support**. You can create systems that run entirely in the GPU, yet is able to play nice with the CPU systems.
 * **System Events/Delegates**. Simple generic way to extended systems, and lighting fast with hot cache efficiency.
 * **Archetype Events/Delegates**. Add functionality on key events from Archetypes, adding, updating, move-in, etc.
 * **C++ 17 meta-programming**. Makes the compiler work hard so that the run time doesn't + keeps API simple.
 * **GUID for entities**. Helps identify entities across different levels, scripts, versions, etc.
 * **Game Graph**. Simple multi-core graph allows user to define order dependencies easily and flexibly. 
-* **Universe/Worlds**. Simple way to organize your project flexibly.
+* **Universe/Worlds**. Simple way to organize your project flexibly. Can run multiple worlds at the same time.
 * **Data worlds**. for blasting fast streaming of worlds. Think Playstation 5.
 * **Step by step execution**. So that it is easy to integrate with editor, or continuous execution for speed.
 * **Procedure + Data Oriented APIs**. Procedure API for speed and simplicity + Data Oriented APIs for editors.
@@ -70,7 +70,7 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **Share**. Factors out components which are share across multiple entities.
 * **Tags**. Helps user group entities easily. 
 * **Singleton**. Allows to build supporting systems, complex components, and still plays nice with MECS.
-* **[WIP :construction: &#128338;] Reference**. references to other entities in a safe, simple and elegant way. Great for assets/resources.
+* **[WIP :construction:] Reference**. references to other entities in a safe, simple and elegant way. Great for assets/resources.
 
 ### Pipeline / Documentation
 * **Unit-test**. to make sure everything is working.
