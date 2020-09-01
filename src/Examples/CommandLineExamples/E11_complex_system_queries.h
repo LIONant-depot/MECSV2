@@ -31,6 +31,12 @@ namespace mecs::examples::E11_complex_system_queries
     {
         using instance::instance;
 
+        // For complex queries we can use (query_t) this allows us to directly control which components
+        // and entity should have in order for it to be process by the system. query_t should have a
+        // std::tuple with the following templates:
+        // all<...list of components >  will tell the query which component must an entity have.
+        // any<...list of components >  will tell the query which components an entity could have.
+        // none<...list of components > will tell the query which components an entity can not have.
         using query_t = std::tuple
         <
             all<dynamic_tag>
@@ -39,6 +45,10 @@ namespace mecs::examples::E11_complex_system_queries
 
         xcore::random::small_generator Rnd;
 
+        // This example show cases how one system can handle entities that may or may nor have velocities
+        // or Health components. Note that the way we indicate that a component is optional is by asking
+        // for its pointer. This mirrors good practices of C++. This helps reduce the number of systems
+        // that you need. This type of pointers are call tentative references because you may get nothing.
         void operator() ( entity& Entity, position& Position, const velocity* pVelocity, health* pHealth ) noexcept
         {
             xcore::vector2 RndVel = { Rnd.RandF32(-1, 1 ), Rnd.RandF32(-1, 1) };
@@ -66,6 +76,8 @@ namespace mecs::examples::E11_complex_system_queries
                 if( pHealth->m_Value <= 0 )
                 {
                     L += sprintf_s( &String[L], String.size() - L, "Killing Entity...");
+
+                    // add a dead_tag component to our entity
                     getArchetypeBy<std::tuple<dead_tag>, std::tuple<>>(Entity, [&](archetype& Archetype)
                     {
                         moveEntityToArchetype(Entity, Archetype);
