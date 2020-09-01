@@ -1,6 +1,6 @@
 <img src="https://i.imgur.com/NwahbNn.jpg" align="right" width="250px" />
 
-# MECS (Version: 0.2.0 Alpha)
+# MECS (Version: 2.0-Alpha)
 <!---
 [      ![pipeline status](https://gitlab.com/LIONant/properties/badges/master/pipeline.svg)](https://gitlab.com/LIONant/properties/commits/master)
 [            ![Docs](https://img.shields.io/badge/docs-ready-brightgreen.svg)](https://gitlab.com/LIONant/properties/blob/master/docs/Documentation.md)
@@ -41,7 +41,7 @@ Any feedback is more than welcome. Please follow us and help support the project
 [              ![Patreon](https://img.shields.io/badge/Patreon-Donate-blue.svg)](https://www.patreon.com/LIONant)
 --->
 
-# Features :eyes:
+# Features
 The main concept of MECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
 
 ### Legal
@@ -100,12 +100,12 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 
 # Dependencies
 
-* :godmode: XCORE - https://gitlab.com/LIONant/xcore (low level API, hard dependency)
+* XCORE - https://gitlab.com/LIONant/xcore (low level API, hard dependency)
 * DiligentEngine - https://github.com/DiligentGraphics/DiligentEngine (graphics API, Soft dependency for the Graphical Examples)
 
 # Similar Projects
 
-* Previous version (0.1) of MECS: https://gitlab.com/LIONant/MECS
+* Previous version (1.0-Alpha) of MECS: https://gitlab.com/LIONant/MECS
 * https://github.com/alecthomas/entityx
 * https://github.com/sschmid/Entitas-CSharp
 * https://github.com/skypjack/entt
