@@ -60,6 +60,7 @@ namespace mecs::component
     struct share
     {
         using                   type_guid           = component::type_guid;
+        constexpr static auto   type_data_access_v  = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
         constexpr static auto   type_name_v         { xconst_universal_str("unnamed share") };
         static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }

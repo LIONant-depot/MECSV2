@@ -148,6 +148,7 @@
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E07_double_buffer_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E08_quantum_mutable_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E09_quantum_double_buffer_components.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E10_share_components.h" />
     <ClInclude Include="..\..\src\Examples\Settings\PropertyConfig.h" />
     <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h" />
