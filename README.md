@@ -41,30 +41,39 @@ Any feedback is more than welcome. Please follow us and help support the project
 [              ![Patreon](https://img.shields.io/badge/Patreon-Donate-blue.svg)](https://www.patreon.com/LIONant)
 --->
 
-
 # Features
 The main concept of MECS is to leverage all the features of the hardware to the maximum, and to provide a unify system for both CPU and GPU.
 
+### Legal
 * **MIT license**. Not need to worry is all yours.
+
+### Archetecture
 * **Lockless architecture**. Utilizes all the hardware threads, and remains completely safe for the end user.
 * **Virtual memory support**. Provide super fast memory manipulations and minimizes wasted memory.
 * **Archetypes support**. Groups entities into flat arrays to provide near zero cache misses.
 * **Single CPP/H**. It is not a library is a module. Just include a single cpp/h into your project directly.
 * **GPU support**. You can create systems that run entirely in the GPU, yet is able to play nice with the CPU systems.
-* **Events/Delegates**. The events are lighting fast and use to extended systems to keep cache efficiency.
+* **System Events/Delegates**. The events are lighting fast and use to extended systems to keep cache efficiency.
+* **Archetype Events/Delegates**.
 * **C++ 17 meta-programming**. Makes the compiler work hard so that the run time doesn't + keeps API simple.
-* **Quantum components** Support direct multi-core access components, for advance users.
-* **Share components** Factors out components which are share across multiple entities.
-* **Tag components** Helps user group entities easily. 
-* **GUID for entities** Helps identify entities across different levels, scripts, versions, etc.
-* **Game Graph** Simple multi-core graph allows user to define order dependencies easily and flexibly. 
-* **Universe/Worlds** Simple way to organize your project flexibly.
-* **Data worlds** for blasting fast streaming of worlds. Think Playstation 5.
-* **Unit-test** to make sure everything is working.
-* **Command Line examples** Minimizes dependencies and keeps the project simple to follow.
-* **Visual Examples** Shows how MECS can be used with a multi-core graphics APIs.
-* **Step by step execution** So that it is easy to integrate with editor, or continuous execution for speed.
-* **Procedure + Data Oriented APIs** Procedure API for speed and simplicity + Data Oriented APIs for editors.
+* **GUID for entities**. Helps identify entities across different levels, scripts, versions, etc.
+* **Game Graph**. Simple multi-core graph allows user to define order dependencies easily and flexibly. 
+* **Universe/Worlds**. Simple way to organize your project flexibly.
+* **Data worlds**. for blasting fast streaming of worlds. Think Playstation 5.
+* **Step by step execution**. So that it is easy to integrate with editor, or continuous execution for speed.
+* **Procedure + Data Oriented APIs**. Procedure API for speed and simplicity + Data Oriented APIs for editors.
+
+### Component types
+* **Quantum components**. Support direct multi-core access components, for advance users.
+* **Share components**. Factors out components which are share across multiple entities.
+* **Tag components**. Helps user group entities easily. 
+* **Singleton components**. Allows to build supporting systems, complex components, and still plays nice with MECS.
+* **Reference components**. references to other entities in a safe, simple and elegant way. Great for resources.
+
+### Pipeline / Documentation
+* **Unit-test**. to make sure everything is working.
+* **Command Line examples**. Minimizes dependencies and keeps the project simple to follow.
+* **Visual Examples**. Shows how MECS can be used with a multi-core graphics APIs.
 
 # Code Example
 

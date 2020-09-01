@@ -12,6 +12,9 @@
 #include "E08_quantum_mutable_components.h"
 #include "E09_quantum_double_buffer_components.h"
 #include "E10_share_components.h"
+#include "E11_complex_system_queries.h"
+
+
 
 //------------------------------------------------------------------------------------
 // main
@@ -31,7 +34,8 @@ int main(void)
     if(0) mecs::examples::E07_double_buffer_components::Test();
     if(0) mecs::examples::E08_quantum_mutable_components::Test();
     if(0) mecs::examples::E09_quantum_double_buffer_components::Test();
-    if(1) mecs::examples::E10_shared_components::Test();
+    if(0) mecs::examples::E10_shared_components::Test();
+    if(1) mecs::examples::E11_complex_system_queries::Test();
 
     xcore::Kill();
     return 0;

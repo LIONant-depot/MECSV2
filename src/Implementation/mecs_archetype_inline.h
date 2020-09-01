@@ -118,6 +118,7 @@ namespace mecs::archetype
             }
         }
 
+        // can't find a component
         xassume(false);
     }
 
