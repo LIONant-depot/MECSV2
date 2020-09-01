@@ -96,7 +96,14 @@ The main concept of MECS is to leverage all the features of the hardware to the 
         }
     };
 ```
-<br>
+
+# Build Instructions
+Go to the **builds** directory and run (double click) **updateDependencies.bat** This will allow you to use all the functionality of the module.
+Make sure you wait until is completed, it will tell you when that is the case. 
+If you want to run the graphical examples also run **updateGraphicsDependencies.bat**. 
+Ones completed you can just load the solutions in visual studio.
+
+To add to your project simply insert in your build **mecs.h** and **mecs.cpp**
 
 # Dependencies
 
