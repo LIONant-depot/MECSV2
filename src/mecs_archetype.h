@@ -63,8 +63,10 @@ namespace mecs::archetype
 
             using component_list_t = std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>;
 
-            static bool LockQueryComponents     ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
-            static bool UnlockQueryComponents   ( system::instance& System, mecs::archetype::query::instance& Query ) noexcept;
+            static bool LockQueryComponents     ( system::instance& System, const mecs::archetype::query::instance&       Query ) noexcept;
+            static bool LockQueryComponents     ( system::instance& System, const mecs::archetype::query::result_entry&   E     ) noexcept;
+            static bool UnlockQueryComponents   ( system::instance& System, const mecs::archetype::query::result_entry&   E     ) noexcept;
+            static bool UnlockQueryComponents   ( system::instance& System, const mecs::archetype::query::instance&       Query ) noexcept;
 
             std::uint8_t        m_nSharerWriters    {0};
             component_list_t    m_lComponentLocks   {};
@@ -117,6 +119,7 @@ namespace mecs::archetype
         instance*                       m_pArchetypeInstance        {};
         mecs::entity_pool::instance     m_EntityPool                {};
         std::span<std::uint64_t>        m_ShareComponentKeysSpan    {};
+        mecs::entity_pool::index        m_MainPoolIndex             {};
         share_component_keys            m_ShareComponentKeysMemory  {};
         specialized_pool*               m_pNext                     {nullptr};
     };
@@ -409,6 +412,7 @@ namespace mecs::archetype
                 for( int nKeys = static_cast<int>(ShareComponentKeys.size()), k = 0; k < nKeys; ++k) Specialized.m_ShareComponentKeysMemory[k] = ShareComponentKeys[k];
                 Specialized.m_ShareComponentKeysSpan = std::span<std::uint64_t>{ Specialized.m_ShareComponentKeysMemory.data(), ShareComponentKeys.size() };
                 Specialized.m_TypeGuid               = SpecializedGuidTypeGuid;
+                Specialized.m_MainPoolIndex          = PoolIndex;
 
                 // Copy all the components into the right location
                 ( 
@@ -464,6 +468,7 @@ namespace mecs::archetype
 
                 //TODO: Preallocate nEntites before returning
                 Specialized.m_TypeGuid.setNull();
+                Specialized.m_MainPoolIndex = PoolIndex;
                 Specialized.m_EntityPool.Init( *this, m_Descriptor.m_DataDescriptorSpan, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
                 Specialized.m_pArchetypeInstance = this;
                 return
@@ -1122,6 +1127,129 @@ namespace mecs::archetype
             }
         }
 
+        template< auto& func_sorted_descriptors, auto& func_remap_from_sort >
+        static void DetailsDoQuery( mecs::archetype::query::result_entry& Entry ) noexcept
+        {
+            const auto&     Archetype                   = *Entry.m_pArchetype;
+            const auto&     ArchetypeDataCompDescSpan   = Archetype.m_Descriptor.m_DataDescriptorSpan;
+            const auto&     ArchetypeShareCompDescSpan  = Archetype.m_Descriptor.m_ShareDescriptorSpan;
+            const int       ArchetypeDataCompSize       = static_cast<int>(ArchetypeDataCompDescSpan.size());
+            const int       ArchetypeShareCompSize      = static_cast<int>(ArchetypeShareCompDescSpan.size());
+            const int       FunctionParamSize           = Entry.m_nParameters;
+            int             iArchetypeShareCompDesc     = 0;
+            int             iArchetypeDataCompDesc      = 0;
+
+            std::uint64_t   DoubleBufferDirtyBits       = 0;
+
+            for( int iFunctionSortedCompDesc = 0; iFunctionSortedCompDesc < FunctionParamSize; ++iFunctionSortedCompDesc )
+            {
+                auto& SortedFunctionComponent = std::get<0>(func_sorted_descriptors[iFunctionSortedCompDesc]);
+                if( SortedFunctionComponent.m_Type == mecs::component::type::SHARE )
+                {
+                    if( iArchetypeShareCompDesc < ArchetypeShareCompSize )
+                    {
+                        // Lets find the right share component
+                        while( SortedFunctionComponent.m_Guid.m_Value > ArchetypeShareCompDescSpan[iArchetypeShareCompDesc]->m_Guid.m_Value )
+                        {
+                            iArchetypeShareCompDesc++;
+                            xassert( iArchetypeShareCompDesc < ArchetypeShareCompSize );
+                        }
+
+                        // If we can not find it then mark it as unfound
+                        // TODO: Note that If this component is not a pointer in the function we should assert here
+                        if( SortedFunctionComponent.m_Guid != ArchetypeShareCompDescSpan[iArchetypeShareCompDesc]->m_Guid )
+                        {
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
+                        }
+                        else
+                        {
+                            // Please note that we need to offset the share component index by one because the very first share component in fact is the pool itself
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = 1 + iArchetypeShareCompDesc;
+                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
+                        }
+
+                        // Move to the next component
+                        iArchetypeShareCompDesc++;
+                    }
+                    else
+                    {
+                        // This should be an optional component that was not found
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
+                    }
+                }
+                else if(iArchetypeDataCompDesc < ArchetypeDataCompDescSpan.size() )
+                {
+                    // Lets find the right data component
+                    while( SortedFunctionComponent.m_Guid.m_Value > ArchetypeDataCompDescSpan[iArchetypeDataCompDesc]->m_Guid.m_Value )
+                    {
+                        iArchetypeDataCompDesc++;
+                        xassert(iArchetypeDataCompDesc < ArchetypeDataCompSize);
+                    }
+
+                    // If we can not find it then mark it as unfound
+                    // TODO: Note that If this component is not a pointer in the function we should assert here
+                    if( SortedFunctionComponent.m_Guid != ArchetypeDataCompDescSpan[iArchetypeDataCompDesc]->m_Guid )
+                    {
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
+                    }
+                    // We found our entry, but lets check if we need to handle the double buffer case
+                    else if( SortedFunctionComponent.m_isDoubleBuffer )
+                    {
+                        // First find the base for this double buffer component
+                        int iBase = (iArchetypeDataCompDesc > 0)
+                                        ? (ArchetypeDataCompDescSpan[iArchetypeDataCompDesc - 1]->m_Guid == SortedFunctionComponent.m_Guid 
+                                            ? (iArchetypeDataCompDesc - 1) 
+                                            :  iArchetypeDataCompDesc)
+                                        : 0;
+
+                        // If we are a read only parameter then we need to be looking for T0
+                        if( std::get<1>(func_sorted_descriptors[iFunctionSortedCompDesc]) )
+                        {
+                            iBase += static_cast<int>((Archetype.m_DoubleBufferInfo.m_StateBits >> iBase) & 1);
+                        }
+                        else
+                        {
+                            // Mark the Double Buffer State as Dirty since we are going to update it
+                            // Note that we always change the base component index for the double buffer.
+                            DoubleBufferDirtyBits |= (1ull << iBase);
+
+                            // Now ge the new iBase
+                            iBase += static_cast<int>(1 - ((Archetype.m_DoubleBufferInfo.m_StateBits >> iBase) & 1));
+                        }
+
+                        // Okay ready to set the offsets now
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = iBase;
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
+                    }
+                    else
+                    {
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = iArchetypeDataCompDesc;
+                        Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
+                    }
+
+                    // Move to the next component
+                    iArchetypeDataCompDesc++;
+                }
+                else
+                {
+                    // This should be an optional component that was not found
+                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index    = mecs::archetype::query::result_entry::invalid_index;
+                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared = false;
+                }
+            }
+
+            // Update the double buffer bits if we got any
+            if (DoubleBufferDirtyBits)
+            {
+                for (auto L = Archetype.m_DoubleBufferInfo.m_DirtyBits.load(std::memory_order_relaxed);
+                     false == const_cast<std::atomic<std::uint64_t>&>(Archetype.m_DoubleBufferInfo.m_DirtyBits).compare_exchange_weak(L, L | DoubleBufferDirtyBits);
+                    );
+            }
+        }
+
         template<typename T_FUNCTION, auto& Defined >
         void DoQuery( query::instance& Instance ) const noexcept
         {
@@ -1162,124 +1290,7 @@ namespace mecs::archetype
                     Entry.m_nParameters                         = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);
                     Entry.m_FunctionDescriptors                 = func_descriptors;
 
-                    const auto&     Archetype                   = *Entry.m_pArchetype;
-                    const auto&     ArchetypeDataCompDescSpan   = Archetype.m_Descriptor.m_DataDescriptorSpan;
-                    const auto&     ArchetypeShareCompDescSpan  = Archetype.m_Descriptor.m_ShareDescriptorSpan;
-                    const int       ArchetypeDataCompSize       = static_cast<int>(ArchetypeDataCompDescSpan.size());
-                    const int       ArchetypeShareCompSize      = static_cast<int>(ArchetypeShareCompDescSpan.size());
-                    const int       FunctionParamSize           = Entry.m_nParameters;
-                    int             iArchetypeShareCompDesc     = 0;
-                    int             iArchetypeDataCompDesc      = 0;
-
-                    std::uint64_t   DoubleBufferDirtyBits       = 0;
-
-                    for( int iFunctionSortedCompDesc = 0; iFunctionSortedCompDesc < FunctionParamSize; ++iFunctionSortedCompDesc )
-                    {
-                        auto& SortedFunctionComponent = std::get<0>(func_sorted_descriptors[iFunctionSortedCompDesc]);
-                        if( SortedFunctionComponent.m_Type == mecs::component::type::SHARE )
-                        {
-                            if( iArchetypeShareCompDesc < ArchetypeShareCompSize )
-                            {
-                                // Lets find the right share component
-                                while( SortedFunctionComponent.m_Guid.m_Value > ArchetypeShareCompDescSpan[iArchetypeShareCompDesc]->m_Guid.m_Value )
-                                {
-                                    iArchetypeShareCompDesc++;
-                                    xassert( iArchetypeShareCompDesc < ArchetypeShareCompSize );
-                                }
-
-                                // If we can not find it then mark it as unfound
-                                // TODO: Note that If this component is not a pointer in the function we should assert here
-                                if( SortedFunctionComponent.m_Guid != ArchetypeShareCompDescSpan[iArchetypeShareCompDesc]->m_Guid )
-                                {
-                                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
-                                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
-                                }
-                                else
-                                {
-                                    // Please note that we need to offset the share component index by one because the very first share component in fact is the pool itself
-                                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = 1 + iArchetypeShareCompDesc;
-                                    Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
-                                }
-
-                                // Move to the next component
-                                iArchetypeShareCompDesc++;
-                            }
-                            else
-                            {
-                                // This should be an optional component that was not found
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = true;
-                            }
-                        }
-                        else if(iArchetypeDataCompDesc < ArchetypeDataCompDescSpan.size() )
-                        {
-                            // Lets find the right data component
-                            while( SortedFunctionComponent.m_Guid.m_Value > ArchetypeDataCompDescSpan[iArchetypeDataCompDesc]->m_Guid.m_Value )
-                            {
-                                iArchetypeDataCompDesc++;
-                                xassert(iArchetypeDataCompDesc < ArchetypeDataCompSize);
-                            }
-
-                            // If we can not find it then mark it as unfound
-                            // TODO: Note that If this component is not a pointer in the function we should assert here
-                            if( SortedFunctionComponent.m_Guid != ArchetypeDataCompDescSpan[iArchetypeDataCompDesc]->m_Guid )
-                            {
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = mecs::archetype::query::result_entry::invalid_index;
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
-                            }
-                            // We found our entry, but lets check if we need to handle the double buffer case
-                            else if( SortedFunctionComponent.m_isDoubleBuffer )
-                            {
-                                // First find the base for this double buffer component
-                                int iBase = (iArchetypeDataCompDesc > 0)
-                                                ? (ArchetypeDataCompDescSpan[iArchetypeDataCompDesc - 1]->m_Guid == SortedFunctionComponent.m_Guid 
-                                                    ? (iArchetypeDataCompDesc - 1) 
-                                                    :  iArchetypeDataCompDesc)
-                                                : 0;
-
-                                // If we are a read only parameter then we need to be looking for T0
-                                if( std::get<1>(func_sorted_descriptors[iFunctionSortedCompDesc]) )
-                                {
-                                    iBase += static_cast<int>((Archetype.m_DoubleBufferInfo.m_StateBits >> iBase) & 1);
-                                }
-                                else
-                                {
-                                    // Mark the Double Buffer State as Dirty since we are going to update it
-                                    // Note that we always change the base component index for the double buffer.
-                                    DoubleBufferDirtyBits |= (1ull << iBase);
-
-                                    // Now ge the new iBase
-                                    iBase += static_cast<int>(1 - ((Archetype.m_DoubleBufferInfo.m_StateBits >> iBase) & 1));
-                                }
-
-                                // Okay ready to set the offsets now
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = iBase;
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
-                            }
-                            else
-                            {
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index     = iArchetypeDataCompDesc;
-                                Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared  = false;
-                            }
-
-                            // Move to the next component
-                            iArchetypeDataCompDesc++;
-                        }
-                        else
-                        {
-                            // This should be an optional component that was not found
-                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_Index    = mecs::archetype::query::result_entry::invalid_index;
-                            Entry.m_lFunctionToArchetype[func_remap_from_sort[iFunctionSortedCompDesc]].m_isShared = false;
-                        }
-                    }
-
-                    // Update the double buffer bits if we got any
-                    if (DoubleBufferDirtyBits)
-                    {
-                        for (auto L = Archetype.m_DoubleBufferInfo.m_DirtyBits.load(std::memory_order_relaxed);
-                             false == const_cast<std::atomic<std::uint64_t>&>(Archetype.m_DoubleBufferInfo.m_DirtyBits).compare_exchange_weak(L, L | DoubleBufferDirtyBits);
-                            );
-                    }
+                    DetailsDoQuery<func_sorted_descriptors, func_remap_from_sort>(Entry);
                 }
             }
         }
@@ -1537,6 +1548,7 @@ namespace mecs::archetype
                         auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
                         Specialized.m_pArchetypeInstance        = &NewArchetype;
                         Specialized.m_TypeGuid.m_Value          = 0u;
+                        Specialized.m_MainPoolIndex             = Index;
                         Specialized.m_ShareComponentKeysSpan    = std::span{ Specialized.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
                         Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
                         for (int k = 0, end2 = static_cast<int>(Specialized.m_ShareComponentKeysSpan.size()); k != end2; ++k) 
@@ -1580,6 +1592,7 @@ namespace mecs::archetype
                         auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
                         Specialized.m_pArchetypeInstance        = &NewArchetype;
                         Specialized.m_TypeGuid.m_Value          = 0u;
+                        Specialized.m_MainPoolIndex             = Index;
                         Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
 
                         pSpecialized = &Specialized;

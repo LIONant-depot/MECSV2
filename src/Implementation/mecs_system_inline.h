@@ -33,6 +33,29 @@ namespace mecs::system
             else                                return std::array< const mecs::system::event::descriptor*, 0>{};
         }
 
+        template< typename...T_ARGS, typename T_CALLBACK > constexpr
+        auto tuple_type_apply(std::tuple<T_ARGS...>*, T_CALLBACK&& Callback ) noexcept
+        {
+            // Types must be wrapped around a tuple in case of references
+            return Callback( static_cast<std::tuple<T_ARGS>*>(nullptr) ... );
+        }
+
+        template< typename...T_ARGS > constexpr
+        auto ComputeUpdateBits( std::tuple<T_ARGS...>* ) noexcept
+        {
+            tools::bits Bits{ nullptr };
+
+            (( [&]()
+            {
+                if constexpr ( std::is_const_v< std::remove_pointer_t<std::remove_reference_t<T_ARGS>> > == false )
+                {
+                    Bits.AddBit( mecs::component::descriptor_v<T_ARGS>.m_BitNumber );
+                }
+            }()), ... );
+            
+            return Bits;
+        };
+
         //---------------------------------------------------------------------------------
         // SYSTEM::CUSTOM SYSTEM 
         //---------------------------------------------------------------------------------
@@ -77,8 +100,6 @@ namespace mecs::system
         : T_SYSTEM      { std::move(Settings) }
         , m_GlobalEvents{ GetGlobalEventTuple( *this, reinterpret_cast<typename custom_system::global_event_tuple_t*>(nullptr) ) }
         {
-            instance::m_TypeGuid = descriptor_v<T_SYSTEM>.m_Guid;
-
             //
             // Register with World events
             //
@@ -130,24 +151,31 @@ namespace mecs::system
             //
             // unlock and sync groups from the cache
             //
-            /*
-            for( const auto& E : user_system_t::m_Cache.m_Lines )
             {
-                bool bFound = false;
-                std::as_const(E.m_pGroup->m_SemaphoreLock).unlock();
-
-                for( const auto& Q : user_system_t::m_Query.m_lResults )
+                xcore::lock::scope Lk(user_system_t::m_Cache.m_Lines);
+                auto& Lines = user_system_t::m_Cache.m_Lines.get();
+                for (const auto& E : Lines)
                 {
-                    if( E.m_pGroup == Q.m_pGroup )
-                    {
-                        bFound = true;
-                        break;
-                    }
-                }
+                    mecs::archetype::details::safety::UnlockQueryComponents(*this, E.m_ResultEntry);
 
-                if( bFound == false ) E.m_pGroup->MemoryBarrierSync( Syncpoint );
+                    /*
+                    bool bFound = false;
+
+                    for( const auto& Q : user_system_t::m_Query.m_lResults )
+                    {
+                        if( E.m_pGroup == Q.m_pGroup )
+                        {
+                            bFound = true;
+                            break;
+                        }
+                    }
+
+                    if( bFound == false ) E.m_pGroup->MemoryBarrierSync( Syncpoint );
+                    */
+                }
+                Lines.clear();
             }
-            */
+
 
             //
             // Let the archetypes that we used do their memory barriers
@@ -192,11 +220,13 @@ namespace mecs::system
             std::span<std::uint8_t>                 m_DelegateSpan;
         };
 
-        template< typename T, typename...T_ARGS> constexpr xforceinline
-        auto ProcessInitArray( std::tuple<T_ARGS...>*, int iStart, int Index, archetype::query::result_entry& R, T& Params ) noexcept
+        template< typename...T_ARGS > constexpr xforceinline
+        auto ProcessInitArray   (   std::tuple<T_ARGS...>*
+                                ,   int                                   iStart
+                                ,   int                                   Index
+                                ,   const archetype::query::result_entry& R ) noexcept
         {
             using       func_tuple  = std::tuple<T_ARGS...>;
-            auto&       Specialized = R.m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
             const auto  Decide      = [&]( int iArg, auto Arg ) constexpr noexcept
             {
                 using       t = xcore::types::decay_full_t<decltype(Arg)>;
@@ -206,6 +236,7 @@ namespace mecs::system
 
                 if( I.m_isShared ) return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_MainPool.getComponentByIndex<t>( Index, I.m_Index ));
 
+                auto& Specialized = R.m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
                 return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t>( iStart, I.m_Index ));
             };
             
@@ -289,29 +320,6 @@ namespace mecs::system
     // SYSTEM:: INSTANCE
     //----------------------------------------------------------------------------
 
-    template< typename...T_ARGS, typename T_CALLBACK > constexpr
-    auto tuple_type_apply(std::tuple<T_ARGS...>*, T_CALLBACK&& Callback ) noexcept
-    {
-        // Types must be wrapped around a tuple in case of references
-        return Callback( static_cast<std::tuple<T_ARGS>*>(nullptr) ... );
-    }
-
-    template< typename...T_ARGS > constexpr
-    auto ComputeUpdateBits( std::tuple<T_ARGS...>* ) noexcept
-    {
-        tools::bits Bits{ nullptr };
-
-        (( [&]()
-        {
-            if constexpr ( std::is_const_v< std::remove_pointer_t<std::remove_reference_t<T_ARGS>> > == false )
-            {
-                Bits.AddBit( mecs::component::descriptor_v<T_ARGS>.m_BitNumber );
-            }
-        }()), ... );
-        
-        return Bits;
-    };
-
     xforceinline
     instance::instance( const construct&& Settings) noexcept
         : overrides{ Settings.m_JobDefinition | xcore::scheduler::triggers::DONT_CLEAN_COUNT }
@@ -323,7 +331,7 @@ namespace mecs::system
     void instance::ForEach(mecs::archetype::query::instance& QueryI, T_CALLBACK&& Functor, int nEntitiesPerJob) noexcept
     {
         using func_args_tuple = typename xcore::function::traits<T_CALLBACK>::args_tuple;
-        static constexpr auto is_writing_v = tuple_type_apply
+        static constexpr auto is_writing_v = details::tuple_type_apply
         (
             static_cast<func_args_tuple*>(nullptr)
             , []( auto... x ) constexpr
@@ -377,7 +385,7 @@ namespace mecs::system
                 auto& UpdateComponent = R.m_pArchetype->m_Events.m_UpdateComponent;
                 if(UpdateComponent.m_Event.hasSubscribers() )
                 {
-                    const static tools::bits Bits = ComputeUpdateBits( static_cast<func_args_tuple*>(nullptr) );
+                    const static tools::bits Bits = details::ComputeUpdateBits( static_cast<func_args_tuple*>(nullptr) );
 
                     const auto& UpdateComponentBits = UpdateComponent.m_Bits;
                     auto& StackEntry = DelegateStack[ DelegateStackIndex++ ];
@@ -465,7 +473,8 @@ namespace mecs::system
             ] () constexpr noexcept
             {
                 using function_arg_tuple = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
-                auto  Pointers           = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult, Params);
+                auto& Specialized = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+                auto  Pointers    = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult );
 
                 if( Params2.m_DelegateSpan.size() )
                 {
@@ -523,6 +532,153 @@ namespace mecs::system
             auto& Event = *std::get< typename T_EVENT::real_event_t* >( This.m_GlobalEvents );
             Event.NotifyAll( *this, std::forward<T_ARGS>(Args)... );
         }
+    }
+
+    //----------------------------------------------------------------------------------------------------
+    inline
+    void instance::DetailsClearGroupCache( void ) noexcept
+    {
+        /*
+        xcore::lock::scope Lk( m_Cache.m_Lines );
+
+        auto& Lines = m_Cache.m_Lines.get();
+
+        // unlock and sync groups from the cache
+        for( const auto& E : Lines )
+        {
+            std::as_const( E.m_pGroup->m_SemaphoreLock).unlock();
+        }
+
+        m_Cache.m_Lines.clear();
+        */
+    }
+
+    //----------------------------------------------------------------------------------------------------
+    namespace details
+    {
+        template< typename T_CALLBACK, typename...T_ARGS >
+        void get_component_call(std::tuple<T_ARGS...>* , T_CALLBACK&& Callback, std::span<std::byte*> Pointers ) noexcept
+        {
+            using func_tuple = std::tuple<T_ARGS...>;
+            Callback
+            (
+                ([&]() constexpr noexcept -> T_ARGS
+                    {
+                        auto& p = Pointers[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
+                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(p);
+                        else                                     return reinterpret_cast<T_ARGS>(*p);
+                    }())...
+            );
+        }
+    }
+
+    template< typename T_CALLBACK >
+    void instance::getComponents( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept
+    {
+        xassert(Entity.isZombie() == false );
+
+        using                   func_tuple              = typename xcore::function::traits<T_CALLBACK>::args_tuple;
+        static constexpr auto   func_descriptors        = mecs::archetype::query::details::get_arrays< func_tuple >::value;
+        using                   func_sorted_tuple       = xcore::types::tuple_sort_t< mecs::component::smaller_guid, func_tuple >;
+        static constexpr auto   func_sorted_descriptors = mecs::archetype::query::details::get_arrays< func_sorted_tuple >::value;
+        static constexpr auto   func_remap_from_sort    = mecs::archetype::query::details::remap_arrays< func_tuple, func_sorted_tuple >::value;
+        static constexpr auto   is_writing_v            = details::tuple_type_apply
+        (
+            static_cast<func_tuple*>(nullptr)
+            , [](auto... x) constexpr noexcept
+            {
+                return ((std::is_same_v< std::tuple_element<0, decltype(*x)>, const std::tuple_element<0, decltype(*x)> > == false) || ...);
+            }
+        );
+
+        auto&   Reference   = Entity.getReference();
+        auto&   Archetype   = *Reference.m_pPool->m_pArchetypeInstance;
+        auto    Call        = [&]( const mecs::system::details::cache::line& Line ) mutable constexpr noexcept
+        {
+            auto Pointers = details::ProcessInitArray(   reinterpret_cast<func_tuple*>(nullptr)
+                                                    ,   Reference.m_Index
+                                                    ,   Reference.m_pPool->m_MainPoolIndex
+                                                    ,   Line.m_ResultEntry );
+
+            details::get_component_call( static_cast<func_tuple*>(nullptr), std::forward<T_CALLBACK>(Function), Pointers );
+
+            if constexpr ( is_writing_v )
+            {
+                if( Line.m_nDelegatesIndices )
+                {
+                    int i = 0;
+                    auto& Event = Line.m_ResultEntry.m_pArchetype->m_Events.m_UpdateComponent.m_Event;
+                    do
+                    {
+                        Event.Notify( Line.m_UpdateDelegateIndex[i], const_cast<mecs::component::entity&>(Entity), *this );
+                    }
+                    while( i != Line.m_nDelegatesIndices );
+                }
+            }
+        };
+
+        //
+        // Search the entry from the cache
+        //
+        TRY_AGAIN_:
+        {
+            xcore::lock::scope Lk(std::as_const(m_Cache.m_Lines));
+            auto& Lines     = m_Cache.m_Lines.get();
+
+            for (const auto& E : Lines)
+            {
+                if (&Archetype == E.m_ResultEntry.m_pArchetype)
+                {
+                    m_World.m_ArchetypeDB.m_EntityMap.find(Entity.getMapEntry().m_Key, [&](auto&) constexpr noexcept
+                    {
+                        Call(E);
+                    });
+
+                    // All done
+                    return;
+                }
+            }
+        }
+
+        //
+        // Create a new cache entry
+        //
+        {
+            xcore::lock::scope Lk(m_Cache.m_Lines);
+            auto& Lines        = m_Cache.m_Lines.get();
+            auto& CacheLine    = Lines.emplace_back();
+            auto& Entry        = CacheLine.m_ResultEntry;
+
+            Entry.m_pArchetype                          = &Archetype;
+            Entry.m_nParameters                         = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);
+            Entry.m_FunctionDescriptors                 = func_descriptors;
+
+            CacheLine.m_nDelegatesIndices = 0;
+
+            if constexpr (is_writing_v)
+            {
+                auto& UpdateComponent = Archetype.m_Events.m_UpdateComponent;
+                if( UpdateComponent.m_Event.hasSubscribers() )
+                {
+                    const static tools::bits Bits = details::ComputeUpdateBits(static_cast<func_tuple*>(nullptr));
+                    const auto& UpdateComponentBits = UpdateComponent.m_Bits;
+
+                    for( int i = 0, end = static_cast<int>(UpdateComponentBits.size()); i != end; ++i )
+                    {
+                        if( UpdateComponentBits[i].isMatchingBits(Bits) )
+                            CacheLine.m_UpdateDelegateIndex[CacheLine.m_nDelegatesIndices++] = static_cast<std::uint8_t>(i);
+                    }
+                }
+            }
+
+            // Build required details to call the function easily 
+            mecs::archetype::data_base::DetailsDoQuery< func_sorted_descriptors, func_remap_from_sort >(Entry);
+
+            // Lets lock the archetype to make sure we are doing ok
+            mecs::archetype::details::safety::LockQueryComponents( *this, CacheLine.m_ResultEntry );
+        }
+
+        goto TRY_AGAIN_;
     }
 
     //---------------------------------------------------------------------------------

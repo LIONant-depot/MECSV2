@@ -4,25 +4,25 @@ namespace mecs::system
 
     struct descriptor;
 
+    //----------------------------------------------------------------------------
+    // SYSTEM:: INSTANCE OVERRIDES
+    //----------------------------------------------------------------------------
     namespace details
     {
         struct cache
         {
             struct line
             {
-                //component::group::guid          m_Guid;
-                //component::group::instance* m_pGroup;
+                mecs::archetype::instance*              m_pArchetype;
+                mecs::archetype::query::result_entry    m_ResultEntry;
+                std::uint8_t                            m_nDelegatesIndices;
+                std::array<std::uint8_t, 16>            m_UpdateDelegateIndex;
             };
 
-            xcore::lock::semaphore  m_Lock;
-            std::vector<line>       m_Lines;
+            xcore::lock::object< std::vector<line>, xcore::lock::semaphore >    m_Lines;
         };
     }
 
-    //----------------------------------------------------------------------------
-    // SYSTEM:: INSTANCE OVERRIDES
-    //----------------------------------------------------------------------------
-    
     struct overrides : xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>
     {
         using                           type_guid       = mecs::system::type_guid;
@@ -133,12 +133,16 @@ namespace mecs::system
                                                                     , T_PARAMS2&                            Params2
                                                                     , const int                             Index ) noexcept;
 
+        void                                DetailsClearGroupCache  ( void ) noexcept;
+
+        template< typename T_CALLBACK >
+        void                                getComponents           ( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept;
+
         // TODO: This will be private
         mecs::world::instance&              m_World;
+        mecs::archetype::query::instance    m_Query     {};
+        details::cache                      m_Cache     {};
         mecs::system::instance::guid        m_Guid;
-        mecs::archetype::query::instance    m_Query{};
-        mecs::system::instance::type_guid   m_TypeGuid;
-        // details::cache      m_Cache;
     };
 
 

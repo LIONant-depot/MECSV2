@@ -41,7 +41,7 @@ namespace mecs::examples::E12_hierarchy_components
             none<parent>
         >;
 
-        void operator()( const children& Children, const position& ParentWorldPos ) const noexcept
+        void operator()( const children& Children, const position& ParentWorldPos ) noexcept
         {
             // Loop thought out all our children
             for( auto& E : Children.m_List )
@@ -90,4 +90,7 @@ namespace mecs::examples::E12_hierarchy_components
         }
     };
 
+
+
+    void Test(){}
 }
