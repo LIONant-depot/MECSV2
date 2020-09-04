@@ -105,7 +105,7 @@ namespace mecs::examples::E12_hierarchy_components
     void Test()
     {
         printf("--------------------------------------------------------------------------------\n");
-        printf("E11_complex_system_queries\n");
+        printf("E12_hierarchy_components\n");
         printf("--------------------------------------------------------------------------------\n");
 
         auto upUniverse = std::make_unique<mecs::universe::instance>();
