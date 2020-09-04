@@ -1,8 +1,13 @@
-namespace mecs::examples::E12_hierarchy_components
+namespace mecs::examples::E12_basic_hierarchical_components
 {
-    //
-    // Describing a hierarchy in MECS
-    //
+    // Describing a basic hierarchy in MECS.
+    // This hierarchy won't be very fast, it is mainly to show that is possible and how to think about it
+    // Other examples will cover must faster ways of doing it.
+
+    //-----------------------------------------------------------------------------------------
+    // Components
+    //-----------------------------------------------------------------------------------------
+
     struct parent : mecs::component::share
     {
         mecs::component::entity m_Entity;
@@ -46,6 +51,15 @@ namespace mecs::examples::E12_hierarchy_components
             // Loop thought out all our children
             for (auto& E : Children.m_List)
             {
+                // in MECS there are two ways to query and compute. Systems is the fastest most efficient way
+                // because it goes in order and does not jump around memory. However sometimes you need to jump around
+                // memory for that you have this function. This function will get the components from the entity
+                // but because is not an entity that we are visiting right now it will create a cache miss per component.
+                // MECS does its best to cache as much as it can to minimize misses but it won't be perfect.
+                // Also the components that you are asking for may or may not exists. So the function parameters
+                // are creating a query that must be matched against the entity itself. If the query fails then
+                // it the lambda won't get call. Please also be careful of passing an entity which is a zombie.
+                // If it is a zombie it will assert so you should check before calling it.
                 getComponents(E, [&](local_position& LocalPos, position& WorldPos, children* pChildren)
                 {
                     WorldPos.m_Value = LocalPos.m_Value + ParentWorldPos.m_Value;

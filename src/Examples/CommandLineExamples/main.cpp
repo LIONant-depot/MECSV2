@@ -13,7 +13,7 @@
 #include "E09_quantum_double_buffer_components.h"
 #include "E10_share_components.h"
 #include "E11_complex_system_queries.h"
-#include "E12_hierarchy_components.h"
+#include "E12_basic_hierarchical_components.h"
 
 
 
@@ -37,7 +37,7 @@ int main(void)
     if(0) mecs::examples::E09_quantum_double_buffer_components::Test();
     if(0) mecs::examples::E10_shared_components::Test();
     if(0) mecs::examples::E11_complex_system_queries::Test();
-    if(1) mecs::examples::E12_hierarchy_components::Test();
+    if(1) mecs::examples::E12_basic_hierarchical_components::Test();
 
     xcore::Kill();
     return 0;
