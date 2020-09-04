@@ -54,7 +54,7 @@ namespace mecs::examples::E12_hierarchy_components
 
                     if (pChildren)
                     {
-                        Recursive(*pChildren, WorldPos, Level+1 );
+                        if(pChildren->m_List.size()) Recursive(*pChildren, WorldPos, Level+1 );
                     }
                 });
             }
