@@ -33,6 +33,8 @@ namespace mecs::system
         using                           job_t           = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
         using                           guid            = xcore::guid::unit<64, struct mecs_system_instance_tag>;
         using                           archetype       = mecs::archetype::instance;
+        template< auto&& T_SHARE_COMPONENT_V> using share_key = mecs::component::details::share_ref_inst< decltype(T_SHARE_COMPONENT_V), decltype(T_SHARE_COMPONENT_V)::getKey(&xcore::types::lvalue(T_SHARE_COMPONENT_V)) >;
+
 
         template< typename T_SYSTEM, typename...T_PARAMETERS >
         struct exclusive_event : mecs::system::event::exclusive

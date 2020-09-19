@@ -114,6 +114,7 @@ namespace mecs::archetype
         using                           guid                    = xcore::guid::unit<64, struct specialized_pool_tag>;
         using                           type_guid               = xcore::guid::unit<64, struct specialized_pool_type_tag>;
         using                           share_component_keys    = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
+        using                           share_component_index   = std::array<std::uint32_t, mecs::settings::max_data_components_per_entity>;
 
         type_guid                       m_TypeGuid                  {};
         instance*                       m_pArchetypeInstance        {};
@@ -121,7 +122,7 @@ namespace mecs::archetype
         std::span<std::uint64_t>        m_ShareComponentKeysSpan    {};
         mecs::entity_pool::index        m_MainPoolIndex             {};
         share_component_keys            m_ShareComponentKeysMemory  {};
-        specialized_pool*               m_pNext                     {nullptr};
+        share_component_index           m_ShareMapIndices           {};
     };
 
     //----------------------------------------------------------------------------------------------
@@ -239,7 +240,15 @@ namespace mecs::archetype
 
             if( ShareDescriptorList.size() )
             {
-                for( int i=0; i< ShareDescriptorList.size(); ++ i) m_MainPoolDescriptorData[1+i] = ShareDescriptorList[i];
+                for( int i=0; i< ShareDescriptorList.size(); ++ i) 
+                {
+                    auto pShare         = ShareDescriptorList[i];
+                    const auto Index    = i+1;
+                    m_MainPoolDescriptorData[Index] = pShare;
+
+                    // For those share components that the user wants us to create a hash map we crate one
+                    if( pShare->m_ShareComponentMapType != mecs::component::share::type_map::NONE ) m_ShareMapTable[pShare->m_BitNumber] = std::make_unique<share_map>();
+                }
             }
 
             m_MainPool.Init( *this, m_MainPoolDescriptorSpan, 100000u );
@@ -609,8 +618,11 @@ namespace mecs::archetype
             std::atomic<std::uint64_t>  m_DirtyBits{ 0 };           // Tells which bits in the StateBits need to change state.
         };
 
+
         using main_pool_descriptors = std::array<const mecs::component::descriptor*, mecs::settings::max_data_components_per_entity>;
         using safety_lock_object    = xcore::lock::object<details::safety, xcore::lock::semaphore >;
+        using share_one_to_many_map = mecs::tools::fixed_map<guid, std::vector<specialized_pool*>, settings::max_specialized_pools_v>;
+        using share_map             = std::shared_ptr<share_one_to_many_map>;
 
         mecs::component::entity::map*                   m_pEntityMap                { nullptr };
 
@@ -632,6 +644,8 @@ namespace mecs::archetype
 
         mecs::component::filter_bits                    m_ArchitypeBits             { nullptr };
         mecs::component::filter_bits                    m_TagBits                   { nullptr };
+
+        std::array<std::shared_ptr<share_map>,mecs::settings::max_data_components_per_entity> m_ShareMapTable;
 
         main_pool_descriptors                           m_MainPoolDescriptorData    {};
     };
@@ -1250,8 +1264,16 @@ namespace mecs::archetype
             }
         }
 
-        template<typename T_FUNCTION, auto& Defined >
+        template<typename T_FUNCTION, typename T_TUPLE_QUERY > constexpr xforceinline
         void DoQuery( query::instance& Instance ) const noexcept
+        {
+            static constexpr auto query_v = mecs::archetype::query::details::define< T_TUPLE_QUERY >{};
+            struct functor { void operator()() noexcept {} };
+            DetailsDoQuery< std::conditional_t< std::is_same_v< void, T_FUNCTION>, functor, T_FUNCTION>, query_v>(Instance);
+        }
+
+        template<typename T_FUNCTION, auto& Defined > constexpr xforceinline
+        void DetailsDoQuery( query::instance& Instance ) const noexcept
         {
             static_assert(std::is_convertible_v< decltype(Defined), query::details::define_data >);
 

@@ -54,7 +54,7 @@ namespace mecs::archetype::delegate
                     World.m_ArchetypeDB. template DoQuery
                     < 
                         function_helper<std::tuple<const overrides::entity&>>
-                    ,   query_v
+                    ,   typename user_delegate_t::query_t
                     >( m_Query );
                 }
                 else
@@ -62,7 +62,7 @@ namespace mecs::archetype::delegate
                     World.m_ArchetypeDB. template DoQuery
                     < 
                         function_helper<args>
-                    ,   query_v
+                    ,   typename user_delegate_t::query_t
                     >( m_Query );
                 }
             }

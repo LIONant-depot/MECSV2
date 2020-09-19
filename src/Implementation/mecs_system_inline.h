@@ -63,7 +63,6 @@ namespace mecs::system
         struct custom_system final : T_SYSTEM
         {
             using                           user_system_t                   = T_SYSTEM;
-            inline static constexpr auto    query_v                         = mecs::archetype::query::details::define<typename user_system_t::query_t>{};
             using                           global_event_tuple_t            = decltype(FilterEventsTuple<system::event::global>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
             using                           global_real_events_t            = decltype(GetRealEventsTuple<true>(reinterpret_cast<global_event_tuple_t*>(nullptr)));
             inline static constexpr auto    global_events_descriptors_v     = GetEventDescriptorArray(reinterpret_cast<global_event_tuple_t*>(nullptr));
@@ -129,7 +128,7 @@ namespace mecs::system
             }
             else
             {
-                user_system_t::m_World.m_ArchetypeDB.template DoQuery< user_system_t, query_v >(user_system_t::m_Query);
+                user_system_t::m_World.m_ArchetypeDB.template DoQuery< user_system_t, typename user_system_t::query_t >(user_system_t::m_Query);
                 user_system_t::ForEach( user_system_t::m_Query, *this, user_system_t::entities_per_job_v );
             }
         }

@@ -62,6 +62,12 @@ namespace mecs::archetype::query
         {
             static constexpr auto value = std::array{ static_cast<std::uint16_t>(xcore::types::tuple_t2i_v<T_ARGS, T_ORIGINAL_TUPLE>) ... };
         };
+
+        template< typename T_ORIGINAL_TUPLE >
+        struct remap_arrays< T_ORIGINAL_TUPLE, std::tuple<> >
+        {
+            static constexpr auto value = std::array< std::uint16_t, 0> {};
+        };
     }
 
     template< typename...T_COMPONENTS_AND_TAGS >
@@ -105,13 +111,6 @@ namespace mecs::archetype::query
         static constexpr auto component_list_v  = details::get_arrays<filterout>::value;
         static constexpr auto tag_list_v        = details::get_arrays<filterout_allbut>::value;
     };
-
-    //---------------------------------------------------------------------------------
-    // QUERY:: as_filter
-    // Used to make values of share components to play with the query system
-    //---------------------------------------------------------------------------------
-    template<typename T_COM>
-    constexpr auto as_filter( T_COM x ) noexcept { return mecs::component::details::share_ref_inst<T_COM, T_COM::getKey(&x)>{}; }
 
     //---------------------------------------------------------------------------------
     // QUERY::DETAILS DEFINE

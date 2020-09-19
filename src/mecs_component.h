@@ -59,10 +59,20 @@ namespace mecs::component
 
     struct share
     {
+        // We use the type map other than NONE when we want to be able to use this share component in the actual component query
+        // If you don't need to do that leave it as NONE. Other wise there is a memory hit as well as a performance hit.
+        enum class type_map : std::uint8_t
+        {
+            NONE                    // We don't need a HashMap that will map the key to any custom_pool pools.
+        ,   ONE_TO_MANY             // Create a HashMap between the key and potentially many custom_pools. (such a level in a Hierarchy)
+        ,   ONE_TO_ONE              // Create a HashMap between the key and a single custom_pool. They key must only map to a single pool. (Such a unique point in space)
+        };
+
         using                   type_guid           = component::type_guid;
         constexpr static auto   type_data_access_v  = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
         constexpr static auto   type_guid_v         { type_guid{ nullptr } };
         constexpr static auto   type_name_v         { xconst_universal_str("unnamed share") };
+        constexpr static auto   type_map_v          { type_map::NONE }; 
         static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }
     };
 
@@ -122,11 +132,7 @@ namespace mecs::component
         using fn_getkey             = std::uint64_t(const void*)    noexcept;
 
         const type_guid                         m_Guid;
-        union
-        {
-            const xcore::string::const_universal    m_Name;
-            const descriptor*                       m_pDescriptor;
-        };
+        const xcore::string::const_universal    m_Name;
         mutable std::int16_t                    m_BitNumber;
         const type                              m_Type;
         fn_construct* const                     m_fnConstruct;
@@ -134,10 +140,12 @@ namespace mecs::component
         fn_move* const                          m_fnMove;
         fn_getkey* const                        m_fnGetKey;
         //property::table&                      m_PropertyTable;
+        const descriptor*                       m_pReferenceDescriptor;
         const std::uint32_t                     m_Size;
         const std::uint16_t                     m_Alignment;
         const type_data_access                  m_DataAccess;
         const bool                              m_isDoubleBuffer;
+        const share::type_map                   m_ShareComponentMapType;
     };
 
     namespace details
@@ -196,10 +204,12 @@ namespace mecs::component
                     ,   destruct_fn_v<T_COMPONENT>
                     ,   movable_fn_v<T_COMPONENT>
                     ,   nullptr
+                    ,   nullptr
                     ,   static_cast<std::uint32_t>( sizeof(T_COMPONENT) )
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   T_COMPONENT::type_data_access_v == type_data_access::DOUBLE_BUFFER || T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
+                    ,   share::type_map::NONE
                 };
             }
             else if constexpr (std::is_base_of_v<tag, T_COMPONENT>)
@@ -215,10 +225,12 @@ namespace mecs::component
                     ,   nullptr
                     ,   nullptr
                     ,   nullptr
+                    ,   nullptr
                     ,   0u
                     ,   0u
                     ,   type_data_access::ENUM_COUNT
                     ,   false
+                    ,   share::type_map::NONE
                 };
             }
             else if constexpr( std::is_base_of_v<singleton, T_COMPONENT> )
@@ -234,10 +246,12 @@ namespace mecs::component
                     ,   []( void* pData )     constexpr noexcept { std::destroy_at( reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(pData) ); }
                     ,   []( void* d, void* s) constexpr noexcept { *reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(d) = std::move(*reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(s)); }
                     ,   nullptr
+                    ,   nullptr
                     ,   static_cast<std::uint32_t>( sizeof(std::unique_ptr<T_COMPONENT>) )
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<std::unique_ptr<T_COMPONENT>> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   false
+                    ,   share::type_map::NONE
                 };
             }
             else if constexpr (std::is_base_of_v<share, T_COMPONENT>)
@@ -253,10 +267,12 @@ namespace mecs::component
                     ,   destruct_fn_v<T_COMPONENT>
                     ,   movable_fn_v<T_COMPONENT>
                     ,   (&T_COMPONENT::getKey == &mecs::component::share::getKey)? []( const void* pData ) constexpr noexcept { xcore::crc<64> X{}; return X.FromBytes( {static_cast<const std::byte*>(pData), sizeof(T_COMPONENT)} ).m_Value; } : &T_COMPONENT::getKey
+                    ,   nullptr
                     ,   static_cast<std::uint32_t>( sizeof(T_COMPONENT) )
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   type_data_access::LINEAR
                     ,   false
+                    ,   T_COMPONENT::type_map_v
                 };
             }
             else if constexpr (std::is_base_of_v< share_ref, T_COMPONENT> )
@@ -265,17 +281,19 @@ namespace mecs::component
                 return descriptor
                 {
                       T_COMPONENT::key
-                    , &MakeDescriptor<T_COMPONENT::type>()
+                    , xcore::string::const_universal( "Share Reference" )
                     , -1
                     , type::SHARE_REF
                     , nullptr
                     , nullptr
                     , nullptr
                     , nullptr
+                    , &MakeDescriptor<T_COMPONENT::type>()
                     , 0u
                     , 0u
                     , type_data_access::ENUM_COUNT
                     , false
+                    , share::type_map::NONE
                 };
             }
         }

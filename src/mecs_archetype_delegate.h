@@ -91,7 +91,6 @@ namespace mecs::archetype::delegate
             using                   user_delegate_t     = T_USER_DELEGATE;
             using                   type_t              = mecs::archetype::event::details::base_event;
             using                   event_t             = typename user_delegate_t::event_t;
-            constexpr static auto   query_v             = mecs::archetype::query::details::define<typename user_delegate_t::query_t>{};
 
             mecs::archetype::query::instance         m_Query;
             mecs::world::instance&                   m_World;

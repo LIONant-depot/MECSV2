@@ -151,6 +151,7 @@
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E10_share_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E11_complex_system_queries.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E12_basic_hierarchical_components.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E14_2d_physics.h" />
     <ClInclude Include="..\..\src\Examples\Settings\PropertyConfig.h" />
     <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h" />
