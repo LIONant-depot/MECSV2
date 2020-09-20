@@ -112,9 +112,17 @@ namespace mecs::archetype::delegate
             {
                 Archetype.m_Events.m_CreatedEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }
+            else if constexpr (user_delegate_t::event_t::type_guid_v == mecs::archetype::event::create_pool::type_guid_v)
+            {
+                Archetype.m_Events.m_CreatedPool.AddDelegate<&custom_instance::HandlePoolEvents>(*this);
+            }
+            else if constexpr (user_delegate_t::event_t::type_guid_v == mecs::archetype::event::destroy_pool::type_guid_v)
+            {
+                Archetype.m_Events.m_DestroyPool.AddDelegate<&custom_instance::HandlePoolEvents>(*this);
+            }
             else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::destroy_entity::type_guid_v )
             {
-                Archetype.m_Events.m_DeletedEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
+                Archetype.m_Events.m_DestroyEntity.AddDelegate<&custom_instance::HandleEvents>(*this );
             }
             else if constexpr( user_delegate_t::event_t::type_guid_v == mecs::archetype::event::moved_out::type_guid_v )
             {
@@ -146,7 +154,12 @@ namespace mecs::archetype::delegate
         template< typename T_USER_DELEGATE > inline
         void custom_instance< T_USER_DELEGATE >::HandleEvents(mecs::component::entity& Entity, mecs::system::instance& System) noexcept
         {
-            if constexpr ( &custom_instance::msgHandleEvents != &overrides::msgHandleEvents )
+            if constexpr (std::is_same_v< event_t, mecs::archetype::event::details::base_event::event_t> == false )
+            {
+                // Do nothing if we are not an regular event
+                xassert(false);
+            }
+            else if constexpr ( &custom_instance::msgHandleEvents != &overrides::msgHandleEvents )
             {
                 custom_instance::msgHandleEvents(Entity, System);
             }
@@ -172,6 +185,42 @@ namespace mecs::archetype::delegate
                 }
             }
         }
+
+        template< typename T_USER_DELEGATE > inline
+        void custom_instance< T_USER_DELEGATE >::HandlePoolEvents( mecs::system::instance& System, mecs::archetype::specialized_pool& Pool ) noexcept
+        {
+            if constexpr ( std::is_same_v< event_t, mecs::archetype::event::details::base_event::event_t> )
+            {
+                // Do nothing if we are not an event pool
+                xassert(false);
+            }
+            else if constexpr ( &custom_instance::msgHandlePoolEvents != &overrides::msgHandlePoolEvents )
+            {
+                custom_instance::msgHandlePoolEvents(System, Pool);
+            }
+            else
+            {
+                using params_tuple = typename xcore::function::traits<custom_instance>::args_tuple;
+                static_assert( std::tuple_size_v<params_tuple> >= 2 );
+                if constexpr( std::tuple_size_v<params_tuple> == 2 )
+                {
+                    (*this)(System, Pool);
+                }
+                else
+                {
+                    using componets_tuple = xcore::types::tuple_delete_n_t< 2u, params_tuple >;
+
+                    mecs::archetype::details::CallPoolFunction
+                    (
+                          Pool
+                        , *this
+                        , reinterpret_cast<componets_tuple*>(nullptr)
+                        , System
+                    );
+                }
+            }
+        }
+
     }
 
     template< typename T_ARCHETYPE_DELEGATE >

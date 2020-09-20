@@ -62,6 +62,7 @@ namespace mecs::system
         template< typename T_SYSTEM >
         struct custom_system final : T_SYSTEM
         {
+            static_assert( std::is_base_of_v< mecs::system::overrides, T_SYSTEM >, "This is not a system" );
             using                           user_system_t                   = T_SYSTEM;
             using                           global_event_tuple_t            = decltype(FilterEventsTuple<system::event::global>(reinterpret_cast<typename user_system_t::events_t*>(nullptr)));
             using                           global_real_events_t            = decltype(GetRealEventsTuple<true>(reinterpret_cast<global_event_tuple_t*>(nullptr)));

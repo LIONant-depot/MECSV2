@@ -16,6 +16,7 @@ namespace mecs::archetype::delegate
         using                           entity                  = mecs::component::entity;
         using                           guid                    = xcore::guid::unit<64, struct mecs_archetype_delegate_tag>;
         using                           system                  = mecs::system::instance;
+        using                           pool                    = mecs::archetype::specialized_pool;
 
         constexpr static auto           type_guid_v             = type_guid{ nullptr };
         constexpr static auto           type_name_v             = xconst_universal_str("mecs::archetype::delegate(unnamed)");
@@ -26,6 +27,7 @@ namespace mecs::archetype::delegate
         xforceinline            void    msgFrameStart           (void)                                              noexcept {}
         xforceinline            void    msgFrameDone            (void)                                              noexcept {}
         xforceinline            void    msgHandleEvents         (mecs::component::entity&,mecs::system::instance&)  noexcept {}
+        xforceinline            void    msgHandlePoolEvents     (mecs::system::instance&, mecs::archetype::specialized_pool& )  noexcept {}
 
         virtual                        ~overrides               (void) noexcept = default;
         virtual                 void    Disable                 (void) noexcept = 0;
@@ -112,6 +114,7 @@ namespace mecs::archetype::delegate
             inline      void    eventAddNewArchetype    ( archetype::instance& Archetype )                                      noexcept;
             inline      void    eventDeleteArchetype    ( archetype::instance& Archetype )                                      noexcept;
             inline      void    HandleEvents            ( mecs::component::entity& Entity, mecs::system::instance& System )     noexcept;
+            inline      void    HandlePoolEvents        ( mecs::system::instance& System, mecs::archetype::specialized_pool& Pool )     noexcept;
         };
 
         //---------------------------------------------------------------------------------

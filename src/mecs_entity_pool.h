@@ -24,6 +24,8 @@ namespace mecs::entity_pool
         constexpr   auto                capacity                ( void ) const                                                      noexcept{ return m_MaxEntries;  }
         template< typename T_COMPONENT >
         inline      T_COMPONENT&        getComponentByIndex     ( const index Index, int iComponent )                               noexcept;
+        template< typename T_COMPONENT >
+        inline      const T_COMPONENT&  getComponentByIndex     ( const index Index, int iComponent )                               const noexcept;
         inline      std::byte*          getComponentByIndexRaw  ( const index Index, int iComponent )                               noexcept;
         xforceinline auto&              getDescriptors          ( void ) const                                                      noexcept {return m_Descriptors; }
 

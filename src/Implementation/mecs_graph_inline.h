@@ -4,6 +4,7 @@ namespace mecs::graph
     template< typename T_SYSTEM, typename...T_END_SYNC_POINTS >
     T_SYSTEM& instance::CreateGraphConnection(mecs::sync_point::instance& StartSyncpoint, T_END_SYNC_POINTS&...EndSyncpoints) noexcept
     {
+        static_assert(std::is_base_of_v< mecs::system::overrides, T_SYSTEM >, "This is not a system");
         static_assert(sizeof...(EndSyncpoints) > 0, "You must pass at least one end Sync_point");
         static_assert(std::is_base_of_v<mecs::sync_point::instance, std::common_type_t<T_END_SYNC_POINTS...>>, "All the end sync_points must be non const sync_points");
 

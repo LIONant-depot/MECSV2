@@ -37,6 +37,20 @@ namespace mecs::archetype::event
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::moved_out" );
     };
 
+    struct create_pool final : details::base_event
+    {
+        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::specialized_pool& >;
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::create_pool" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::create_pool" );
+    };
+
+    struct destroy_pool final : details::base_event
+    {
+        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::specialized_pool& >;
+        constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::destroy_pool" };
+        constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::destroy_pool" );
+    };
+
     template< typename...T_COMPONENTS >
     struct updated_component final : details::base_event
     {
@@ -57,10 +71,12 @@ namespace mecs::archetype::event
     {
         struct events
         {
-            using created_entity  = xcore::types::make_unique< mecs::archetype::event::create_entity::event_t,   struct new_entity_tag           >;
-            using deleted_entity  = xcore::types::make_unique< mecs::archetype::event::destroy_entity::event_t,  struct delete_entity_tag        >;
+            using created_entity  = xcore::types::make_unique< mecs::archetype::event::create_entity::event_t,   struct create_entity_tag        >;
+            using destroy_entity  = xcore::types::make_unique< mecs::archetype::event::destroy_entity::event_t,  struct destroy_entity_tag       >;
             using move_out_entity = xcore::types::make_unique< mecs::archetype::event::moved_out::event_t,       struct move_out_entity_tag      >;
             using move_in_entity  = xcore::types::make_unique< mecs::archetype::event::moved_in::event_t,        struct move_in_entity_tag       >;
+            using created_pool    = xcore::types::make_unique< mecs::archetype::event::create_pool::event_t,     struct create_pool_tag          >;
+            using destroy_pool    = xcore::types::make_unique< mecs::archetype::event::destroy_pool::event_t,    struct destroy_pool_tag         >;
 
             struct updated_component
             {
@@ -70,9 +86,11 @@ namespace mecs::archetype::event
             };
 
             created_entity              m_CreatedEntity;
-            deleted_entity              m_DeletedEntity;
+            destroy_entity              m_DestroyEntity;
             move_out_entity             m_MovedOutEntity;
             move_in_entity              m_MovedInEntity;
+            created_pool                m_CreatedPool;
+            destroy_pool                m_DestroyPool;
             updated_component           m_UpdateComponent;
         };
     }

@@ -21,18 +21,38 @@ namespace mecs::examples::E14_2d_physics
         float m_Radius;
     };
 
-    struct cell : mecs::component::share
+    struct cell_group : mecs::component::share
     {
         // one key to one entity (one to one)
         constexpr static auto type_map_v = type_map::ONE_TO_ONE;
         static constexpr std::uint64_t getKey( const void* p ) noexcept
         {
-            auto& R = *static_cast<const cell*>(p);
+            auto& R = *static_cast<const cell_group*>(p);
             return (18446744073709551557ull ^ 9223372036854775ull) ^ (static_cast<std::uint64_t>(R.m_X) << 32) ^ static_cast<std::uint64_t>(R.m_Y);
         }
 
         std::uint32_t m_X;
         std::uint32_t m_Y;
+    };
+
+    //-----------------------------------------------------------------------------------------
+    // Delegates
+    //-----------------------------------------------------------------------------------------
+
+    struct create_cell_entity : mecs::archetype::delegate::instance< mecs::archetype::event::create_pool >
+    {
+        void operator()( system& System, pool& Pool, const cell_group& Cell )
+        {
+            int a = 22;
+        }
+    };
+
+    struct destroy_cell_entity : mecs::archetype::delegate::instance< mecs::archetype::event::destroy_pool >
+    {
+        void operator()( system& System, pool& Pool, const cell_group& Cell )
+        {
+            int a = 22;
+        }
     };
 
     //-----------------------------------------------------------------------------------------
@@ -50,7 +70,7 @@ namespace mecs::examples::E14_2d_physics
                 void            // We don't have any function that provides additional filters
             ,   std::tuple      // We want all archetypes with cell components
                 <
-                    all< cell >
+                    all< cell_group >
                 >
             >( instance::m_Query );
 
@@ -65,7 +85,7 @@ namespace mecs::examples::E14_2d_physics
     void Test()
     {
         printf("--------------------------------------------------------------------------------\n");
-        printf("E12_hierarchy_components\n");
+        printf("E14_physics\n");
         printf("--------------------------------------------------------------------------------\n");
 
         auto upUniverse = std::make_unique<mecs::universe::instance>();
@@ -88,10 +108,14 @@ namespace mecs::examples::E14_2d_physics
         //
         // Create the game graph.
         //
-        /*
         auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
-        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<local_move_system>( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
-                          DefaultWorld.m_GraphDB.CreateGraphConnection<root_move_system> ( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
+        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<update_hierarchy_system>( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
+                          DefaultWorld.m_GraphDB.CreateGraphConnection<update_hierarchy_system> ( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
+
+        DefaultWorld.m_GraphDB.CreateDelegate<destroy_cell_entity>();
+
+
+        /*
 
         //------------------------------------------------------------------------------------------
         // Initialization
