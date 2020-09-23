@@ -35,6 +35,11 @@ namespace mecs::examples::E14_2d_physics
         std::uint32_t m_Y;
     };
 
+    struct cell_list : mecs::component::singleton
+    {
+        std::vector<mecs::archetype::specialized_pool*> m_List;
+    };
+
     //-----------------------------------------------------------------------------------------
     // Delegates
     //-----------------------------------------------------------------------------------------
@@ -98,7 +103,7 @@ namespace mecs::examples::E14_2d_physics
         //
         // Register Components
         //
-        upUniverse->registerTypes<position, velocity, collider, cell >();
+        upUniverse->registerTypes<position, velocity, collider, cell_group >();
 
         //
         // Which world we are building?

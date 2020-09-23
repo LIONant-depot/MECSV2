@@ -288,6 +288,7 @@
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E11_complex_system_queries.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E12_basic_hierarchical_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E14_2d_physics.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E10_share_components2_updating.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

@@ -149,6 +149,7 @@
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E08_quantum_mutable_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E09_quantum_double_buffer_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E10_share_components.h" />
+    <ClInclude Include="..\..\src\Examples\CommandLineExamples\E10_share_components2_updating.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E11_complex_system_queries.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E12_basic_hierarchical_components.h" />
     <ClInclude Include="..\..\src\Examples\CommandLineExamples\E14_2d_physics.h" />
