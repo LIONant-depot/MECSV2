@@ -220,11 +220,11 @@ namespace mecs::system
             std::span<std::uint8_t>                 m_DelegateSpan;
         };
 
-        template< typename T_COMPONENT >
-        static constexpr bool is_share_mutable_v = mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SHARE && std::is_same_v<T_COMPONENT, std::remove_const_t<T_COMPONENT> >;
-
         namespace details
         {
+            template< typename T_COMPONENT >
+            static constexpr bool is_share_mutable_v = mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SHARE
+                                                    && false == std::is_same_v<T_COMPONENT, const T_COMPONENT >;
             template< typename...T_ARGS >
             struct mutable_share_tuple;
 
@@ -238,7 +238,7 @@ namespace mecs::system
                     < 
                         std::conditional_t
                         <
-                            is_share_mutable_v<T_ARGS>
+                            is_share_mutable_v<std::remove_reference_t<std::remove_pointer_t<T_ARGS>>>
                         ,   std::tuple<xcore::types::decay_full_t<T_ARGS>>
                         ,   std::tuple<>
                         > ...
@@ -249,74 +249,6 @@ namespace mecs::system
 
         template< typename T_TUPLE >
         using mutable_share_tuple_t = typename details::mutable_share_tuple< T_TUPLE >::type;
-
-        template< typename...T_ARGS > constexpr xforceinline
-        auto getMutableShareComponentArray(const mecs::archetype::specialized_pool& Pool, std::tuple<T_ARGS...>*) noexcept
-        {
-            static constexpr auto MutableShareArray = std::array{ &mecs::component::descriptor_v<T_ARGS> ... };
-            const auto&           Desc              = Pool.m_pArchetypeInstance->m_MainPoolDescriptorSpan;
-            const int             end               = static_cast<int>(Desc.size());
-            int                   j                 = 0;
-
-            std::array< std::uint16_t, sizeof...(T_ARGS) > Index;
-
-            for( int i = 1; i < end; ++i )
-            {
-                if( MutableShareArray[j]->m_Guid == Desc[i]->m_Guid )
-                {
-                    Index[j] = i;
-                    j++;
-                    if( j == Index.size() ) break;
-                }
-                xassert( MutableShareArray[j]->m_Guid < Desc[i]->m_Guid );
-            }
-
-            return Index;
-        }
-
-        template< typename...T_ARGS > constexpr xforceinline
-        auto ComputeMutableShareCRC( const mecs::archetype::specialized_pool& Pool, std::tuple<T_ARGS...>* ) noexcept
-        {
-            using mutable_share_tuple = xcore::types::tuple_sort_t
-            <
-                mecs::component::smaller_guid
-                , xcore::types::tuple_cat_t
-                < 
-                    std::conditional_t
-                    <
-                        mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SHARE && std::is_same_v<T_ARGS, std::remove_const_t<T_ARGS> >
-                    ,   std::tuple<T_ARGS>
-                    ,   std::tuple<>
-                    > ...
-                >
-            >;
-
-            if constexpr ( std::tuple_size_v<mutable_share_tuple> > 0 )
-            {
-                static constexpr auto MutableShareArray = ComputeMutableShareArray(static_cast<mutable_share_tuple*>(nullptr));
-                std::uint64_t         CRC  = 0;
-                const auto&           Desc = Pool.m_pArchetypeInstance->m_MainPoolDescriptorSpan;
-                const int             end  = static_cast<int>(Desc.size());
-                int                   j    = 0;
-
-                for( int i = 1; i < end; ++i )
-                {
-                    if( MutableShareArray[j]->m_Guid == Desc[i]->m_Guid )
-                    {
-                        CRC += Pool.m_ShareComponentKeysSpan[i-1];
-                        j++;
-                        if( j == MutableShareArray.size() ) break;
-                    }
-                    xassert( MutableShareArray[j]->m_Guid < Desc[i]->m_Guid );
-                }
-
-                return CRC;
-            }
-            else
-            {
-                return 0ull;
-            }
-        }
 
         template< typename...T_ARGS > constexpr xforceinline
         auto ProcessInitArray   (   std::tuple<T_ARGS...>*
@@ -380,41 +312,105 @@ namespace mecs::system
         template<   typename    T
                 ,   typename... T_SHARE_COMPS
                 ,   typename... T_ARGS
-                ,   typename    T_INDEX_ARRAY >
+        >
         constexpr xforceinline
-        void ProcesssCallMutableShareComponents (  std::tuple<T_SHARE_COMPS...>*
-                                                ,  std::tuple<T_ARGS...>*
-                                                ,  T_INDEX_ARRAY&                       ShareIndexArray
+        void ProcesssCallMutableShareComponents (  std::tuple<T_SHARE_COMPS...>*                        // Share components are order by their guids (less to more)
+                                                ,  std::tuple<T_ARGS...>*                               // Arguments are order base on the function call
                                                 ,  mecs::archetype::specialized_pool&   Pool
                                                 ,  std::span<std::byte*>                Span
                                                 ,  T&                                   Params
+                                                ,  params_per_archetype&                Params2
+                                                ,  component::entity*                   pEntityPool
                                                 ,  int                                  iStart
                                                 ,  const int                            iEnd ) noexcept
         {
-            using func_tuple    = std::tuple<T_ARGS...>;
-            using share_tuple   = std::tuple<T_SHARE_COMPS...>;
+            using func_tuple_decayed = std::tuple< xcore::types::decay_full_t<T_ARGS>... >;
+            using func_tuple         = std::tuple<T_ARGS...>;
+            using share_tuple        = std::tuple<T_SHARE_COMPS...>;
 
             xassert(iStart != iEnd);
 
-            const std::uint64_t MutableShareCRC = [&]
-            {
-                std::uint64_t MutableShareCRC = 0;
-                for( auto Index : ShareIndexArray )
-                {
-                    MutableShareCRC += Pool.m_ShareComponentKeysSpan[Index - 1];
-                }
-                return MutableShareCRC;
-            }();
+            std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>   ComponentCRC;
+            std::array<std::byte*,    mecs::settings::max_data_components_per_entity>   ShareComponentData;
+            share_tuple                                                                 ShareTuple;
+            std::array<std::byte*,    sizeof...(T_SHARE_COMPS)>                         OriginalShareComponents;
+            std::array<std::uint16_t, sizeof...(T_SHARE_COMPS)>                         ShareIndexArray;
 
-            // Call the system
-            share_tuple ShareTuple;
-            std::array<std::tuple<const mecs::component::descriptor*, std::byte*>, 32> PotenciallyModified;
+            //
+            // Create a Map between Function Parameters (Share Writable Component Only) To ShareComponentIndex in the pool
+            //
+            {
+                const auto& Desc    = Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan;
+                const int   end     = static_cast<int>(Desc.size());
+                int         Index   = 0;
+                const auto  FindPos = [&]( auto& i, auto& ComponentDesc ) constexpr 
+                {
+                    for (; i < end; ++i)
+                    {
+                        if ( ComponentDesc.m_Guid == Desc[i]->m_Guid )
+                        {
+                           return i++;
+                        }
+                    }
+                    xassert(false);
+                    return ~0;
+                };
+
+                ((ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] = FindPos( Index, mecs::component::descriptor_v<T_SHARE_COMPS> )), ... );
+            }
+
+            // Back up all the original pointers
+            ((OriginalShareComponents[ xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple> ] = Span[ xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed> ] ), ... );
+
+            // Replace orinal share components with the new tuple memory (if we had a valid pointer)
+            ((Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>] = Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>] 
+                                                                                    ? reinterpret_cast<std::byte*>(&std::get<T_SHARE_COMPS>(ShareTuple))
+                                                                                    : nullptr 
+             ), ... );
+
+            // Compute a partial CRC to detect changes
+            const std::uint64_t MutableShareCRC = (( OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                                                        ? Pool.m_ShareComponentKeysSpan[ ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ]
+                                                        : 0
+                                                   ) + ... );
+
+            //
+            // Copy all keys and pointers
+            //
+            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            {
+                ShareComponentData[i] = Pool.m_pArchetypeInstance->m_MainPool.getComponentByIndexRaw( Pool.m_MainPoolIndex, 1+i );
+                ComponentCRC[i]       = Pool.m_ShareComponentKeysSpan[i];
+            }
+
+            // Override points of share components that we are going to replace
+            ((Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>]
+                ? ShareComponentData[ ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ] = Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>], nullptr
+                : nullptr
+             ), ... );
+
+
+            //
+            // Be ready to notify delegates
+            //
+            auto&               UpdateComponents = Params2.m_pResult->m_pArchetype->m_Events.m_UpdateComponent;
+            const std::uint8_t  endDelegateSpan  = static_cast<std::uint8_t>(Params2.m_DelegateSpan.size());
+
+            //
+            // Call the system function
+            //
             do
             {
-                int Count = 0;
+                // Copy the share components that are about to get modifies into the tuple 
+                ((OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                    ? std::get<T_SHARE_COMPS>(ShareTuple) = *reinterpret_cast<T_SHARE_COMPS*>(OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]), nullptr
+                    : nullptr
+                ), ... );
+
+                // Call the function
                 Params.m_Callback
                 (
-                    ([&]( auto& sharetuple, auto& modified, auto& count ) constexpr noexcept -> T_ARGS
+                    ([&]() constexpr noexcept -> T_ARGS
                     {
                         auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
                         auto  pBackup   = p;
@@ -423,55 +419,188 @@ namespace mecs::system
                             if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
                             else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
                         }
-                        else if constexpr ( is_share_mutable_v<T_ARGS> )
-                        {
-                            // If we are going to mutate the share component we need to make a copy of it because we can not change
-                            // the current one since this will change the component for everyone.
-                            if constexpr (std::is_pointer_v<T_ARGS>)
-                            {
-                                if (p) 
-                                {
-                                    std::get<xcore::types::decay_full_t<T_ARGS>>(sharetuple) = reinterpret_cast<xcore::types::decay_full_t<T_ARGS>&>(*p);
-                                    pBackup = &std::get<xcore::types::decay_full_t<T_ARGS>>(sharetuple);
-                                    modified[count++] = std::tuple{ &mecs::component::descriptor_v<T_ARGS>, reinterpret_cast<std::byte*>(pBackup) };
-                                }
-                            }
-                            else
-                            {
-                                std::get<xcore::types::decay_full_t<T_ARGS>>(sharetuple) = reinterpret_cast<xcore::types::decay_full_t<T_ARGS>&>(*p);
-                                pBackup = reinterpret_cast<std::byte*>(&std::get<xcore::types::decay_full_t<T_ARGS>>(sharetuple));
-                                modified[count++] = std::tuple{ &mecs::component::descriptor_v<T_ARGS>, reinterpret_cast<std::byte*>(pBackup) };
-                            }
-                        }
 
                         if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
                         else                                     return reinterpret_cast<T_ARGS>(*pBackup);
-                    }(ShareTuple, PotenciallyModified, Count))...
+                    }())...
                 );
 
-                // Compute new partial CRC to see if things have change
-                std::uint64_t MutableShareNewCRC = 0;
-                for( int i=0; i< Count; ++i )
-                {
-                    const auto& [ pDescriptor, pData ] = PotenciallyModified[i];
-                    MutableShareNewCRC += pDescriptor->m_fnGetKey(pData);
-                }
+                // Deal with delegates 
+                for (std::uint8_t i = 0u; i != endDelegateSpan; ++i)
+                    UpdateComponents.m_Event.Notify(Params2.m_DelegateSpan[i], *pEntityPool, Params.m_System);
 
+                pEntityPool++;
+
+                // Store partial CRCs we may need to use them
+                // also compute the new partial CRC to detect changes
+                std::uint64_t MutableShareNewCRC = 0;
+                ((OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                    ? MutableShareNewCRC += (ComponentCRC[ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ] = mecs::component::descriptor_v<T_SHARE_COMPS>.m_fnGetKey(&std::get<T_SHARE_COMPS>(ShareTuple)))
+                        , nullptr 
+                    : nullptr
+                  ), ... );
+                    
+                // If CRC has change we need to move the entity to a new pool
                 if( MutableShareNewCRC != MutableShareCRC )
                 {
-                    // TODO: Move to new specialized pool
-                    int a = 0;
+                    const auto NewFullGuid = Pool.m_TypeGuid.m_Value - MutableShareCRC + MutableShareNewCRC;
+
+                    Pool.m_pArchetypeInstance->moveEntityBetweenSpecializePools
+                    (
+                            Params.m_System
+                        ,   Pool.m_MainPoolIndex
+                        ,   iStart
+                        ,   NewFullGuid
+                        ,   ShareComponentData.data()
+                        ,   ComponentCRC.data()
+                    );
                 }
 
             } while( ++iStart != iEnd );
         }
 
+        template<   typename    T
+                ,   typename... T_SHARE_COMPS
+                ,   typename... T_ARGS
+        >
+        constexpr xforceinline
+        void ProcesssCallMutableShareComponents (  std::tuple<T_SHARE_COMPS...>*                        // Share components are order by their guids (less to more)
+                                                ,  std::tuple<T_ARGS...>*                               // Arguments are order base on the function call
+                                                ,  mecs::archetype::specialized_pool&   Pool
+                                                ,  std::span<std::byte*>                Span
+                                                ,  T&                                   Params
+                                                ,  int                                  iStart
+                                                ,  const int                            iEnd ) noexcept
+        {
+            using func_tuple_decayed = std::tuple< xcore::types::decay_full_t<T_ARGS>... >;
+            using func_tuple         = std::tuple<T_ARGS...>;
+            using share_tuple        = std::tuple<T_SHARE_COMPS...>;
+
+            xassert(iStart != iEnd);
+
+            std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>   ComponentCRC;
+            std::array<std::byte*,    mecs::settings::max_data_components_per_entity>   ShareComponentData;
+            share_tuple                                                                 ShareTuple;
+            std::array<std::byte*,    sizeof...(T_SHARE_COMPS)>                         OriginalShareComponents;
+            std::array<std::uint16_t, sizeof...(T_SHARE_COMPS)>                         ShareIndexArray;
+
+            //
+            // Create a Map between Function Parameters (Share Writable Component Only) To ShareComponentIndex in the pool
+            //
+            {
+                const auto& Desc    = Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan;
+                const int   end     = static_cast<int>(Desc.size());
+                int         Index   = 0;
+                const auto  FindPos = [&]( auto& i, auto& ComponentDesc ) constexpr 
+                {
+                    for (; i < end; ++i)
+                    {
+                        if ( ComponentDesc.m_Guid == Desc[i]->m_Guid )
+                        {
+                           return i++;
+                        }
+                    }
+                    xassert(false);
+                    return ~0;
+                };
+
+                ((ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] = FindPos( Index, mecs::component::descriptor_v<T_SHARE_COMPS> )), ... );
+            }
+
+            // Back up all the original pointers
+            ((OriginalShareComponents[ xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple> ] = Span[ xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed> ] ), ... );
+
+            // Replace orinal share components with the new tuple memory (if we had a valid pointer)
+            ((Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>] = Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>] 
+                                                                                    ? reinterpret_cast<std::byte*>(&std::get<T_SHARE_COMPS>(ShareTuple))
+                                                                                    : nullptr 
+             ), ... );
+
+            // Compute a partial CRC to detect changes
+            const std::uint64_t MutableShareCRC = (( OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                                                        ? Pool.m_ShareComponentKeysSpan[ ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ]
+                                                        : 0
+                                                   ) + ... );
+
+            //
+            // Copy all keys and pointers
+            //
+            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            {
+                ShareComponentData[i] = Pool.m_pArchetypeInstance->m_MainPool.getComponentByIndexRaw( Pool.m_MainPoolIndex, 1+i );
+                ComponentCRC[i]       = Pool.m_ShareComponentKeysSpan[i];
+            }
+
+            // Override points of share components that we are going to replace
+            ((Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>]
+                ? ShareComponentData[ ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ] = Span[xcore::types::tuple_t2i_v<T_SHARE_COMPS, func_tuple_decayed>], nullptr
+                : nullptr
+             ), ... );
+
+            //
+            // Call the system function
+            //
+            do
+            {
+                // Copy the share components that are about to get modifies into the tuple 
+                ((OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                    ? std::get<T_SHARE_COMPS>(ShareTuple) = *reinterpret_cast<T_SHARE_COMPS*>(OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]), nullptr
+                    : nullptr
+                ), ... );
+
+                // Call the function
+                Params.m_Callback
+                (
+                    ([&]() constexpr noexcept -> T_ARGS
+                    {
+                        auto& p         = Span[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
+                        auto  pBackup   = p;
+                        if constexpr ( mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE )
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
+                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                        }
+
+                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                    }())...
+                );
+
+                // Store partial CRCs we may need to use them
+                // also compute the new partial CRC to detect changes
+                std::uint64_t MutableShareNewCRC = 0;
+                ((OriginalShareComponents[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>]
+                    ? MutableShareNewCRC += (ComponentCRC[ShareIndexArray[xcore::types::tuple_t2i_v<T_SHARE_COMPS, share_tuple>] ] = mecs::component::descriptor_v<T_SHARE_COMPS>.m_fnGetKey(&std::get<T_SHARE_COMPS>(ShareTuple)))
+                        , nullptr 
+                    : nullptr
+                  ), ... );
+                    
+                // If CRC has change we need to move the entity to a new pool
+                if( MutableShareNewCRC != MutableShareCRC )
+                {
+                    const auto NewFullGuid = Pool.m_TypeGuid.m_Value - MutableShareCRC + MutableShareNewCRC;
+
+                    Pool.m_pArchetypeInstance->moveEntityBetweenSpecializePools
+                    (
+                            Params.m_System
+                        ,   Pool.m_MainPoolIndex
+                        ,   iStart
+                        ,   NewFullGuid
+                        ,   ShareComponentData.data()
+                        ,   ComponentCRC.data()
+                    );
+                }
+
+            } while( ++iStart != iEnd );
+        }
+
+
         template< typename T, typename...T_ARGS> constexpr xforceinline
         void ProcesssCall( std::tuple<T_ARGS...>*
                          , std::span<std::byte*>        Span
-                         , component::entity*           pEntityPool
                          , T&                           Params
                          , params_per_archetype&        Params2
+                         , component::entity*           pEntityPool
                          , int                          iStart
                          , const int                    iEnd ) noexcept
         {
@@ -758,28 +887,24 @@ namespace mecs::system
                 ,   Index
                 ] () constexpr noexcept
                 {
-                    auto&       Specialized             = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
                     auto        Pointers                = details::ProcessInitArray( reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult );
-                    const auto  MutableShareIndexArray  = details::getMutableShareComponentArray(Specialized, static_cast<mutable_share_tuple*>(nullptr));
                     auto&       SpecializedPool         = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
 
                     if (Params2.m_DelegateSpan.size())
                     {
                         mecs::component::entity* pEntityPool     = &SpecializedPool.m_EntityPool.getComponentByIndex<mecs::component::entity>(iStart, 0);
-                        xassert(false);
-                        /*
                         details::ProcesssCallMutableShareComponents
                         (
                               reinterpret_cast<mutable_share_tuple*>(nullptr)
                             , reinterpret_cast<function_arg_tuple*>(nullptr)
-                            , MutableShareIndexArray
                             , SpecializedPool
                             , Pointers
                             , Params
+                            , Params2
+                            , pEntityPool
                             , iStart
                             , iEnd
                         );
-                        */
                     }
                     else
                     {
@@ -787,7 +912,6 @@ namespace mecs::system
                         (
                               reinterpret_cast<mutable_share_tuple*>(nullptr)
                             , reinterpret_cast<function_arg_tuple*>(nullptr)
-                            , MutableShareIndexArray
                             , SpecializedPool
                             , Pointers
                             , Params
@@ -814,7 +938,6 @@ namespace mecs::system
                 ,   Index
                 ] () constexpr noexcept
                 {
-                    auto& Specialized = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
                     auto  Pointers    = details::ProcessInitArray(reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult );
 
                     if( Params2.m_DelegateSpan.size() )
@@ -826,9 +949,9 @@ namespace mecs::system
                         (
                             reinterpret_cast<function_arg_tuple*>(nullptr)
                         ,   Pointers
-                        ,   pEntityPool
                         ,   Params
                         ,   Params2
+                        ,   pEntityPool
                         ,   iStart
                         ,   iEnd
                         );

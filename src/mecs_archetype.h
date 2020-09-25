@@ -212,6 +212,15 @@ namespace mecs::archetype
                                                                , T_SHARE_COMPONENTS&&...                ShareComponents
                                                                ) const noexcept;
         //-----------------------------------------------------------------------------------
+        inline
+        void                        moveEntityBetweenSpecializePools        ( system::instance&         System
+                                                                            , int                       FromSpecializePoolIndex
+                                                                            , int                       EntityIndexInSpecializedPool
+                                                                            , std::uint64_t             NewCRCPool
+                                                                            , std::byte**               pPointersToShareComponents
+                                                                            , std::uint64_t*            pListOfCRCFromShareComponents 
+                                                                            ) noexcept;
+        //-----------------------------------------------------------------------------------
 
         struct double_buffer_info
         {

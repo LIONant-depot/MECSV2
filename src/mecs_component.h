@@ -266,7 +266,10 @@ namespace mecs::component
                     ,   construct_fn_v<T_COMPONENT>
                     ,   destruct_fn_v<T_COMPONENT>
                     ,   movable_fn_v<T_COMPONENT>
-                    ,   (&T_COMPONENT::getKey == &mecs::component::share::getKey)? []( const void* pData ) constexpr noexcept { xcore::crc<64> X{}; return X.FromBytes( {static_cast<const std::byte*>(pData), sizeof(T_COMPONENT)} ).m_Value; } : &T_COMPONENT::getKey
+                    ,   (&T_COMPONENT::getKey == &mecs::component::share::getKey)? []( const void* pData ) constexpr noexcept
+                            {   xcore::crc<64> X{};
+                                return X.FromBytes( {static_cast<const std::byte*>(pData), sizeof(T_COMPONENT)},{ 2305843009213693951ull} ).m_Value;
+                            } : &T_COMPONENT::getKey
                     ,   nullptr
                     ,   static_cast<std::uint32_t>( sizeof(T_COMPONENT) )
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )

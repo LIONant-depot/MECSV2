@@ -368,7 +368,7 @@ namespace mecs::archetype
             std::array<std::uint64_t, sizeof...(T_SHARE_COMPONENTS)> ShareComponentKeys;
             ((ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, sorted_tuple>] = mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey(&ShareComponents)), ...);
 
-            const specialized_pool::type_guid SpecializedGuidTypeGuid{ mecs::tools::hash::combine( ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, share_tuple>] ...) };
+            const specialized_pool::type_guid SpecializedGuidTypeGuid{ (ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, share_tuple>] + ...) };
 
             static constexpr auto nKeys = sizeof...(T_SHARE_COMPONENTS);
             for (int end = static_cast<int>(m_MainPool.size()), i = 0; i < end; ++i)
@@ -535,6 +535,115 @@ namespace mecs::archetype
         auto& Archetype = *Reference.m_pPool->m_pArchetypeInstance;
         if (Archetype.m_Events.m_DestroyEntity.hasSubscribers())
             Archetype.m_Events.m_DestroyEntity.NotifyAll(Entity, System);
+    }
+
+    //----------------------------------------------------------------------------------------------------
+
+    inline
+    void instance::moveEntityBetweenSpecializePools(
+          system::instance& System
+        , int               FromSpecializePoolIndex
+        , int               EntityIndexInSpecializedPool
+        , std::uint64_t     NewCRCPool
+        , std::byte**       pPointersToShareComponents
+        , std::uint64_t*    pListOfCRCFromShareComponents ) noexcept
+    {
+        //
+        // Sanity Check
+        //
+        xassert_block_basic()
+        {
+            std::uint64_t CRC = 0;
+            for( int i=0, end = static_cast<int>(m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            {
+                CRC += pListOfCRCFromShareComponents[i];
+            }
+            xassert( CRC == NewCRCPool );
+        }
+
+        //
+        // Try to find an existing pool
+        //
+        int               i     = 0;
+        specialized_pool* pPool = nullptr;
+    TRY_FIND_AGAIN:
+
+        for( int end = m_MainPool.size(); i<end; ++i )
+        {
+            auto& Specialized = m_MainPool.getComponentByIndex<specialized_pool>(i, 0);
+            if(Specialized.m_TypeGuid.m_Value == NewCRCPool)
+            {
+                pPool = &Specialized;
+                break;
+            }
+        }
+
+        //
+        // Create a pool if we can not find one
+        //
+        if( pPool == nullptr )
+        {
+            xcore::lock::scope Lk(m_SemaphoreLock);
+            if( i != m_MainPool.size() ) goto TRY_FIND_AGAIN;
+
+            const int PoolIndex = m_MainPool.append(); m_MainPool.MemoryBarrier();
+            auto& Specialized   = m_MainPool.getComponentByIndex<specialized_pool>(PoolIndex, 0);
+
+            //TODO: Preallocate nEntites before returning
+            Specialized.m_TypeGuid.m_Value       = NewCRCPool;
+            Specialized.m_MainPoolIndex          = PoolIndex;
+            Specialized.m_EntityPool.Init(*this, m_Descriptor.m_DataDescriptorSpan, 100000 /*MaxEntries*/ );
+            Specialized.m_pArchetypeInstance     = this;
+            Specialized.m_ShareComponentKeysSpan = std::span{ Specialized.m_ShareComponentKeysMemory.data(), m_Descriptor.m_ShareDescriptorSpan.size() };
+
+            for( int i=0; i< Specialized.m_ShareComponentKeysSpan.size(); i++ )
+            {
+                Specialized.m_ShareComponentKeysSpan[i] = pListOfCRCFromShareComponents[i];
+                memcpy( m_MainPool.getComponentByIndexRaw(PoolIndex, 1 + i), pPointersToShareComponents[i], m_Descriptor.m_ShareDescriptorSpan[i]->m_Size );
+            }
+
+            // Notify possible listeners
+            if (m_Events.m_CreatedPool.hasSubscribers())
+                m_Events.m_CreatedPool.NotifyAll(System, Specialized);
+
+            pPool = &Specialized;
+        }
+
+        //
+        // Move the entity
+        //
+        auto Index           = pPool->m_EntityPool.append(1);
+
+        // If we failt to allocate then we run out of space and must find another pool
+        if( Index == ~0 )
+        {
+            i++;
+            goto TRY_FIND_AGAIN;
+        }
+
+        auto& OldSpecialized = m_MainPool.getComponentByIndex<specialized_pool>(FromSpecializePoolIndex, 0);
+        for( i=0; i< m_Descriptor.m_DataDescriptorSpan.size(); i++ )
+        {
+            m_Descriptor.m_DataDescriptorSpan[i]->m_fnMove(pPool->m_EntityPool.getComponentByIndexRaw(Index, i),
+                OldSpecialized.m_EntityPool.getComponentByIndexRaw(EntityIndexInSpecializedPool, i) );
+        }
+
+        // We must update the entities now
+        // TODO: Should it be possible to change the entity without accessing the entity hash map?
+        {
+            auto& OldEntity = OldSpecialized.m_EntityPool.getComponentByIndex<mecs::component::entity>(EntityIndexInSpecializedPool, 0);
+            auto& NewEntity = pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Index, 0);
+
+            m_pEntityMap->find( OldEntity.getGUID(), [&]( auto& Entry ) constexpr
+            {
+                Entry.m_pPool           = pPool;
+                Entry.m_Index           = Index; 
+            });
+
+            // Mark the old entity for deletion
+            OldSpecialized.m_EntityPool.deleteBySwap(EntityIndexInSpecializedPool);
+            OldEntity.MarkAsZombie();
+        }
     }
 
     /*
