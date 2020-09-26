@@ -53,7 +53,7 @@ namespace mecs::examples::E10_shared_components2_updating
         void operator()( const mesh_render& MeshRender, group1& Group1, group2& Group2 ) noexcept
         {
             Group1.m_Value++;
-            //Group2.m_Value++;
+            Group2.m_Value++;
         }
     };
 
@@ -63,7 +63,7 @@ namespace mecs::examples::E10_shared_components2_updating
     void Test()
     {
         printf("--------------------------------------------------------------------------------\n");
-        printf("E10_shared_components\n");
+        printf("E10_shared_components2_updating\n");
         printf("--------------------------------------------------------------------------------\n");
 
         auto upUniverse = std::make_unique<mecs::universe::instance>();
@@ -89,7 +89,7 @@ namespace mecs::examples::E10_shared_components2_updating
         auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
         auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<updating_share_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint);
                           DefaultWorld.m_GraphDB.CreateGraphConnection<render_system>  (Syncpoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
-                       
+
         //------------------------------------------------------------------------------------------
         // Initialization
         //------------------------------------------------------------------------------------------

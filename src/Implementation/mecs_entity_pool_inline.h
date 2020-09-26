@@ -52,7 +52,7 @@ namespace mecs::entity_pool
 
     void instance::clear(void) noexcept
     {
-        xassert( m_NewCount.load().m_Count == 0 );
+        xassert( m_NewCount.load().m_Count == m_Count);
         if( m_Count >= 10000 )
         {
             // Clear in quantum space
