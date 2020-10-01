@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{CCCD45CA-D3B2-4BD2-B20A-43FE1E643C11}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MEGSVisualExamplesvs2019</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>./;../../src/examples/settings;../../dependencies/xcore/src;../../src;../../dependencies/DiligentEngine/DiligentCore/;../../dependencies/DiligentEngine/DiligentCore/Primitives/interface/;../../dependencies/DiligentEngine/DiligentSamples/SampleBase/include/;$(IncludePath)</IncludePath>
+    <LibraryPath>../../dependencies\xcore;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <IncludePath>./;../../src/examples/settings;../../dependencies/xcore/src;../../src;../../dependencies/DiligentEngine/DiligentCore/;../../dependencies/DiligentEngine/DiligentCore/Primitives/interface/;../../dependencies/DiligentEngine/DiligentSamples/SampleBase/include/;$(IncludePath)</IncludePath>
+    <LibraryPath>../../dependencies\xcore;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/NODEFAULTLIB:library %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/NODEFAULTLIB:libcmt.lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_arglist.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_array.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_assert.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_bits.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_cmdline.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_compression.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_context.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_crc.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_endian.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_error.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_event.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_file.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_function.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_global.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_guid.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lock.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_pool.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_queues.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_log.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_matrix4.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_quaternion.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_radian3.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_shapes.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_transform.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector2.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector3.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector4.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_memory.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_profiler.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_ptr.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_random.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_rtti.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_channel.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_job.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_system.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_trigger.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_serialicer.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_serializer.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_span.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_string.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_system_reg.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_target.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile2.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_types.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_unique_span.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_units.h" />
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_vector.h" />
+    <ClInclude Include="..\..\src\Examples\Settings\mecs_user_settings.h" />
+    <ClInclude Include="..\..\src\Examples\Settings\PropertyConfig.h" />
+    <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_2d_basic_physics.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_gridbase_pathfinding.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E02_graphical_2d_basic_physics.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E03_graphical_2d_basic_physics.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E04_graphical_2d_boids.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E05_graphical_2d_virus_spread.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E06_graphical_2d_GPU_physics.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-Diligent.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-GraphicalApp.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-VisualExamples.vs2019.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_entity_pool_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_graph_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_system_delegate_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h" />
+    <ClInclude Include="..\..\src\mecs.h" />
+    <ClInclude Include="..\..\src\mecs_archetype.h" />
+    <ClInclude Include="..\..\src\mecs_archetype_delegate.h" />
+    <ClInclude Include="..\..\src\mecs_archetype_event.h" />
+    <ClInclude Include="..\..\src\mecs_archetype_query.h" />
+    <ClInclude Include="..\..\src\mecs_component.h" />
+    <ClInclude Include="..\..\src\mecs_entity_pool.h" />
+    <ClInclude Include="..\..\src\mecs_graph.h" />
+    <ClInclude Include="..\..\src\mecs_settings.h" />
+    <ClInclude Include="..\..\src\mecs_sync_point.h" />
+    <ClInclude Include="..\..\src\mecs_system.h" />
+    <ClInclude Include="..\..\src\mecs_system_delegate.h" />
+    <ClInclude Include="..\..\src\mecs_system_events.h" />
+    <ClInclude Include="..\..\src\mecs_time.h" />
+    <ClInclude Include="..\..\src\mecs_tools.h" />
+    <ClInclude Include="..\..\src\mecs_tools_bits.h" />
+    <ClInclude Include="..\..\src\mecs_tools_event.h" />
+    <ClInclude Include="..\..\src\mecs_tools_fixed_map.h" />
+    <ClInclude Include="..\..\src\mecs_tools_qvst_pool.h" />
+    <ClInclude Include="..\..\src\mecs_universe.h" />
+    <ClInclude Include="..\..\src\mecs_world.h" />
+    <ClInclude Include="framework.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\dependencies\DiligentEngine\DiligentTools\ThirdParty\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore.cpp" />
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_1.cpp" />
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_2.cpp" />
+    <ClCompile Include="..\..\src\Examples\VisualExamples\E06_graphical_2d_GPU_physics.cpp" />
+    <ClCompile Include="..\..\src\Examples\VisualExamples\Examples.cpp" />
+    <ClCompile Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-GraphicalApp.cpp" />
+    <ClCompile Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-VisualExamples.vs2019.cpp" />
+    <ClCompile Include="..\..\src\mecs.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MEGS-VisualExamples.vs2019.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="MEGS-VisualExamples.vs2019.ico" />
+    <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\dependencies\DiligentEngine\.build\Win64\DiligentTools\Imgui\Diligent-Imgui.vcxproj">
+      <Project>{5e9b03b6-165f-304c-b40c-c02983736577}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

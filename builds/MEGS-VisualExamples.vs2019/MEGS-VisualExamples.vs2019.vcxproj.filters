@@ -1,0 +1,358 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="XCORE">
+      <UniqueIdentifier>{8072b5b1-041c-4925-8de5-d3a0af6541af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Settings">
+      <UniqueIdentifier>{4ba9f5f4-1222-4d31-a79d-f62633873ebc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MECS">
+      <UniqueIdentifier>{793f3877-3353-4c70-9fca-ba9b54934045}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppDetails">
+      <UniqueIdentifier>{329dcb93-ea9a-4cc5-bd04-06ac81775e9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppDetails\Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="AppDetails\Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="VisualExamples">
+      <UniqueIdentifier>{3cf6ee6a-b86e-48f1-88d5-0a7397155568}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AppDetails\ImGui">
+      <UniqueIdentifier>{e6693912-0f53-4613-8375-5efd84856039}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MECS\Implementation">
+      <UniqueIdentifier>{f77a5b1a-bdd9-4709-8b92-ed4ffcf1f479}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="targetver.h">
+      <Filter>AppDetails\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>AppDetails\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_arglist.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_array.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_assert.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_bits.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_cmdline.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_compression.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_context.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_crc.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_endian.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_error.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_event.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_file.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_function.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_global.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_guid.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lock.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_pool.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_queues.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_log.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_matrix4.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_quaternion.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_radian3.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_shapes.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_transform.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector2.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector3.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector4.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_memory.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_profiler.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_ptr.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_random.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_rtti.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_channel.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_job.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_system.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_trigger.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_serialicer.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_serializer.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_span.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_string.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_system_reg.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_target.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile2.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_types.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_unique_span.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_units.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dependencies\xcore\src\xcore_vector.h">
+      <Filter>XCORE</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\Settings\PropertyConfig.h">
+      <Filter>Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h">
+      <Filter>Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\Settings\mecs_user_settings.h">
+      <Filter>Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_archetype.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_archetype_delegate.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_archetype_event.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_archetype_query.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_component.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_entity_pool.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_graph.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_settings.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_sync_point.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_system.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_system_delegate.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_system_events.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_time.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_tools.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_tools_bits.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_tools_event.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_tools_fixed_map.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_tools_qvst_pool.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_universe.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mecs_world.h">
+      <Filter>MECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-Diligent.h">
+      <Filter>AppDetails</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-GraphicalApp.h">
+      <Filter>AppDetails</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-VisualExamples.vs2019.h">
+      <Filter>AppDetails</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>AppDetails\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_2d_basic_physics.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_gridbase_pathfinding.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E02_graphical_2d_basic_physics.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E03_graphical_2d_basic_physics.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E04_graphical_2d_boids.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E05_graphical_2d_virus_spread.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E06_graphical_2d_GPU_physics.h">
+      <Filter>VisualExamples</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_entity_pool_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_graph_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_system_delegate_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore.cpp">
+      <Filter>XCORE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_1.cpp">
+      <Filter>XCORE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_2.cpp">
+      <Filter>XCORE</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\dependencies\DiligentEngine\DiligentTools\ThirdParty\imgui\imgui_demo.cpp">
+      <Filter>AppDetails\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\mecs.cpp">
+      <Filter>MECS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-GraphicalApp.cpp">
+      <Filter>AppDetails</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-VisualExamples.vs2019.cpp">
+      <Filter>AppDetails</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Examples\VisualExamples\Examples.cpp" />
+    <ClCompile Include="..\..\src\Examples\VisualExamples\E06_graphical_2d_GPU_physics.cpp">
+      <Filter>VisualExamples</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MEGS-VisualExamples.vs2019.rc">
+      <Filter>AppDetails\Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico">
+      <Filter>AppDetails\Resource Files</Filter>
+    </Image>
+    <Image Include="MEGS-VisualExamples.vs2019.ico">
+      <Filter>AppDetails\Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" />
+  </ItemGroup>
+</Project>

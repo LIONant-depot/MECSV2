@@ -74,7 +74,7 @@ namespace mecs::system
             exclusive_real_events_t     m_ExclusiveEvents   {};
             global_real_events_t        m_GlobalEvents      {};
 
-            constexpr       custom_system               ( const typename T_SYSTEM::construct&& Settings )                   noexcept;
+            constexpr       custom_system               ( typename T_SYSTEM::construct&& Settings )                         noexcept;
             virtual void    qt_onRun                    ( void )                                                            noexcept override;
             inline  void    msgSyncPointDone            ( mecs::sync_point::instance& Syncpoint )                           noexcept;
             virtual void*   DetailsGetExclusiveRealEvent( const system::event::type_guid )                                  noexcept;
@@ -96,7 +96,7 @@ namespace mecs::system
         }
 
         template< typename T_SYSTEM > inline constexpr
-        custom_system<T_SYSTEM>::custom_system( const typename T_SYSTEM::construct&& Settings ) noexcept
+        custom_system<T_SYSTEM>::custom_system( typename T_SYSTEM::construct&& Settings ) noexcept
         : T_SYSTEM      { std::move(Settings) }
         , m_GlobalEvents{ GetGlobalEventTuple( *this, reinterpret_cast<typename custom_system::global_event_tuple_t*>(nullptr) ) }
         {
@@ -105,17 +105,17 @@ namespace mecs::system
             //
             if constexpr( &custom_system::msgGraphInit != &overrides::msgGraphInit )
             {
-                user_system_t::m_World.m_Graph.m_Events.m_GraphInit.AddDelegate<&custom_system::msgGraphInit>(*this);
+                user_system_t::m_World.m_GraphDB.m_Events.m_GraphInit.AddDelegate<&custom_system::msgGraphInit>(*this);
             }
 
             if constexpr( &custom_system::msgFrameStart != &overrides::msgFrameStart )
             {
-                user_system_t::m_World.m_Graph.m_Events.m_FrameStart.AddDelegate<&custom_system::msgFrameStart>(*this);
+                user_system_t::m_World.m_GraphDB.m_Events.m_FrameStart.AddDelegate<&custom_system::msgFrameStart>(*this);
             }
 
             if constexpr( &custom_system::msgFrameDone != &overrides::msgFrameDone )
             {
-                user_system_t::m_World.m_Graph.m_Events.m_FrameDone.AddDelegate<&custom_system::msgFrameDone>(*this);
+                user_system_t::m_World.m_GraphDB.m_Events.m_FrameDone.AddDelegate<&custom_system::msgFrameDone>(*this);
             }
         }
 
@@ -1037,6 +1037,7 @@ namespace mecs::system
     }
 
     template< typename T_CALLBACK >
+    constexpr xforceinline
     void instance::getComponents( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept
     {
         xassert(Entity.isZombie() == false );
@@ -1146,6 +1147,74 @@ namespace mecs::system
     }
 
     //---------------------------------------------------------------------------------
+    template< typename T_CALLBACK >
+    constexpr xforceinline
+    bool instance::findComponents
+    (   mecs::component::entity::guid     gEntity
+    ,   T_CALLBACK&& Function
+    ) noexcept
+    {
+        return m_World.m_ArchetypeDB.m_EntityMap.find( gEntity, [&]( mecs::component::entity::reference& Reference )
+        {
+            getComponents(  Reference.m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index,0)
+                         ,  std::forward<T_CALLBACK>(Function) 
+                         );
+        });
+    }
+
+    //---------------------------------------------------------------------------------
+    template< typename  T_FUNCTION_TYPE
+            , typename  T_COMPONENT_TUPLE >
+    constexpr xforceinline
+    void instance::DoQuery ( query& Query 
+                 ) const noexcept
+    {
+        m_World.m_ArchetypeDB.template DoQuery< T_FUNCTION_TYPE, T_COMPONENT_TUPLE >(Query);
+    }
+
+    //---------------------------------------------------------------------------------
+    template< typename... T_COMPONENTS >
+    constexpr xforceinline
+    mecs::archetype::instance& instance::getOrCreateArchetype( void ) const noexcept
+    {
+        return m_World.m_ArchetypeDB.getOrCreateArchitype<T_COMPONENTS ... >();
+    }
+
+    //---------------------------------------------------------------------------------
+    template< typename      T_GET_CALLBACK
+            , typename      T_CREATE_CALLBACK
+            >
+    constexpr xforceinline
+    void instance::getOrCreateEntity( mecs::component::entity::guid         gEntity
+                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                    , T_GET_CALLBACK&&                      GetCallback
+                                    , T_CREATE_CALLBACK&&                   CreateCallback
+                                    ) noexcept
+    {
+        auto& EntityMap = m_World.m_ArchetypeDB.m_EntityMap;
+        EntityMap.getOrCreate( gEntity
+        , [&](const entity::reference& Reference )
+        {
+            getComponents( Reference.m_pPool->m_EntityPool.getComponentByIndex<entity>(Reference.m_Index,0), GetCallback );
+        }
+        , [&]( entity::reference& Reference )
+        {
+            Reference.m_pPool = &SpecialiedPool;
+            Reference.m_Index = SpecialiedPool.m_EntityPool.append();
+
+            auto& Entity = Reference.m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index, 0);
+
+            Entity.m_pInstance = &EntityMap.getEntryFromItsValue(Reference);
+
+            auto& Event = SpecialiedPool.m_pArchetypeInstance->m_Events.m_CreatedEntity;
+            if(Event.hasSubscribers())
+                Event.NotifyAll( Entity, *this );
+
+            // TODO: Add archetype to the cache no locks are needed
+        });
+    }
+
+    //---------------------------------------------------------------------------------
     // SYSTEM:: DESCRIPTOR DATA BASE
     //---------------------------------------------------------------------------------
 
@@ -1159,7 +1228,7 @@ namespace mecs::system
             return mecs::system::descriptor
             {
                 T_SYSTEM::type_guid_v.isValid() ? T_SYSTEM::type_guid_v : type_guid{ __FUNCSIG__ }
-                , [](const mecs::system::overrides::construct&& C) noexcept
+                , []( mecs::system::overrides::construct&& C) noexcept
                 {
                     auto p = new sys{ std::move(C) };
                     return std::unique_ptr<mecs::system::instance>{ static_cast<mecs::system::instance*>(p) };

@@ -31,7 +31,8 @@ namespace mecs::entity_pool
 
 
         inline      void                DeletePendingEntries    ( void )                                                            noexcept;
-
+        inline      auto                FreeCount               ( void )                                                            const noexcept { return m_MaxEntries - m_Count; }
+        inline      void                UpdateCount             ( void )                                                            noexcept       { m_Count = m_NewCount.load().m_Count; }
 
         union counter
         {

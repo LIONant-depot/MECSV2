@@ -646,6 +646,74 @@ namespace mecs::archetype
         }
     }
 
+    //----------------------------------------------------------------------------------------------------
+
+    template< typename... T_SHARE_COMPONENTS >
+    inline
+    specialized_pool& instance::getOrCreateSpecializedPool( system::instance&         System
+                                                          , int                       MinFreeEntries
+                                                          , int                       MaxEntries    
+                                                          , T_SHARE_COMPONENTS...     ShareComponents
+                                                          ) noexcept
+    {
+        // Share components count must match the archetype share component list
+        xassert( sizeof...(T_SHARE_COMPONENTS) == m_Descriptor.m_ShareDescriptorSpan.size() );
+
+        const std::array<std::uint64_t, sizeof...(T_SHARE_COMPONENTS)> ArrayList{ mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey(&ShareComponents)  ... };
+        const auto ShareKey = [] ( auto& Array ){ std::uint64_t Key = 0; for( auto x : Array ) Key += x; return Key; }( ArrayList );
+
+        //
+        // Search for the right specialized pool
+        //
+        int i=0;
+        CONTINUE_SEARCHING:
+        {
+            const std::uint32_t MinFree = MinFreeEntries;
+            for (int end = m_MainPool.size(); i < end; ++i)
+            {
+                auto& Pool = m_MainPool.getComponentByIndex<specialized_pool>(i, 0);
+                if (Pool.m_TypeGuid.m_Value == ShareKey && Pool.m_EntityPool.FreeCount() >= MinFree) return Pool;
+            }
+        }
+
+        //
+        // Create new pool
+        //
+        {
+            xcore::lock::scope Lk(m_SemaphoreLock);
+            if (i != m_MainPool.size()) goto CONTINUE_SEARCHING;
+
+            const auto Index = m_MainPool.append(1);
+            auto&      Pool  = m_MainPool.getComponentByIndex<specialized_pool>( Index, 0 );
+
+            using unsorted_tuple = std::tuple<T_SHARE_COMPONENTS ...>;
+            using sorted_tuple   = xcore::types::tuple_sort_t< mecs::component::smaller_guid, unsorted_tuple >;
+
+            // Copy all the share components
+            ((m_MainPool.getComponentByIndex<T_SHARE_COMPONENTS>(Index, 1 + xcore::types::tuple_t2i_v< T_SHARE_COMPONENTS, sorted_tuple> ) = ShareComponents), ... );
+
+            // Copy all the share components keys
+            ((Pool.m_ShareComponentKeysMemory[xcore::types::tuple_t2i_v< T_SHARE_COMPONENTS, sorted_tuple>] = ArrayList[xcore::types::tuple_t2i_v< T_SHARE_COMPONENTS, unsorted_tuple>]), ... );
+
+            Pool.m_MainPoolIndex          = Index;
+            Pool.m_ShareComponentKeysSpan = std::span{ Pool.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
+            Pool.m_TypeGuid.m_Value       = ShareKey;
+            Pool.m_pArchetypeInstance     = this;
+            Pool.m_EntityPool.Init( *this, m_Descriptor.m_DataDescriptorSpan, MaxEntries );
+
+            if( m_Events.m_CreatedPool.hasSubscribers() )
+                m_Events.m_CreatedPool.NotifyAll( System, Pool );
+
+            // Officially update the count
+            m_MainPool.UpdateCount();
+
+            return Pool;
+        }
+    }
+
+
+
+
     /*
     details::entity_creation findSpecializedPoolForAllocation(int nEntities = 1, specialized_pool::type_guid SpecialiedTypeGuid = specialized_pool::type_guid{ 0ull }) noexcept
     {

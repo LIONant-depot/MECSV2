@@ -33,6 +33,7 @@ namespace mecs::system
         using                           job_t           = xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>;
         using                           guid            = xcore::guid::unit<64, struct mecs_system_instance_tag>;
         using                           archetype       = mecs::archetype::instance;
+        using                           query           = mecs::archetype::query::instance;
         template< auto&& T_SHARE_COMPONENT_V> using share_key = mecs::component::details::share_ref_inst< decltype(T_SHARE_COMPONENT_V), decltype(T_SHARE_COMPONENT_V)::getKey(&xcore::types::lvalue(T_SHARE_COMPONENT_V)) >;
 
 
@@ -76,73 +77,138 @@ namespace mecs::system
 
     struct instance : overrides
     {
-        
-        inline                              instance                ( const construct&& Settings) noexcept;
-
+        //----------------------------------------------------------------------------
+        inline
+                                            instance                ( const construct&& Settings
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         constexpr
-        auto                                getGUID                 ( void ) const noexcept { return m_Guid; }
-
-        template< typename...T_SHARE_COMPONENTS >
+        auto                                getGUID                 ( void 
+                                                                    ) const noexcept { return m_Guid; }
+        //----------------------------------------------------------------------------
+        template< typename...T_SHARE_COMPONENTS
+                >
         inline
         mecs::archetype::entity_creation    createEntities          ( mecs::archetype::instance::guid   gArchetype
                                                                     , int                               nEntities
                                                                     , std::span<entity::guid>           gEntitySpan
-                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents ) noexcept;
-
+                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         inline
-        void                                deleteEntity            ( mecs::component::entity&          Entity ) noexcept;
-
-        template< typename T_CALLBACK >
+        void                                deleteEntity            ( mecs::component::entity&          Entity 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        template< typename T_CALLBACK
+                >
         constexpr xforceinline
         void                                ForEach                 ( mecs::archetype::query::instance& QueryI
                                                                     , T_CALLBACK&&                      Functor
-                                                                    , int                               nEntitiesPerJob ) noexcept;
-
+                                                                    , int                               nEntitiesPerJob 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         template< typename T_ADD_COMPONENTS_AND_TAGS
                 , typename T_REMOVE_COMPONENTS_AND_TAGS
-                , typename T_CALLBACK >
+                , typename T_CALLBACK
+                >
         constexpr xforceinline
         void                                getArchetypeBy          ( mecs::component::entity&          Entity
-                                                                    , T_CALLBACK&&                      Callback ) noexcept;
-
-        template< typename T_CALLBACK = void(*)(), typename...T_SHARE_COMPONENTS >
+                                                                    , T_CALLBACK&&                      Callback 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        template< typename      T_CALLBACK          = void(*)()
+                , typename...   T_SHARE_COMPONENTS
+                >
         constexpr xforceinline
         void                                moveEntityToArchetype   ( mecs::component::entity&          Entity
                                                                     , mecs::archetype::instance&        ToNewArchetype
                                                                     , T_CALLBACK&&                      Callback = []{}
-                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents ) noexcept;
-
+                                                                    , T_SHARE_COMPONENTS&&...           ShareComponents 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         inline
-        const time&                         getTime                 ( void ) const noexcept;
-
+        const time&                         getTime                 ( void 
+                                                                    ) const noexcept;
+        //----------------------------------------------------------------------------
         template< typename      T_EVENT
                 , typename      T_SYSTEM = typename T_EVENT::system_t
-                , typename...   T_ARGS >
+                , typename...   T_ARGS
+                >
         xforceinline constexpr
-        void                                EventNotify             ( T_ARGS&&...Args ) noexcept;
-
+        void                                EventNotify             ( T_ARGS&&...Args 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         // This function implementation will be provided by MECS
         virtual
-        const descriptor&                   getDescriptor           ( void ) const noexcept = 0;
+        const descriptor&                   getDescriptor           ( void 
+                                                                    ) const noexcept = 0;
 
+        //----------------------------------------------------------------------------
+        template< typename T_CALLBACK
+                >
+        constexpr xforceinline
+        void                                getComponents           ( const mecs::component::entity&    Entity
+                                                                    , T_CALLBACK&&                      Function 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        template< typename T_CALLBACK
+                >
+        constexpr xforceinline
+        bool                                findComponents          ( mecs::component::entity::guid     gEntity
+                                                                    , T_CALLBACK&&                      Function 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        template< typename... T_COMPONENTS
+                >
+        constexpr xforceinline
+        mecs::archetype::instance&          getOrCreateArchetype    ( void
+                                                                    ) const noexcept;
+
+        //----------------------------------------------------------------------------
+        template< typename      T_GET_CALLBACK
+                , typename      T_CREATE_CALLBACK
+                >
+        constexpr xforceinline
+        void                                getOrCreateEntity       ( mecs::component::entity::guid         gEntity
+                                                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                                                    , T_GET_CALLBACK&&                      GetCallback
+                                                                    , T_CREATE_CALLBACK&&                   CreateCallback
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        template< typename  T_FUNCTION_TYPE
+                , typename  T_COMPONENT_TUPLE = std::tuple<>
+                >
+        constexpr xforceinline
+        void                                DoQuery                 ( query& Query 
+                                                                    ) const noexcept;
+
+        //----------------------------------------------------------------------------
         // Details functions
-        virtual
-        void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid ) noexcept = 0;
+        //----------------------------------------------------------------------------
 
-        template< typename T_PARAMS, typename T_PARAMS2 >
+        //----------------------------------------------------------------------------
+        virtual
+        void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid 
+                                                                        ) noexcept = 0;
+        //----------------------------------------------------------------------------
+        template< typename T_PARAMS
+                , typename T_PARAMS2 >
         constexpr xforceinline
         void                                ProcessResult           ( T_PARAMS&                             Params
                                                                     , T_PARAMS2&                            Params2
-                                                                    , const int                             Index ) noexcept;
+                                                                    , const int                             Index 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
+        void                                DetailsClearGroupCache  ( void 
+                                                                    ) noexcept;
 
-        void                                DetailsClearGroupCache  ( void ) noexcept;
-
-        template< typename T_CALLBACK >
-        void                                getComponents           ( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept;
+        //----------------------------------------------------------------------------
+        // VARIABLES
+        //----------------------------------------------------------------------------
 
         // TODO: This will be private
         mecs::world::instance&              m_World;
-        mecs::archetype::query::instance    m_Query     {};
+        query                               m_Query     {};
         details::cache                      m_Cache     {};
         mecs::system::instance::guid        m_Guid;
     };
@@ -153,7 +219,7 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     struct descriptor
     {
-        using fn_create = std::unique_ptr<mecs::system::instance>( const mecs::system::instance::construct&& C ) noexcept;
+        using fn_create = std::unique_ptr<mecs::system::instance>( mecs::system::instance::construct&& C ) noexcept;
 
         mecs::system::type_guid                             m_Guid;
         fn_create*                                          m_fnCreate;

@@ -159,21 +159,41 @@ namespace mecs::component
             using                   type = T_SHARE_COMPONENT;
         };
 
+
+        namespace details
+        {
+            template< typename T_COMPONENT
+                    , bool T_FORCE_COPY_V =    T_COMPONENT::type_data_access_v == mecs::component::type_data_access::QUANTUM_DOUBLE_BUFFER
+                                            || T_COMPONENT::type_data_access_v == mecs::component::type_data_access::QUANTUM
+                    >
+            struct movable_fn;
+
+            template< typename T_COMPONENT >
+            struct movable_fn< T_COMPONENT, true >
+            {
+                xforceinline constexpr 
+                static void Move( void* pSrc, void* pDest ) noexcept
+                {
+                    memcpy(pDest, pSrc, sizeof(T_COMPONENT));
+                }
+            };
+
+            template< typename T_COMPONENT >
+            struct movable_fn< T_COMPONENT, false >
+            {
+                xforceinline constexpr
+                static void Move(void* pSrc, void* pDest) noexcept
+                {
+                    memcpy(pDest, pSrc, sizeof(T_COMPONENT));
+                }
+            };
+
+        }
+
         template< typename T_COMPONENT >
         static constexpr descriptor::fn_move* movable_fn_v = std::is_move_assignable_v<T_COMPONENT> == false
                                                            ? reinterpret_cast<descriptor::fn_move*>(nullptr)
-                                                           : []( void* pDest, void* pSrc) noexcept
-                                                           {
-                                                               if constexpr( T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
-                                                               || T_COMPONENT::type_data_access_v            == type_data_access::QUANTUM )
-                                                               {
-                                                                   memcpy(pDest, pSrc, sizeof(T_COMPONENT) );
-                                                               }
-                                                               else
-                                                               {
-                                                                   *reinterpret_cast<T_COMPONENT*>(pDest) = std::move(*reinterpret_cast<T_COMPONENT*>(pSrc));
-                                                               }
-                                                           };
+                                                           : &details::movable_fn<T_COMPONENT>::Move;
 
         template< typename T_COMPONENT >
         static constexpr descriptor::fn_destruct* destruct_fn_v = std::is_trivially_destructible_v<T_COMPONENT>
@@ -302,7 +322,7 @@ namespace mecs::component
         }
 
         template< typename T_COMPONENT >
-        inline static constexpr auto descriptor_variable_v = details::MakeDescriptor<T_COMPONENT>();
+        inline static constexpr auto descriptor_variable_v = MakeDescriptor<T_COMPONENT>();
     }
 
     template< typename T_COMPONENT >

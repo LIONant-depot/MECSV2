@@ -221,6 +221,14 @@ namespace mecs::archetype
                                                                             , std::uint64_t*            pListOfCRCFromShareComponents 
                                                                             ) noexcept;
         //-----------------------------------------------------------------------------------
+        template< typename... T_SHARE_COMPONENTS >
+        inline
+        specialized_pool&           getOrCreateSpecializedPool              ( system::instance&         System
+                                                                            , int                       MinFreeEntries = 1
+                                                                            , int                       MaxEntries     = mecs::settings::max_default_entities_per_pool
+                                                                            , T_SHARE_COMPONENTS...     ShareComponents 
+                                                                            ) noexcept;
+        //-----------------------------------------------------------------------------------
 
         struct double_buffer_info
         {
