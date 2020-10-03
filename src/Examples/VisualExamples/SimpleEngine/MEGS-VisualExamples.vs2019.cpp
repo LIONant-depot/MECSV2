@@ -207,7 +207,7 @@ struct dbg_render
         PSODesc.Name = "dbg_render::Pipelines";
 
         // This is a graphics pipeline
-        PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+        PSODesc.PipelineType = PIPELINE_TYPE_GRAPHICS;
 
         // clang-format off
         // This tutorial will render to a single render target

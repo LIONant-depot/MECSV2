@@ -426,13 +426,15 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                 // On the start of the game we are going to update all the Counts for the first frame.
                 // Since entities have been created outside the system so our ReadOnlyCounter is set to zero.
                 // But After this update we should be all up to date.
-                void msgWorldStart ( world::instance& ) noexcept
+                void msgGraphInit ( world::instance& ) noexcept
                 {
                     query Query;
 
                     DoQuery< reset_counts >( Query );
 
                     ForEach( Query, *this, entities_per_job_v );
+
+
                 }
 
                 // This system is reading T0 and it does not need to worry about people changing its value midway.
@@ -442,7 +444,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     Count.m_ReadOnlyCount = Count.m_MutableCount.load(std::memory_order_relaxed);
                     if( Count.m_ReadOnlyCount == 0 )
                     {
-                        deleteEntity(Entity);
+                    //    deleteEntity(Entity);
                     }
                     else
                     {
@@ -642,6 +644,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         printf( "--------------------------------------------------------------------------------\n");
 
         auto upUniverse = std::make_unique<mecs::universe::instance>();
+        upUniverse->Init();
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -664,6 +667,14 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                               DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::reset_counts>  ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint);
                               DefaultWorld.m_GraphDB.CreateGraphConnection<system::render_pageflip>        ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
 
+        //
+        // Create the delegates.
+        //
+        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< physics::delegate::create_spatial_entity >();
+        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< physics::delegate::destroy_spatial_entity >();
+
+        DefaultWorld.m_GraphDB.CreateSystemDelegate< delegate::my_render    >();
+
         //------------------------------------------------------------------------------------------
         // Initialization
         //------------------------------------------------------------------------------------------
@@ -677,15 +688,14 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, s_MyMenu.m_EntitieCount, {} )
-            ([&](  component::position&  Position
+        Archetype.CreateEntities(System, 1 + 0*s_MyMenu.m_EntitieCount, {} )
+            ([&](   component::position&  Position
                 ,   component::velocity&  Velocity
                 ,   component::collider&  Collider )
             {
                 Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f), (physics::tools::world_width_v/2.0f) )
                               , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
                 
-
                 Velocity.m_Value.setup( Rnd.RandF32(-1.0f, 1.0f ), Rnd.RandF32(-1.0f, 1.0f ) );
                 Velocity.m_Value.NormalizeSafe();
                 Velocity.m_Value *= 10.0f;

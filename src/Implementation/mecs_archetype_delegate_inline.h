@@ -154,7 +154,7 @@ namespace mecs::archetype::delegate
         template< typename T_USER_DELEGATE > inline
         void custom_instance< T_USER_DELEGATE >::HandleEvents(mecs::component::entity& Entity, mecs::system::instance& System) noexcept
         {
-            if constexpr (std::is_same_v< event_t, mecs::archetype::event::details::base_event::event_t> == false )
+            if constexpr (std::is_same_v< typename event_t::event_t, mecs::archetype::event::details::base_event::event_t> == false )
             {
                 // Do nothing if we are not an regular event
                 xassert(false);
@@ -189,7 +189,7 @@ namespace mecs::archetype::delegate
         template< typename T_USER_DELEGATE > inline
         void custom_instance< T_USER_DELEGATE >::HandlePoolEvents( mecs::system::instance& System, mecs::archetype::specialized_pool& Pool ) noexcept
         {
-            if constexpr ( std::is_same_v< event_t, mecs::archetype::event::details::base_event::event_t> )
+            if constexpr ( std::is_same_v< typename event_t::event_t, mecs::archetype::event::details::base_event::event_t> )
             {
                 // Do nothing if we are not an event pool
                 xassert(false);

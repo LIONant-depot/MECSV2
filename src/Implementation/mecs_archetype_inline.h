@@ -135,6 +135,40 @@ namespace mecs::archetype
     }
 
     //----------------------------------------------------------------------------------------------------
+    template< typename T_CALLBACK, typename...T_COMPONENTS >
+    inline
+    void entity_creation::ProcessIndirect
+    ( mecs::component::entity::reference&   Reference
+    , T_CALLBACK&&                          Callback
+    , std::tuple<T_COMPONENTS...>*
+    ) const noexcept
+    {
+        static_assert(((mecs::component::descriptor_v<T_COMPONENTS>.m_Type != mecs::component::type::SHARE) && ...));
+        static_assert(((mecs::component::descriptor_v<T_COMPONENTS>.m_Type != mecs::component::type::TAG)   && ...));
+        static_assert(((std::is_same_v<T_COMPONENTS, xcore::types::decay_full_t<T_COMPONENTS>&>) && ...));
+
+        using raw_tuple = std::tuple<T_COMPONENTS...>;
+        using sorted_tuple = xcore::types::tuple_sort_t< mecs::component::smaller_guid, raw_tuple >;
+
+        std::array<std::uint8_t, sizeof...(T_COMPONENTS)> ComponentIndices;
+        getTrueComponentIndices
+        (
+            std::span<std::uint8_t>                             { ComponentIndices }
+        ,   std::span<const mecs::component::descriptor* const> { m_pPool->m_EntityPool.getDescriptors() }
+        ,   reinterpret_cast<sorted_tuple*>(nullptr) 
+        );
+
+        Reference.m_Index = m_pPool->m_EntityPool.append(1);
+        Reference.m_pPool = m_pPool;
+
+        m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index, 0).m_pInstance = &m_pEntityMap->getEntryFromItsValue(Reference);
+        Callback(m_pPool->m_EntityPool.getComponentByIndex<xcore::types::decay_full_t<T_COMPONENTS>>(Reference.m_Index, ComponentIndices[xcore::types::tuple_t2i_v<T_COMPONENTS, sorted_tuple>]) ...);
+
+        auto& Event = m_pPool->m_pArchetypeInstance->m_Events.m_CreatedEntity;
+        if(Event.hasSubscribers()) Event.NotifyAll(m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index, 0), m_System);
+    }
+
+    //----------------------------------------------------------------------------------------------------
 
     template< typename T, typename...T_COMPONENTS > xforceinline
     void entity_creation::Initialize( T&& Callback, std::tuple<T_COMPONENTS...>* ) noexcept
@@ -155,6 +189,7 @@ namespace mecs::archetype
         );
         if(m_Guids.size()) 
         {
+            xassert( m_Guids.size() == m_Count );
             if(m_Count <= max_entries_single_thread )
             {
                 for( int i = m_StartIndex, end = m_StartIndex + m_Count, g=0; i != end; ++i, ++g )

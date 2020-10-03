@@ -74,6 +74,11 @@ namespace mecs::graph
             m_EndSyncPoint.m_Events.m_Done.AddDelegate<&instance::msgSyncPointDone>(*this);
 
             //
+            // Notify anyone that the graph is starting
+            //
+            m_Events.m_GraphInit.NotifyAll( m_World );
+
+            //
             // Clear some variables
             //
             m_bContinuousPlay           = bContinuousPlay;

@@ -104,7 +104,7 @@ namespace mecs::system
         constexpr xforceinline
         void                                ForEach                 ( mecs::archetype::query::instance& QueryI
                                                                     , T_CALLBACK&&                      Functor
-                                                                    , int                               nEntitiesPerJob 
+                                                                    , int                               nEntitiesPerJob
                                                                     ) noexcept;
         //----------------------------------------------------------------------------
         template< typename T_ADD_COMPONENTS_AND_TAGS
@@ -189,7 +189,7 @@ namespace mecs::system
         //----------------------------------------------------------------------------
         virtual
         void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid 
-                                                                        ) noexcept = 0;
+                                                                        ) const noexcept = 0;
         //----------------------------------------------------------------------------
         template< typename T_PARAMS
                 , typename T_PARAMS2 >

@@ -141,6 +141,16 @@ namespace mecs::archetype
         inline
         void                    operator()              ( void
                                                         ) noexcept;
+
+        //-----------------------------------------------------------------------------------
+        template< typename      T_CALLBACK
+                , typename...   T_COMPONENTS
+                >
+        inline
+        void                    ProcessIndirect         ( mecs::component::entity::reference&   Reference
+                                                        , T_CALLBACK&&                          Callback
+                                                        , std::tuple<T_COMPONENTS...>*          
+                                                        ) const noexcept;
         //-----------------------------------------------------------------------------------
         template< typename...T_COMPONENTS > 
         xforceinline constexpr
