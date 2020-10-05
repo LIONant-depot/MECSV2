@@ -265,7 +265,7 @@ namespace mecs::archetype
         double_buffer_info                              m_DoubleBufferInfo          {};
         mecs::archetype::event::details::events         m_Events                    {};
 
-        xcore::lock::semaphore                          m_SemaphoreLock             {};
+        xcore::lock::semaphore_reentrant                m_SemaphoreLock             {};
         safety_lock_object                              m_Safety                    {};
 
         mecs::sync_point::instance*                     m_pLastSyncPoint            { nullptr };

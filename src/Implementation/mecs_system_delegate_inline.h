@@ -63,7 +63,7 @@ namespace mecs::system::delegate
                 for( auto& E : m_World.m_GraphDB.m_SystemDB.m_lInstance )
                 {
                     if( ExpectedDesc.m_Guid != E->getDescriptor().m_Guid ) continue;
-                    if( auto pRealEvent = E->DetailsGetExclusiveRealEvent( mecs::system::event::descriptor_v<user_delegate_t::event_t>.m_Guid ); pRealEvent )
+                    if( auto pRealEvent = E->_getExclusiveRealEvent( mecs::system::event::descriptor_v<user_delegate_t::event_t>.m_Guid ); pRealEvent )
                     {
                         auto& RealEvent = *reinterpret_cast<typename user_delegate_t::event_t::real_event_t*>(pRealEvent);
                         if constexpr( has_handle_events<custom_instance, typename user_delegate_t::event_t::real_event_t::arguments_tuple_t>::value )

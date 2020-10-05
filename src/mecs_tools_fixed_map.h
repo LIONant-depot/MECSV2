@@ -169,16 +169,23 @@ namespace mecs::tools
             return find(Key, CallBack);
         }
 
-        /*
         xforceinline constexpr
-        value get(key Key) noexcept
+        const entry& getEntryFromValue( const value& Value ) const noexcept
         {
-            value Val;
-            bool b = find(Key, [&]const value& V) { Val = V; });
-            xassert(b);
-            return Val;
+            return *reinterpret_cast<const entry*>(reinterpret_cast<const std::byte*>(&Value) - offsetof( entry, m_Value ));
         }
-        */
+
+        xforceinline constexpr
+        entry& getEntryFromValue( value& Value ) const noexcept
+        {
+            return *reinterpret_cast<entry*>(reinterpret_cast<std::byte*>(&Value) - offsetof( entry, m_Value ));
+        }
+
+        xforceinline constexpr
+        key getKeyFromValue( const value& Value ) const noexcept
+        {
+            return getEntryFromValue(Value).m_Key;
+        }
 
         xforceinline constexpr
         value get(key Key) const noexcept

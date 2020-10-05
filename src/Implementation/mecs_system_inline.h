@@ -88,7 +88,7 @@ namespace mecs::system
                                                                         ) noexcept;
             //----------------------------------------------------------------------------------------------
             virtual
-            void*                   DetailsGetExclusiveRealEvent        ( const system::event::type_guid Guid 
+            void*                   _getExclusiveRealEvent              ( const system::event::type_guid Guid 
                                                                         ) const noexcept override;
             //----------------------------------------------------------------------------------------------
             template< typename...T_REAL_EVENTS >
@@ -244,7 +244,7 @@ namespace mecs::system
         //----------------------------------------------------------------------------------------------
         template< typename T_SYSTEM >
         xforceinline
-        void* custom_system<T_SYSTEM>::DetailsGetExclusiveRealEvent( const system::event::type_guid Guid ) const noexcept
+        void* custom_system<T_SYSTEM>::_getExclusiveRealEvent( const system::event::type_guid Guid ) const noexcept
         {
             return getExclusiveRealEventHelper(Guid, static_cast<exclusive_real_events_t*>(nullptr) );
         }
@@ -1097,12 +1097,12 @@ namespace mecs::system
         }
     }
 
-    template< typename T_CALLBACK >
+    //----------------------------------------------------------------------------------------------
+    template< bool      T_ALREADY_LOCKED_V
+            , typename  T_CALLBACK >
     constexpr xforceinline
-    void instance::getComponents( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept
+    void instance::_getEntityComponents( const mecs::component::entity::reference& Reference, T_CALLBACK&& Function ) noexcept
     {
-        xassert(Entity.isZombie() == false );
-
         using                   func_tuple              = typename xcore::function::traits<T_CALLBACK>::args_tuple;
         static constexpr auto   func_descriptors        = mecs::archetype::query::details::get_arrays< func_tuple >::value;
         using                   func_sorted_tuple       = xcore::types::tuple_sort_t< mecs::component::smaller_guid, func_tuple >;
@@ -1117,7 +1117,6 @@ namespace mecs::system
             }
         );
 
-        auto&   Reference   = Entity.getReference();
         auto&   Archetype   = *Reference.m_pPool->m_pArchetypeInstance;
         auto    Call        = [&]( const mecs::system::details::cache::line& Line ) mutable constexpr noexcept
         {
@@ -1133,7 +1132,8 @@ namespace mecs::system
                 if( Line.m_nDelegatesIndices )
                 {
                     int i = 0;
-                    auto& Event = Line.m_ResultEntry.m_pArchetype->m_Events.m_UpdateComponent.m_Event;
+                    auto& Event  = Line.m_ResultEntry.m_pArchetype->m_Events.m_UpdateComponent.m_Event;
+                    auto& Entity = Reference.m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index,0); 
                     do
                     {
                         Event.Notify( Line.m_UpdateDelegateIndex[i], const_cast<mecs::component::entity&>(Entity), *this );
@@ -1155,10 +1155,18 @@ namespace mecs::system
             {
                 if (&Archetype == E.m_ResultEntry.m_pArchetype)
                 {
-                    m_World.m_ArchetypeDB.m_EntityMap.find(Entity.getMapEntry().m_Key, [&](auto&) constexpr noexcept
+                    if constexpr (T_ALREADY_LOCKED_V)
                     {
                         Call(E);
-                    });
+                    }
+                    else
+                    {
+                        auto& Map = m_World.m_ArchetypeDB.m_EntityMap;
+                        Map.find(Map.getKeyFromValue(Reference), [&](auto&) constexpr noexcept
+                        {
+                            Call(E);
+                        });
+                    }
 
                     // All done
                     return;
@@ -1207,19 +1215,27 @@ namespace mecs::system
         goto TRY_AGAIN_;
     }
 
+
+    //---------------------------------------------------------------------------------
+    template< typename T_CALLBACK >
+    constexpr xforceinline
+    void instance::getEntityComponents( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept
+    {
+        xassert(Entity.isZombie() == false);
+        _getEntityComponents<false>(Entity.getReference(), std::forward<T_CALLBACK&&>(Function) );
+    }
+
     //---------------------------------------------------------------------------------
     template< typename T_CALLBACK >
     constexpr xforceinline
     bool instance::findComponents
     (   mecs::component::entity::guid     gEntity
-    ,   T_CALLBACK&& Function
+    ,   T_CALLBACK&&                      Function
     ) noexcept
     {
         return m_World.m_ArchetypeDB.m_EntityMap.find( gEntity, [&]( mecs::component::entity::reference& Reference )
         {
-            getComponents(  Reference.m_pPool->m_EntityPool.getComponentByIndex<mecs::component::entity>(Reference.m_Index,0)
-                         ,  std::forward<T_CALLBACK>(Function) 
-                         );
+            _getEntityComponents<true>( Reference, std::forward<T_CALLBACK&&>(Function) );
         });
     }
 
@@ -1256,7 +1272,7 @@ namespace mecs::system
         EntityMap.getOrCreate( gEntity
         , [&](const entity::reference& Reference )
         {
-            getComponents( Reference.m_pPool->m_EntityPool.getComponentByIndex<entity>(Reference.m_Index,0), GetCallback );
+            _getEntityComponents<true>( Reference, GetCallback );
         }
         , [&]( entity::reference& Reference )
         {
@@ -1274,6 +1290,7 @@ namespace mecs::system
             Creation.ProcessIndirect( Reference, CreateCallback, static_cast<typename xcore::function::traits<T_CREATE_CALLBACK>::args_tuple*>(nullptr) );
 
             // TODO: Add archetype to the cache no locks are needed
+            #error "We need to fix this"
         });
     }
 

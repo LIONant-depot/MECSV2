@@ -147,7 +147,7 @@ namespace mecs::system
         template< typename T_CALLBACK
                 >
         constexpr xforceinline
-        void                                getComponents           ( const mecs::component::entity&    Entity
+        void                                getEntityComponents     ( const mecs::component::entity&    Entity
                                                                     , T_CALLBACK&&                      Function 
                                                                     ) noexcept;
         //----------------------------------------------------------------------------
@@ -187,9 +187,16 @@ namespace mecs::system
         //----------------------------------------------------------------------------
 
         //----------------------------------------------------------------------------
+        template< bool      T_ALREADY_LOCKED_V
+                , typename  T_CALLBACK >
+        constexpr xforceinline
+        void                                _getEntityComponents    ( const mecs::component::entity::reference& Reference
+                                                                    , T_CALLBACK&&                              Function 
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         virtual
-        void*                               DetailsGetExclusiveRealEvent( const system::event::type_guid 
-                                                                        ) const noexcept = 0;
+        void*                               _getExclusiveRealEvent  ( const system::event::type_guid 
+                                                                    ) const noexcept = 0;
         //----------------------------------------------------------------------------
         template< typename T_PARAMS
                 , typename T_PARAMS2 >
