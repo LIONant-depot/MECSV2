@@ -160,6 +160,7 @@
     <ClInclude Include="..\..\src\Examples\VisualExamples\SimpleEngine\MEGS-VisualExamples.vs2019.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_delegate_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_archetype_inline.h" />
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_query_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_entity_pool_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_graph_inline.h" />
     <ClInclude Include="..\..\src\Implementation\mecs_system_delegate_inline.h" />

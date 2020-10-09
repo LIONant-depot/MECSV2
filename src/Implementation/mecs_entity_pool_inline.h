@@ -442,13 +442,13 @@ namespace mecs::entity_pool
                 int Index = 0;
                 for( auto pE : m_Descriptors )
                 {
-                    auto        Ptr  = m_Pointers[Index];
-                    const auto  Size = pE->m_Size;
-                    auto        p    = Ptr + E * Size;
+                    auto        Ptr   = m_Pointers[Index++];
+                    const auto  Size  = pE->m_Size;
+                    auto        pDest = Ptr + E        * Size;
+                    auto        pSrc  = Ptr + TopIndex * Size;
 
-                    if( pE->m_fnMove ) pE->m_fnMove(p, Ptr + TopIndex * Size);
-                    else               std::memcpy (p, Ptr + TopIndex * Size, Size );
-                    Index++;
+                    xassert(pE->m_fnMove);
+                    pE->m_fnMove( pDest, pSrc );
                 }
 
                 // TODO: Prefetch the reference to minimize cache hit

@@ -117,9 +117,19 @@ namespace mecs::archetype
             {
                 if( Desc.m_isDoubleBuffer )
                 {
-                    const std::uint32_t state = (m_Archetype.m_DoubleBufferInfo.m_StateBits >> Desc.m_BitNumber) & 1;
-                    const std::uint32_t iBase = (Span[c - 1]->m_Guid == Desc.m_Guid) ? c - 1 : c; 
-                    Array[I] = c + 1 - state;
+                    const std::uint32_t iBase = (Span[c - 1]->m_Guid == Desc.m_Guid) ? c - 1 : c;
+                    const std::uint32_t state = (m_Archetype.m_DoubleBufferInfo.m_StateBits >> iBase) & 1;
+
+                    // We only care for T1
+                    Array[I] = iBase + 1 - state;
+
+                    // Update the dirty bits of the archetype (we are always writing here)
+                    auto Bits = m_Archetype.m_DoubleBufferInfo.m_DirtyBits.load( std::memory_order_relaxed );
+                    do
+                    {
+                        auto NewBits = Bits | (1ull << iBase);
+                        if( m_Archetype.m_DoubleBufferInfo.m_DirtyBits.compare_exchange_weak(Bits, NewBits) ) break;
+                    } while(true);
                 }
                 else
                 {
@@ -363,6 +373,7 @@ namespace mecs::archetype
         //
         // Update double buffer state if we have any
         //
+        /*
         std::uint64_t DirtyBits = 0;
         for( int i = 1, end = static_cast<int>(m_Descriptor.m_DataDescriptorSpan.size()); i < end; ++i )
         {
@@ -375,6 +386,9 @@ namespace mecs::archetype
             }
         }
         m_DoubleBufferInfo.m_StateBits ^= DirtyBits;
+        m_DoubleBufferInfo.m_DirtyBits.store(0, std::memory_order_relaxed);
+        */
+        m_DoubleBufferInfo.m_StateBits ^= m_DoubleBufferInfo.m_DirtyBits.load(std::memory_order_relaxed);
         m_DoubleBufferInfo.m_DirtyBits.store(0, std::memory_order_relaxed);
     }
 
@@ -1459,12 +1473,12 @@ namespace mecs::archetype
                 // We found our entry, but lets check if we need to handle the double buffer case
                 else if( SortedFunctionComponent.m_isDoubleBuffer )
                 {
+                    // The first component should be an entity and entities are not double buffered 
+                    xassert( iArchetypeDataCompDesc > 0 );
                     // First find the base for this double buffer component
-                    int iBase = (iArchetypeDataCompDesc > 0)
-                                    ? (ArchetypeDataCompDescSpan[iArchetypeDataCompDesc - 1]->m_Guid == SortedFunctionComponent.m_Guid 
-                                        ? (iArchetypeDataCompDesc - 1) 
-                                        :  iArchetypeDataCompDesc)
-                                    : 0;
+                    int iBase = (ArchetypeDataCompDescSpan[iArchetypeDataCompDesc - 1]->m_Guid == SortedFunctionComponent.m_Guid 
+                                ? (iArchetypeDataCompDesc - 1) 
+                                :  iArchetypeDataCompDesc);
 
                     // If we are a read only parameter then we need to be looking for T0
                     if( std::get<1>(func_sorted_descriptors[iFunctionSortedCompDesc]) )
@@ -1993,23 +2007,5 @@ namespace mecs::archetype
         // Lets tell the system to delete the old component
         //
         OldSpecific.m_EntityPool.deleteBySwap( OldIndex );
-    }
-
-    //----------------------------------------------------------------------------------------------------
-    // ARCHETYPE QUERY
-    //----------------------------------------------------------------------------------------------------
-    namespace query
-    {
-        inline
-        bool instance::TryAppendArchetype(mecs::archetype::instance& Archetype) noexcept
-        {
-            if (false == Archetype.m_ArchitypeBits.Query(m_ComponentQuery.m_All, m_ComponentQuery.m_Any, m_ComponentQuery.m_None)) return false;
-            if (false == Archetype.m_ArchitypeBits.Query(m_TagQuery.m_All,       m_TagQuery.m_Any,       m_TagQuery.m_None)      ) return false;
-
-            auto& R = m_lResults.append();
-            R.m_pArchetype  = &Archetype;
-            R.m_nParameters = 0;
-            return true;
-        }
     }
 }

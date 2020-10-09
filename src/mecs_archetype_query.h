@@ -299,60 +299,15 @@ namespace mecs::archetype::query
         component_query                 m_ComponentQuery    {};
         tag_query                       m_TagQuery          {};
 
-        template< typename T_SYSTEM_FUNCTION, auto& Defined >
-        xforceinline void Initialize( void ) noexcept //const query::details::define_data& Defined, mecs::component::descriptors_data_base& ComponentDescriptorDB ) const noexcept
-        {
-            static_assert(std::is_convertible_v< decltype(Defined), query::details::define_data >);
-
-            if( m_isInitialized ) return;
-            m_isInitialized = true;
-
-            static constexpr query::details::define<T_SYSTEM_FUNCTION> function_define_data_v{};
-
-            //
-            // Handle the Component Side
-            //
-            for( auto E : Defined.m_ComponentQuery.m_All )
-                m_ComponentQuery.m_All.AddBit( std::get<0>(E).m_BitNumber );
-
-            for (auto E : Defined.m_ComponentQuery.m_Any)
-                m_ComponentQuery.m_Any.AddBit( std::get<0>(E).m_BitNumber );
-
-            for (auto E : Defined.m_ComponentQuery.m_None)
-                m_ComponentQuery.m_None.AddBit( std::get<0>(E).m_BitNumber );
-
-            //
-            // Add the contribution from the function parameters
-            //
-            if constexpr (function_define_data_v.m_ComponentQuery.m_All.size()) for( auto& E : function_define_data_v.m_ComponentQuery.m_All )
-            {
-                // DEBUG WARNING: Make sure all components are register!!!
-                const auto& Descriptor = std::get<0>(E);
-                m_ComponentQuery.m_All.AddBit(Descriptor.m_BitNumber);
-                if( std::get<1>(E) ) m_Write.AddBit(Descriptor.m_BitNumber);
-            }
-
-            if constexpr (function_define_data_v.m_ComponentQuery.m_Any.size()) for (auto& E : function_define_data_v.m_ComponentQuery.m_Any )
-            {
-                // DEBUG WARNING: Make sure all components are register!!!
-                const auto& Descriptor = std::get<0>(E);
-                m_ComponentQuery.m_Any.AddBit(Descriptor.m_BitNumber);
-                if( std::get<1>(E) ) m_Write.AddBit(Descriptor.m_BitNumber);
-            }
-
-            //
-            // Handle the tag side
-            //
-            for (auto E : Defined.m_TagQuery.m_All)
-                m_TagQuery.m_All.AddBit(std::get<0>(E).m_BitNumber);
-
-            for (auto E : Defined.m_TagQuery.m_Any)
-                m_TagQuery.m_Any.AddBit(std::get<0>(E).m_BitNumber);
-
-            for (auto E : Defined.m_TagQuery.m_None)
-                m_TagQuery.m_None.AddBit(std::get<0>(E).m_BitNumber);
-        }
-
-        bool TryAppendArchetype( mecs::archetype::instance& Archetype ) noexcept;
+        //---------------------------------------------------------------------------------
+        template< typename  T_SYSTEM_FUNCTION
+                , auto&     T_DEFINED_V >
+        xforceinline
+        void                    Initialize                      ( void 
+                                                                ) noexcept;
+        //---------------------------------------------------------------------------------
+        bool                    TryAppendArchetype              ( mecs::archetype::instance& Archetype
+                                                                ) noexcept;
+        //---------------------------------------------------------------------------------
     };
 }

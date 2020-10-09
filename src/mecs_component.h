@@ -172,7 +172,7 @@ namespace mecs::component
             struct movable_fn< T_COMPONENT, true >
             {
                 xforceinline constexpr 
-                static void Move( void* pSrc, void* pDest ) noexcept
+                static void Move( void* pDest, void* pSrc ) noexcept
                 {
                     memcpy(pDest, pSrc, sizeof(T_COMPONENT));
                 }
@@ -182,18 +182,16 @@ namespace mecs::component
             struct movable_fn< T_COMPONENT, false >
             {
                 xforceinline constexpr
-                static void Move(void* pSrc, void* pDest) noexcept
+                static void Move( void* pDest, void* pSrc ) noexcept
                 {
-                    memcpy(pDest, pSrc, sizeof(T_COMPONENT));
+                    *static_cast<T_COMPONENT*>(pDest) = std::move(*static_cast<T_COMPONENT*>(pSrc));
                 }
             };
 
         }
 
         template< typename T_COMPONENT >
-        static constexpr descriptor::fn_move* movable_fn_v = std::is_move_assignable_v<T_COMPONENT> == false
-                                                           ? reinterpret_cast<descriptor::fn_move*>(nullptr)
-                                                           : &details::movable_fn<T_COMPONENT>::Move;
+        static constexpr descriptor::fn_move* movable_fn_v      = &details::movable_fn<T_COMPONENT>::Move;
 
         template< typename T_COMPONENT >
         static constexpr descriptor::fn_destruct* destruct_fn_v = std::is_trivially_destructible_v<T_COMPONENT>
@@ -300,6 +298,7 @@ namespace mecs::component
             }
             else if constexpr (std::is_base_of_v< share_ref, T_COMPONENT> )
             {
+                xassert(false);
                 static_assert( std::is_base_of_v<share, T_COMPONENT::type> );
                 return descriptor
                 {

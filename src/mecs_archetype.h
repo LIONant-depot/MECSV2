@@ -239,11 +239,11 @@ namespace mecs::archetype
                                                                             , T_SHARE_COMPONENTS...     ShareComponents 
                                                                             ) noexcept;
         //-----------------------------------------------------------------------------------
-
+        
         struct double_buffer_info
         {
             static_assert(mecs::settings::max_data_components_per_entity <= 64);
-            std::uint64_t               m_StateBits{ 0 };           // Tells which of the two columns is T0. Index is same as the component.
+            std::uint64_t               m_StateBits{ 0 };           // Tells which of the two columns is T0. Index is same as the component inside the archetype descriptor.
             std::atomic<std::uint64_t>  m_DirtyBits{ 0 };           // Tells which bits in the StateBits need to change state.
         };
 

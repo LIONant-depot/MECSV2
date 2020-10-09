@@ -311,6 +311,9 @@
     <ClInclude Include="..\..\src\Implementation\mecs_system_inline.h">
       <Filter>MECS\Implementation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Implementation\mecs_archetype_query_inline.h">
+      <Filter>MECS\Implementation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\dependencies\xcore\src\xcore.cpp">

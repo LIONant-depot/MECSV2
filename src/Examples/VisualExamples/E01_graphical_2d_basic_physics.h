@@ -255,7 +255,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                 
                             const auto RelativeGridPos  = tools::vector2{ 1 + x, 1 + y } - ID.m_Value;
 
-                            if( false == findComponents( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
+                            if( false == findEntityComponents( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
                                 , [&]   ( component::count&         Count
                                         , const component::lists&   T0Lists
                                         , component::lists&         T1Lists ) noexcept
@@ -360,7 +360,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         int C;
                         {
                             //XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
-                            if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr ) getOrCreateEntity
+                            if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr )
+                            getOrCreateEntity
                             (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
                                 , *m_pSpecializedPoolCell
                                 // Get entry
@@ -444,7 +445,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     Count.m_ReadOnlyCount = Count.m_MutableCount.load(std::memory_order_relaxed);
                     if( Count.m_ReadOnlyCount == 0 )
                     {
-                    //    deleteEntity(Entity);
+                        deleteEntity(Entity);
                     }
                     else
                     {
@@ -688,14 +689,16 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, 1 + 0*s_MyMenu.m_EntitieCount, {} )
+        Archetype.CreateEntities(System, 2 + 0*s_MyMenu.m_EntitieCount, {} )
             ([&](   component::position&  Position
                 ,   component::velocity&  Velocity
                 ,   component::collider&  Collider )
             {
                 Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f), (physics::tools::world_width_v/2.0f) )
                               , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
-                
+
+                Position.m_Value.setup(100,100);
+
                 Velocity.m_Value.setup( Rnd.RandF32(-1.0f, 1.0f ), Rnd.RandF32(-1.0f, 1.0f ) );
                 Velocity.m_Value.NormalizeSafe();
                 Velocity.m_Value *= 10.0f;

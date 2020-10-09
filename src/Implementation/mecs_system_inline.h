@@ -5,6 +5,8 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     namespace details
     {
+        //---------------------------------------------------------------------------------
+
         struct default_system : mecs::system::instance
         {
             using instance::instance;
@@ -14,6 +16,8 @@ namespace mecs::system
             }
         };
 
+        //---------------------------------------------------------------------------------
+
         template< bool T_IS_GLOBAL_V, typename...T_ARGS >
         auto GetRealEventsTuple( std::tuple<T_ARGS...>* )
         {
@@ -22,9 +26,13 @@ namespace mecs::system
             else                                  return std::tuple< typename T_ARGS::real_event_t  ... >{};
         }
 
+        //---------------------------------------------------------------------------------
+
         template< typename event_type, typename...T_ARGS >
         auto FilterEventsTuple( std::tuple<T_ARGS...>* ) ->
             xcore::types::tuple_cat_t< std::conditional_t< std::is_base_of_v< event_type, T_ARGS>, std::tuple<T_ARGS>, std::tuple<> > ... >;
+
+        //---------------------------------------------------------------------------------
 
         template< typename...T_ARGS > xforceinline constexpr
         auto GetEventDescriptorArray(std::tuple<T_ARGS...>*) noexcept
@@ -33,12 +41,16 @@ namespace mecs::system
             else                                return std::array< const mecs::system::event::descriptor*, 0>{};
         }
 
+        //---------------------------------------------------------------------------------
+
         template< typename...T_ARGS, typename T_CALLBACK > constexpr
         auto tuple_type_apply(std::tuple<T_ARGS...>*, T_CALLBACK&& Callback ) noexcept
         {
             // Types must be wrapped around a tuple in case of references
             return Callback( static_cast<std::tuple<T_ARGS>*>(nullptr) ... );
         }
+
+        //---------------------------------------------------------------------------------
 
         template< typename...T_ARGS > constexpr
         auto ComputeUpdateBits( std::tuple<T_ARGS...>* ) noexcept
@@ -55,6 +67,123 @@ namespace mecs::system
             
             return Bits;
         };
+
+        //---------------------------------------------------------------------------------
+
+        template< typename... T_PARAMS >
+        xforceinline constexpr
+        std::uint64_t getFunctionGUID( std::tuple<T_PARAMS...>* ) noexcept
+        {
+            std::uint64_t Val1 = mecs::tools::hash::combine( mecs::component::descriptor_v<T_PARAMS>.m_Guid.m_Value ... );
+            std::uint64_t Val2 = mecs::tools::hash::combine( Val1, (std::is_pointer_v<T_PARAMS> ? mecs::component::descriptor_v<T_PARAMS>.m_Guid.m_Value : 0ull) ... );
+            std::uint64_t Val3 = mecs::tools::hash::combine( Val2, (std::is_same_v
+                                                           <
+                                                                std::remove_reference_t<
+                                                                    std::remove_pointer_t<T_PARAMS>
+                                                                >
+                                                           ,    xcore::types::decay_full_t<T_PARAMS>
+                                                           > ? mecs::component::descriptor_v<T_PARAMS>.m_Guid.m_Value 
+                                                             : 0ull) ... );
+            return Val3;
+        }
+
+        //---------------------------------------------------------------------------------
+
+        template< typename T_GET_CALLBACK
+                , typename T_CREATE_CALLBACK >
+        xforceinline
+        void details::cache::getOrCreateCache
+        ( const std::uint64_t           FunctionGUID
+        , mecs::archetype::instance&    Archetype
+        , T_GET_CALLBACK&&              GetCallBack
+        , T_CREATE_CALLBACK&&           CreateCallback
+        ) noexcept
+        {
+            int     i = 0;
+
+            //
+            // Stage one, look entry in the cache
+            //
+            _TRY_AGAIN:
+            {
+                xcore::lock::scope Lk1( std::as_const(m_Lines) );
+                auto&   Lines   = m_Lines.get();
+                for( int end = static_cast<int>(Lines.size()); i != end; ++i ) 
+                {
+                    // Linear search
+                    if( Lines[i] != &Archetype )
+                        continue;
+
+                    // There are not gets/creates for these kind
+                    if( FunctionGUID == 0ull )
+                        return;
+
+                    // 
+                    // We found the entry (potential cache hit)
+                    //
+                    int                 j       = 0;
+                    auto&               Data    = m_Data[i];
+
+                    // Search which function we are
+                    _TRY_AGAIN_PER_FUNCTION:
+                    {
+                        xcore::lock::scope  Lk2     (std::as_const(Data.m_nFunctions));
+                        for (int end = Data.m_nFunctions.get(); j != end; ++j)
+                        {
+                            if (Data.m_WhichFunction[j] == FunctionGUID)
+                            {
+                                const auto& PerFunction = Data.m_PerFunction[j];
+                                GetCallBack( PerFunction );
+                                return;
+                            }
+                        }
+                    }
+
+                    // Create entry
+                    {
+                        xcore::lock::scope  Lk2     (Data.m_nFunctions);
+
+                        // Make sure not one has added anything new
+                        if( j != Data.m_nFunctions.get()) goto _TRY_AGAIN_PER_FUNCTION;
+
+                        // Ok now Create new Entry
+                        Data.m_WhichFunction[Data.m_nFunctions.get()] = FunctionGUID;
+                        auto& PerFunction = Data.m_PerFunction[ Data.m_nFunctions.get() ];
+                        CreateCallback( PerFunction );
+
+                        // Done so we can officially added to our entry
+                        Data.m_nFunctions.get()++;
+                        return;
+                    }
+                }
+            }
+
+            //
+            // Not in the cache so we must create it
+            //
+            {
+                xcore::lock::scope  Lk1(m_Lines);
+                auto&               Lines = m_Lines.get();
+                if( i != Lines.size() ) goto _TRY_AGAIN;
+
+                Lines.push_back( &Archetype );
+                m_Data.append();
+
+                data& MyData = m_Data.back();
+
+                xcore::lock::scope  Lk2     (MyData.m_nFunctions);
+                if( FunctionGUID )
+                {
+                    MyData.m_nFunctions.get() = 1;
+                    MyData.m_WhichFunction[0] = FunctionGUID;
+                    CreateCallback(MyData.m_PerFunction[0]);
+                }
+                else
+                {
+                    MyData.m_nFunctions.get() = 0;
+                }
+            }
+        }
 
         //---------------------------------------------------------------------------------
         // SYSTEM::CUSTOM SYSTEM 
@@ -178,31 +307,44 @@ namespace mecs::system
             //
             // unlock and sync groups from the cache
             //
+            xassert_block_basic()
             {
-                xcore::lock::scope Lk(user_system_t::m_Cache.m_Lines);
-                auto& Lines = user_system_t::m_Cache.m_Lines.get();
-                for (const auto& E : Lines)
+                for (const auto& MyData : user_system_t::m_Cache.m_Data )
                 {
-                    mecs::archetype::details::safety::UnlockQueryComponents(*this, E.m_ResultEntry);
-
-                    /*
-                    bool bFound = false;
-
-                    for( const auto& Q : user_system_t::m_Query.m_lResults )
+                    xcore::lock::scope Lk2(std::as_const(MyData.m_nFunctions));
+                    for( int i=0, end = MyData.m_nFunctions.get(); i < end; ++i )
                     {
-                        if( E.m_pGroup == Q.m_pGroup )
+                        if ( MyData.m_WhichFunction[i] )
+                            mecs::archetype::details::safety::UnlockQueryComponents(*this, MyData.m_PerFunction[i].m_ResultEntry);
+                    }
+                }
+            }
+
+            //
+            // Look to see if we have that group in our query
+            // If we don't then we must call the memory barrier for that archetype
+            //
+            {
+                XCORE_CMD_ASSERT( xcore::lock::scope Lk(user_system_t::m_Cache.m_Lines) );
+                auto& Lines = user_system_t::m_Cache.m_Lines.get();
+                for( auto pArchetype : Lines )
+                {
+                    bool        bFound      = false;
+
+                    for (const auto& Q : user_system_t::m_Query.m_lResults)
+                    {
+                        if( pArchetype == Q.m_pArchetype )
                         {
                             bFound = true;
                             break;
                         }
                     }
 
-                    if( bFound == false ) E.m_pGroup->MemoryBarrierSync( Syncpoint );
-                    */
+                    if( bFound == false ) pArchetype->MemoryBarrierSync(Syncpoint);
                 }
                 Lines.clear();
+                user_system_t::m_Cache.m_Data.clear();
             }
-
 
             //
             // Let the archetypes that we used do their memory barriers
@@ -212,7 +354,6 @@ namespace mecs::system
                 R.m_pArchetype->MemoryBarrierSync( Syncpoint );
             }
 
-            //user_system_t::m_Cache.m_Lines.clear();
             user_system_t::m_Query.m_lResults.clear();
         }
 
@@ -1117,8 +1258,7 @@ namespace mecs::system
             }
         );
 
-        auto&   Archetype   = *Reference.m_pPool->m_pArchetypeInstance;
-        auto    Call        = [&]( const mecs::system::details::cache::line& Line ) mutable constexpr noexcept
+        auto    Call        = [&]( const mecs::system::details::cache::per_function& Line ) mutable constexpr noexcept
         {
             auto Pointers = details::ProcessInitArray(   reinterpret_cast<func_tuple*>(nullptr)
                                                     ,   Reference.m_Index
@@ -1146,7 +1286,67 @@ namespace mecs::system
         //
         // Search the entry from the cache
         //
-        TRY_AGAIN_:
+        auto& Archetype  = *Reference.m_pPool->m_pArchetypeInstance;
+        auto  GetFunctor = [&](const details::cache::per_function& PerFunction)
+        {
+            if constexpr (T_ALREADY_LOCKED_V)
+            {
+                Call(PerFunction);
+            }
+            else
+            {
+                auto& Map = m_World.m_ArchetypeDB.m_EntityMap;
+                Map.find(Map.getKeyFromValue(Reference), [&](auto&) constexpr noexcept
+                    {
+                        Call(PerFunction);
+                    });
+            }
+        };
+
+        static constexpr auto function_guid_v = details::getFunctionGUID(static_cast<typename xcore::function::traits<T_CALLBACK>::args_tuple*>(nullptr));
+        m_Cache.getOrCreateCache
+        (
+            function_guid_v
+        ,   Archetype
+        ,   GetFunctor
+        ,   [&]( details::cache::per_function& PerFunction )
+        {
+            auto& Entry = PerFunction.m_ResultEntry;
+            Entry.m_pArchetype                    = &Archetype;
+            Entry.m_nParameters                   = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);
+            Entry.m_FunctionDescriptors           = func_descriptors;
+
+            PerFunction.m_nDelegatesIndices       = 0;
+            if constexpr (is_writing_v)
+            {
+                auto& UpdateComponent = Archetype.m_Events.m_UpdateComponent;
+                if( UpdateComponent.m_Event.hasSubscribers() )
+                {
+                    const static tools::bits Bits = details::ComputeUpdateBits(static_cast<func_tuple*>(nullptr));
+                    const auto& UpdateComponentBits = UpdateComponent.m_Bits;
+
+                    for( int i = 0, end = static_cast<int>(UpdateComponentBits.size()); i != end; ++i )
+                    {
+                        if( UpdateComponentBits[i].isMatchingBits(Bits) )
+                            PerFunction.m_UpdateDelegateIndex[PerFunction.m_nDelegatesIndices++] = static_cast<std::uint8_t>(i);
+                    }
+                }
+            }
+
+            // Build required details to call the function easily 
+            mecs::archetype::data_base::DetailsDoQuery< func_sorted_descriptors, func_remap_from_sort >(Entry);
+
+            // Lets lock the archetype to make sure we are doing ok
+            mecs::archetype::details::safety::LockQueryComponents( *this, PerFunction.m_ResultEntry );
+
+            // Call the function
+            GetFunctor(PerFunction);
+        });
+
+        /*
+        xassert(Reference.m_pPool->m_pArchetypeInstance);
+        auto& Archetype = *Reference.m_pPool->m_pArchetypeInstance;
+    TRY_AGAIN_:
         {
             xcore::lock::scope Lk(std::as_const(m_Cache.m_Lines));
             auto& Lines     = m_Cache.m_Lines.get();
@@ -1187,7 +1387,8 @@ namespace mecs::system
             Entry.m_nParameters                         = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);
             Entry.m_FunctionDescriptors                 = func_descriptors;
 
-            CacheLine.m_nDelegatesIndices = 0;
+            CacheLine.m_nDelegatesIndices   = 0;
+            // CacheLine.m_pArchetype          = &Archetype;
 
             if constexpr (is_writing_v)
             {
@@ -1213,6 +1414,7 @@ namespace mecs::system
         }
 
         goto TRY_AGAIN_;
+        */
     }
 
 
@@ -1228,7 +1430,7 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     template< typename T_CALLBACK >
     constexpr xforceinline
-    bool instance::findComponents
+    bool instance::findEntityComponents
     (   mecs::component::entity::guid     gEntity
     ,   T_CALLBACK&&                      Function
     ) noexcept
@@ -1289,8 +1491,19 @@ namespace mecs::system
 
             Creation.ProcessIndirect( Reference, CreateCallback, static_cast<typename xcore::function::traits<T_CREATE_CALLBACK>::args_tuple*>(nullptr) );
 
-            // TODO: Add archetype to the cache no locks are needed
-            #error "We need to fix this"
+            // Creates a cache entry
+            m_Cache.getOrCreateCache
+            ( 0ull
+            , *Reference.m_pPool->m_pArchetypeInstance
+            , []( const details::cache::per_function& ) constexpr
+            {
+                // Nothing to do
+            }
+            , []( details::cache::per_function& ) constexpr
+            {
+                // Nothing to do
+            }
+            );
         });
     }
 

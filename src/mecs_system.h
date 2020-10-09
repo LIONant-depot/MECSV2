@@ -11,15 +11,30 @@ namespace mecs::system
     {
         struct cache
         {
-            struct line
+            struct per_function
             {
-                mecs::archetype::instance*              m_pArchetype;
                 mecs::archetype::query::result_entry    m_ResultEntry;
                 std::uint8_t                            m_nDelegatesIndices;
                 std::array<std::uint8_t, 16>            m_UpdateDelegateIndex;
             };
 
-            xcore::lock::object< std::vector<line>, xcore::lock::semaphore >    m_Lines;
+            struct data
+            {
+                using per_func_list = std::array<std::uint64_t, 16>;
+
+                xcore::lock::object< int, xcore::lock::semaphore >          m_nFunctions;
+                per_func_list                                               m_WhichFunction;
+                std::array<per_function, per_func_list{}.size()>            m_PerFunction;
+            };
+
+            using lines = xcore::lock::object< std::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
+            
+            lines                   m_Lines;        // Fast, cache friendly, linear search loop up.
+            xcore::vector<data>     m_Data;         // Data per each line. It should be a 1:1 mapping with lines
+
+            template< typename T_GET_CALLBACK, typename T_CREATE_CALLBACK >
+            xforceinline
+            void getOrCreateCache(std::uint64_t FunctionGUID, mecs::archetype::instance& Archetype, T_GET_CALLBACK&& GetCallBack, T_CREATE_CALLBACK&& Create ) noexcept;
         };
     }
 
@@ -154,7 +169,7 @@ namespace mecs::system
         template< typename T_CALLBACK
                 >
         constexpr xforceinline
-        bool                                findComponents          ( mecs::component::entity::guid     gEntity
+        bool                                findEntityComponents    ( mecs::component::entity::guid     gEntity
                                                                     , T_CALLBACK&&                      Function 
                                                                     ) noexcept;
         //----------------------------------------------------------------------------
