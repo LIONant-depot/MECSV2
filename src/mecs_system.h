@@ -298,8 +298,6 @@ namespace mecs::system
 
         instance_data_base( mecs::world::instance& World ) : m_World(World) {}
 
-        void Init( void ) noexcept {}
-
         inline
         instance& Create( const mecs::system::descriptor& Descriptor, mecs::system::instance::guid Guid ) noexcept;
 

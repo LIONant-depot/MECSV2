@@ -56,7 +56,7 @@ namespace mecs::system::delegate
                 const auto& ExpectedDesc = system::descriptor_v
                 <
                     std::conditional_t< std::is_same_v<custom_instance::event_t::system_t, void>
-                        , mecs::system::details::default_system
+                        , mecs::system::instance
                         , custom_instance::event_t::system_t >
                 >;
 

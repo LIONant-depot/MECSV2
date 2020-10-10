@@ -621,16 +621,11 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 100 frames
         //
         while (system::render_pageflip::s_bContinue)
         {
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
         }
     }
 }

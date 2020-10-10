@@ -434,8 +434,6 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     DoQuery< reset_counts >( Query );
 
                     ForEach( Query, *this, entities_per_job_v );
-
-
                 }
 
                 // This system is reading T0 and it does not need to worry about people changing its value midway.
@@ -663,8 +661,9 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Register the game graph.
         //
         auto& DefaultWorld  = *upUniverse->m_WorldDB[0];
+        auto& System        = DefaultWorld.m_GraphDB.m_GraphSystem;
         auto& SyncPhysics   = DefaultWorld.m_GraphDB.CreateSyncPoint();
-        auto& System        = DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::advance_cell>  ( DefaultWorld.m_GraphDB.m_StartSyncPoint, SyncPhysics             );
+                              DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::advance_cell>  ( DefaultWorld.m_GraphDB.m_StartSyncPoint, SyncPhysics             );
                               DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::reset_counts>  ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint);
                               DefaultWorld.m_GraphDB.CreateGraphConnection<system::render_pageflip>        ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
 
@@ -689,7 +688,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, 2 + 0*s_MyMenu.m_EntitieCount, {} )
+        Archetype.CreateEntities(System, 1 + 0*s_MyMenu.m_EntitieCount, {} )
             ([&](   component::position&  Position
                 ,   component::velocity&  Velocity
                 ,   component::collider&  Collider )
@@ -711,16 +710,11 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 100 frames
         //
         while (system::render_pageflip::s_bContinue)
         {
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
         }
     }
 }

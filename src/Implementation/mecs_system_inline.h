@@ -7,17 +7,6 @@ namespace mecs::system
     {
         //---------------------------------------------------------------------------------
 
-        struct default_system : mecs::system::instance
-        {
-            using instance::instance;
-
-            void msgUpdate() noexcept
-            {
-            }
-        };
-
-        //---------------------------------------------------------------------------------
-
         template< bool T_IS_GLOBAL_V, typename...T_ARGS >
         auto GetRealEventsTuple( std::tuple<T_ARGS...>* )
         {

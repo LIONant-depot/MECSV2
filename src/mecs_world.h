@@ -7,26 +7,25 @@ namespace mecs::world
         xforceinline instance( mecs::universe::instance& Universe ) noexcept : m_Universe{ Universe }, m_GraphDB{ *this, Universe }
         {
             m_ArchetypeDB.Init();
-            m_GraphDB.Init();
         }
 
-        void Start(bool bContinuousPlay = false)
+        void Play(bool bContinuousPlay = false)
         {
             //
             // First make sure the archetypes are ready to start
             // This allows archetypes to update their double buffer components and such
             //
-            m_ArchetypeDB.Start();
+            if( false == m_GraphDB.m_bGraphStarted ) m_ArchetypeDB.Start();
 
             //
             // Lets start the graph
             //
-            m_GraphDB.Start(bContinuousPlay);
+            m_GraphDB.Play(bContinuousPlay);
         }
 
-        void Resume(bool bContinuousPlay = false)
+        void Stop( void )
         {
-            m_GraphDB.Resume(bContinuousPlay);
+            m_GraphDB.Stop();
         }
 
         guid                            m_Guid              {};

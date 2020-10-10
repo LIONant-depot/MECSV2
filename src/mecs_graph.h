@@ -1,5 +1,18 @@
 namespace mecs::graph
 {
+    namespace details
+    {
+        struct graph_system : mecs::system::instance
+        {
+            inline                     graph_system            ( construct&& Construct )        noexcept;
+            inline void                msgUpdate               ( void )                         noexcept;
+            inline void                msgSyncPointStart       ( mecs::sync_point::instance& )  noexcept;
+            virtual void               qt_onDone               ( void )                         noexcept override;
+
+            bool m_bPause{false};
+        };
+    }
+
     struct lock_error
     {
         std::array<mecs::system::instance::guid, 2>     m_lSystemGuids;
@@ -18,94 +31,61 @@ namespace mecs::graph
         frame_done  m_FrameDone;
     };
 
-    struct instance : xcore::scheduler::job<1>
+    struct instance
     {
-      //  template< typename T_SYSTEM >
-        //void AddGraphConnection( mecs::syncpin)
-
         static constexpr auto start_sync_point_v = mecs::sync_point::instance::guid{ 1ull };
         static constexpr auto end_sync_point_v   = mecs::sync_point::instance::guid{ 2ull };
 
         events                      m_Events;
 
         instance( mecs::world::instance& World, mecs::universe::instance& Universe )
-            : xcore::scheduler::job<1>
-            { xcore::scheduler::definition::definition::Flags
-                (
-                  xcore::scheduler::lifetime::DONT_DELETE_WHEN_DONE
-                , xcore::scheduler::jobtype::NORMAL
-                , xcore::scheduler::affinity::NORMAL
-                , xcore::scheduler::priority::NORMAL
-                , xcore::scheduler::triggers::DONT_CLEAN_COUNT 
-                )
-            }
-            , m_Universe{ Universe }
-            , m_World(World)
-            , m_SystemDB(World)
-            , m_SystemGlobalEventDB{World}
-            , m_ArchetypeDelegateDB{World}
-            , m_SystemDelegateDB{World}
-            , m_SyncpointDB{ World }
-            , m_StartSyncPoint { m_SyncpointDB.Create<mecs::sync_point::instance>(start_sync_point_v) }
-            , m_EndSyncPoint   { m_SyncpointDB.Create<mecs::sync_point::instance>(end_sync_point_v) }
-            {}
-
-        void Init( void ) noexcept
+            : m_Universe                { Universe }
+            , m_World                   { World }
+            , m_SystemDB                { World }
+            , m_SystemGlobalEventDB     { World }
+            , m_ArchetypeDelegateDB     { World }
+            , m_SystemDelegateDB        { World }
+            , m_SyncpointDB             { World }
+            , m_StartSyncPoint          { m_SyncpointDB.Create<mecs::sync_point::instance>(start_sync_point_v) }
+            , m_EndSyncPoint            { m_SyncpointDB.Create<mecs::sync_point::instance>(end_sync_point_v)   }
+            , m_GraphSystem             { CreateGraphConnection< mecs::graph::details::graph_system >(m_EndSyncPoint, m_StartSyncPoint) }
         {
-            m_SystemDB.Init();
-
-            //
-            // Add the graph as the core of the graph
-            //
-            m_EndSyncPoint.AddJobToBeTrigger(*this);
-            m_StartSyncPoint.JobWillNotifyMe(*this);
         }
 
-        void Start( bool bContinuousPlay ) noexcept
+        void Play( bool bContinuousPlay ) noexcept
         {
             //
-            // Make sure I am the last system to get notified in the End trigger
+            // If it is the very first frame then we need to deal with some details...
             //
-            for( auto it = m_EndSyncPoint.m_Events.m_Done.m_lDelegates.begin(); it != m_EndSyncPoint.m_Events.m_Done.m_lDelegates.end(); )
+            if( m_bGraphStarted == false )
             {
-                if (it->m_pThis == this) m_EndSyncPoint.m_Events.m_Done.m_lDelegates.erase(it);
-                else                     ++it;
+                //
+                // Notify anyone that the graph is starting
+                //
+                m_Events.m_GraphInit.NotifyAll(m_World);
+
+                //
+                // Clear some variables
+                //
+                m_FrameNumber   = 0;
+                m_bGraphStarted = true;
             }
-            m_EndSyncPoint.m_Events.m_Done.AddDelegate<&instance::msgSyncPointDone>(*this);
 
-            //
-            // Notify anyone that the graph is starting
-            //
-            m_Events.m_GraphInit.NotifyAll( m_World );
-
-            //
-            // Clear some variables
-            //
             m_bContinuousPlay           = bContinuousPlay;
-            m_EndSyncPoint.m_bDisable   = !m_bContinuousPlay;
-            m_FrameNumber               = 0;
-
-            //
-            // Get started
-            //
-            XCORE_PERF_FRAME_MARK()
-            auto& Scheduler = xcore::get().m_Scheduler;
-            Scheduler.AddJobToQuantumWorld(*this);
-            Scheduler.MainThreadStartsWorking();
-        }
-
-        void Resume( bool bContinuousPlay ) noexcept
-        {
-            m_bContinuousPlay           = bContinuousPlay;
-            m_EndSyncPoint.m_bDisable   = !m_bContinuousPlay;
 
             //
             // Add the graph as the core of the graph
             //
             XCORE_PERF_FRAME_MARK()
             auto& Scheduler = xcore::get().m_Scheduler;
-            Scheduler.AddJobToQuantumWorld(*this);
+
+            Scheduler.AddJobToQuantumWorld   (m_GraphSystem);
             Scheduler.MainThreadStartsWorking();
+        }
+
+        void Stop( void ) noexcept
+        {
+            m_bGraphStarted = false;
         }
 
         template< typename T_SYSTEM, typename...T_END_SYNC_POINTS >
@@ -132,49 +112,9 @@ namespace mecs::graph
             return m_SyncpointDB.Create<T_SYNC_POINT>(Guid);
         }
 
-        virtual void qt_onRun(void) noexcept override
-        {
-            XCORE_PERF_FRAME_MARK_START("mecs::Frame")
-
-            //
-            // Update Time
-            //
-            if(m_FrameNumber == 0 )   m_Time.Start();
-            else                      m_Time.UpdateDeltaTimeRoundTrip();
-
-            //
-            // Frame counters, etc...
-            //
-            m_bFrameStarted = true;
-            m_FrameNumber++;
-            m_Events.m_FrameStart.NotifyAll();
-        }
-
-        void msgSyncPointDone( mecs::sync_point::instance& SyncPoint)
-        {
-            XCORE_PERF_ZONE_SCOPED()
-
-            m_bFrameStarted = false;
-
-            //
-            // Let everyone know that we are done
-            //
-            m_Events.m_FrameDone.NotifyAll();
-
-            //
-            // Deal with profiler
-            //
-            XCORE_PERF_FRAME_MARK_END("mecs::Frame")
-            //TODO: XCORE_PERF_PLOT("Total Pages", static_cast<int64_t>(m_PageMgr.m_TotalPages.load(std::memory_order_relaxed)))
-            //TODO: XCORE_PERF_PLOT("Free Pages", static_cast<int64_t>(m_PageMgr.m_FreePages.load(std::memory_order_relaxed)))
-
-            //
-            // Decided if we need to return control to the system
-            //
-            if(false == m_bContinuousPlay) xcore::get().m_Scheduler.MainThreadStopWorking();
-        }
 
         bool                                            m_bContinuousPlay       { false };
+        bool                                            m_bGraphStarted         { false };
         bool                                            m_bFrameStarted         { false };
         std::uint64_t                                   m_FrameNumber           {0};
         time                                            m_Time                  {};
@@ -189,6 +129,8 @@ namespace mecs::graph
 
         mecs::sync_point::instance&                     m_StartSyncPoint;
         mecs::sync_point::instance&                     m_EndSyncPoint;
+        mecs::graph::details::graph_system&             m_GraphSystem;
+
 
         xcore::lock::object<std::vector<lock_error>, xcore::lock::spin> m_LockErrors{};
     };
