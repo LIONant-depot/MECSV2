@@ -45,19 +45,29 @@ namespace mecs::archetype
         {
             struct component_lock_entry
             {
-                system::instance*           m_pWritingSystem    { nullptr };        // Which system has this component locked for writing
-                std::uint8_t                m_nReaders          { 0 };              // How many systems have this group locked for reading
+                std::uint8_t                    m_nReaders{ 0 };                        // How many readers have this archetype locked for reading
+                std::uint8_t                    m_nWriters{ 0 };                        // How many writers have this archetype locked for writing
             };
 
-            using component_list_t = std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>;
+            struct per_system
+            {
+                using component_list_t = std::array<component_lock_entry, mecs::settings::max_data_components_per_entity>;
 
-            static bool LockQueryComponents     ( system::instance& System, const mecs::archetype::query::instance&       Query ) noexcept;
-            static bool LockQueryComponents     ( system::instance& System, const mecs::archetype::query::result_entry&   E     ) noexcept;
-            static bool UnlockQueryComponents   ( system::instance& System, const mecs::archetype::query::result_entry&   E     ) noexcept;
-            static bool UnlockQueryComponents   ( system::instance& System, const mecs::archetype::query::instance&       Query ) noexcept;
+                mecs::system::instance*         m_pSystem           {nullptr};
+                component_list_t                m_lComponentLocks   {};
+                int                             m_nTotalInformation { 0 };
+                std::uint8_t                    m_nShareWriters     { 0 };
+            };
 
-            std::uint8_t        m_nSharerWriters    {0};
-            component_list_t    m_lComponentLocks   {};
+            static bool LockQueryComponents     ( system::instance& System,     const mecs::archetype::query::instance&       Query ) noexcept;
+            static bool LockQueryComponents     ( system::instance& System,     const mecs::archetype::query::result_entry&   E     ) noexcept;
+            static bool LockQueryComponents     ( per_system&       PerSystem,  const mecs::archetype::query::result_entry&   E     ) noexcept;
+
+            static bool UnlockQueryComponents   ( system::instance& System,     const mecs::archetype::query::instance&       Query ) noexcept;
+            static bool UnlockQueryComponents   ( system::instance& System,     const mecs::archetype::query::result_entry&   E     ) noexcept;
+            static bool UnlockQueryComponents   ( per_system&       PerSystem,  const mecs::archetype::query::result_entry&   E     ) noexcept;
+
+            std::vector<per_system>         m_PerSystem;
         };
 
         //-----------------------------------------------------------------------------------------

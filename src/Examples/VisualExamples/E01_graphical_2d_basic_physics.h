@@ -13,7 +13,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         void reset()
         {
             m_EntitieCount = 250000 XCORE_CMD_DEBUG( / 100 );
-            m_bRenderGrid  = false;
+            m_bRenderGrid  = true;
         }
 
         property_vtable()
@@ -443,7 +443,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     Count.m_ReadOnlyCount = Count.m_MutableCount.load(std::memory_order_relaxed);
                     if( Count.m_ReadOnlyCount == 0 )
                     {
-                        deleteEntity(Entity);
+                   //     deleteEntity(Entity);
                     }
                     else
                     {
@@ -688,7 +688,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, 1 + 0*s_MyMenu.m_EntitieCount, {} )
+        Archetype.CreateEntities(System, 10000 + 0*s_MyMenu.m_EntitieCount, {} )
             ([&](   component::position&  Position
                 ,   component::velocity&  Velocity
                 ,   component::collider&  Collider )
@@ -696,7 +696,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                 Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f), (physics::tools::world_width_v/2.0f) )
                               , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
 
-                Position.m_Value.setup(100,100);
+               // Position.m_Value.setup( 100, 100 );
 
                 Velocity.m_Value.setup( Rnd.RandF32(-1.0f, 1.0f ), Rnd.RandF32(-1.0f, 1.0f ) );
                 Velocity.m_Value.NormalizeSafe();

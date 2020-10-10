@@ -89,13 +89,44 @@ namespace mecs::graph
             }
             else
             {
-                mecs::system::instance::qt_onDone();
-
                 auto& Graph = m_World.m_GraphDB;
-                if (false == Graph.m_bContinuousPlay) m_bPause = true;
+
+                //
+                // If it is the very first frame then we need to deal with some details...
+                //
+                if (Graph.m_bGraphStarted == false)
+                {
+                    //
+                    // Force the system to flush its cache
+                    //
+                    auto& CustomSystem = static_cast<mecs::system::details::custom_system<graph_system>&>(*this);
+                    CustomSystem.msgSyncPointDone( Graph.m_EndSyncPoint );
+
+                    //
+                    // Notify anyone that the graph is starting
+                    //
+                    Graph.m_Events.m_GraphInit.NotifyAll(m_World);
+
+                    //
+                    // Clear some variables
+                    //
+                    Graph.m_FrameNumber   = 0;
+                    Graph.m_bGraphStarted = true;
+                }
+                else
+                {
+                    if (false == Graph.m_bContinuousPlay) m_bPause = true;
+                }
+                mecs::system::instance::qt_onDone();
             }
         }
     }
+
+    //------------------------------------------------------------------------------------------------------------
+    // GRAPH:: INSTANCE
+    //------------------------------------------------------------------------------------------------------------
+
+    //------------------------------------------------------------------------------------------------------------
 
     template< typename T_SYSTEM, typename...T_END_SYNC_POINTS >
     T_SYSTEM& instance::CreateGraphConnection(mecs::sync_point::instance& StartSyncpoint, T_END_SYNC_POINTS&...EndSyncpoints) noexcept
@@ -131,6 +162,8 @@ namespace mecs::graph
     }
 
 
+    //------------------------------------------------------------------------------------------------------------
+
     template< typename T_ARCHETYPE_DELEGATE >
     T_ARCHETYPE_DELEGATE& instance::CreateArchetypeDelegate(mecs::archetype::delegate::overrides::guid Guid ) noexcept
     {
@@ -138,6 +171,8 @@ namespace mecs::graph
         auto& Delegate = static_cast<custom_delegate_t&>(m_ArchetypeDelegateDB.Create<T_ARCHETYPE_DELEGATE>(Guid));
         return Delegate;
     }
+
+    //------------------------------------------------------------------------------------------------------------
 
     template< typename T_SYSTEM_DELEGATE >
     T_SYSTEM_DELEGATE& instance::CreateSystemDelegate(mecs::system::delegate::overrides::guid Guid) noexcept

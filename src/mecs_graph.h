@@ -15,8 +15,8 @@ namespace mecs::graph
 
     struct lock_error
     {
-        std::array<mecs::system::instance::guid, 2>     m_lSystemGuids;
-        mecs::archetype::instance::guid                 m_gArchetype;
+        std::array<mecs::system::instance*, 2>          m_pSystems;
+        mecs::archetype::instance*                      m_pArchetype;
         const char*                                     m_pMessage;
     };
 
@@ -54,23 +54,6 @@ namespace mecs::graph
 
         void Play( bool bContinuousPlay ) noexcept
         {
-            //
-            // If it is the very first frame then we need to deal with some details...
-            //
-            if( m_bGraphStarted == false )
-            {
-                //
-                // Notify anyone that the graph is starting
-                //
-                m_Events.m_GraphInit.NotifyAll(m_World);
-
-                //
-                // Clear some variables
-                //
-                m_FrameNumber   = 0;
-                m_bGraphStarted = true;
-            }
-
             m_bContinuousPlay           = bContinuousPlay;
 
             //
