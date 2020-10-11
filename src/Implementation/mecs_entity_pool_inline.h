@@ -454,7 +454,7 @@ namespace mecs::entity_pool
                 // TODO: Prefetch the reference to minimize cache hit
                 // Update the moved entity reference
                 {
-                    auto& MovedEntity = *reinterpret_cast<component::entity*>(m_Pointers[0] + E * m_Descriptors[0]->m_Size);
+                    auto& MovedEntity = *reinterpret_cast<component::entity*>(m_Pointers[0] + E * sizeof(component::entity));
                     xassert(MovedEntity.isZombie() == false );
                     auto& Ref         = MovedEntity.getMapEntry().m_Value;
                     Ref.m_Index       = E;

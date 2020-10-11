@@ -443,7 +443,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     Count.m_ReadOnlyCount = Count.m_MutableCount.load(std::memory_order_relaxed);
                     if( Count.m_ReadOnlyCount == 0 )
                     {
-                   //     deleteEntity(Entity);
+                        deleteEntity(Entity);
                     }
                     else
                     {
@@ -688,7 +688,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, 10000 + 0*s_MyMenu.m_EntitieCount, {} )
+        Archetype.CreateEntities(System, s_MyMenu.m_EntitieCount, {} )
             ([&](   component::position&  Position
                 ,   component::velocity&  Velocity
                 ,   component::collider&  Collider )

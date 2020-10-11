@@ -571,12 +571,7 @@ namespace mecs::archetype
         XCORE_PERF_ZONE_SCOPED()
         if (Entity.isZombie()) return;
 
-        // Mark the entity as a zombie
-        Entity.MarkAsZombie();
-
-        // Mark for deletion in the pool
         auto& Reference = Entity.getReference();
-        Reference.m_pPool->m_EntityPool.deleteBySwap(Reference.m_Index);
 
         //
         // Notify that we are deleting an entity
@@ -584,6 +579,19 @@ namespace mecs::archetype
         auto& Archetype = *Reference.m_pPool->m_pArchetypeInstance;
         if (Archetype.m_Events.m_DestroyEntity.hasSubscribers())
             Archetype.m_Events.m_DestroyEntity.NotifyAll(Entity, System);
+
+        //
+        // Mark the entity as a zombie
+        //
+        Entity.MarkAsZombie();
+
+        // Mark for deletion in the pool
+        Reference.m_pPool->m_EntityPool.deleteBySwap(Reference.m_Index);
+
+        //
+        // Delete the entity guid reference, so we can not longer do a look up
+        //
+        m_pEntityMap->free(Entity.getGUID());
     }
 
     //----------------------------------------------------------------------------------------------------
