@@ -142,6 +142,7 @@ namespace mecs::system
 
                         // Done so we can officially added to our entry
                         Data.m_nFunctions.get()++;
+                        xassert( Data.m_nFunctions.get() < 16 );
                         return;
                     }
                 }
@@ -155,12 +156,12 @@ namespace mecs::system
                 auto&               Lines = m_Lines.get();
                 if( i != Lines.size() ) goto _TRY_AGAIN;
 
-                Lines.push_back( &Archetype );
+                Lines.append( &Archetype );
                 m_Data.append();
 
                 data& MyData = m_Data.back();
 
-                xcore::lock::scope  Lk2     (MyData.m_nFunctions);
+                XCORE_CMD_ASSERT( xcore::lock::scope  Lk2     (MyData.m_nFunctions); )
                 if( FunctionGUID )
                 {
                     MyData.m_nFunctions.get() = 1;
@@ -318,6 +319,7 @@ namespace mecs::system
                 auto& Lines = user_system_t::m_Cache.m_Lines.get();
                 for( auto pArchetype : Lines )
                 {
+                    /*
                     bool        bFound      = false;
 
                     for (const auto& Q : user_system_t::m_Query.m_lResults)
@@ -330,6 +332,8 @@ namespace mecs::system
                     }
 
                     if( bFound == false ) pArchetype->MemoryBarrierSync(Syncpoint);
+                    */
+                    pArchetype->MemoryBarrierSync(Syncpoint);
                 }
                 Lines.clear();
                 user_system_t::m_Cache.m_Data.clear();
@@ -1228,10 +1232,11 @@ namespace mecs::system
     }
 
     //----------------------------------------------------------------------------------------------
-    template< bool      T_ALREADY_LOCKED_V
+    template< bool      T_RELAX_V
+            , bool      T_ALREADY_LOCKED_V
             , typename  T_CALLBACK >
     constexpr xforceinline
-    void instance::_getEntityComponents( const mecs::component::entity::reference& Reference, T_CALLBACK&& Function ) noexcept
+    void instance::_getEntityComponentsRelax( const mecs::component::entity::reference& Reference, T_CALLBACK&& Function ) noexcept
     {
         using                   func_tuple              = typename xcore::function::traits<T_CALLBACK>::args_tuple;
         static constexpr auto   func_descriptors        = mecs::archetype::query::details::get_arrays< func_tuple >::value;
@@ -1276,19 +1281,27 @@ namespace mecs::system
         // Search the entry from the cache
         //
         auto& Archetype  = *Reference.m_pPool->m_pArchetypeInstance;
-        auto  GetFunctor = [&](const details::cache::per_function& PerFunction)
+        auto  GetFunctor = [&]( const details::cache::per_function& PerFunction ) constexpr noexcept
         {
             if constexpr (T_ALREADY_LOCKED_V)
             {
                 Call(PerFunction);
             }
+            else if constexpr (T_RELAX_V)
+            {
+                const auto& Map = m_World.m_ArchetypeDB.m_EntityMap;
+                Map.find(Map.getKeyFromValue(Reference), [&](auto&) constexpr noexcept
+                {
+                    Call(PerFunction);
+                });
+            }
             else
             {
                 auto& Map = m_World.m_ArchetypeDB.m_EntityMap;
                 Map.find(Map.getKeyFromValue(Reference), [&](auto&) constexpr noexcept
-                    {
-                        Call(PerFunction);
-                    });
+                {
+                    Call(PerFunction);
+                });
             }
         };
 
@@ -1413,7 +1426,7 @@ namespace mecs::system
     void instance::getEntityComponents( const mecs::component::entity& Entity, T_CALLBACK&& Function ) noexcept
     {
         xassert(Entity.isZombie() == false);
-        _getEntityComponents<false>(Entity.getReference(), std::forward<T_CALLBACK&&>(Function) );
+        _getEntityComponentsRelax<false,false>(Entity.getReference(), std::forward<T_CALLBACK&&>(Function) );
     }
 
     //---------------------------------------------------------------------------------
@@ -1424,9 +1437,23 @@ namespace mecs::system
     ,   T_CALLBACK&&                      Function
     ) noexcept
     {
-        return m_World.m_ArchetypeDB.m_EntityMap.find( gEntity, [&]( mecs::component::entity::reference& Reference )
+        return m_World.m_ArchetypeDB.m_EntityMap.find( gEntity, [&]( mecs::component::entity::reference& Reference ) constexpr noexcept
         {
-            _getEntityComponents<true>( Reference, std::forward<T_CALLBACK&&>(Function) );
+            _getEntityComponentsRelax<false, true>( Reference, std::forward<T_CALLBACK&&>(Function) );
+        });
+    }
+
+    //---------------------------------------------------------------------------------
+    template< typename T_CALLBACK >
+    constexpr xforceinline
+    bool instance::findEntityComponentsRelax
+    (   mecs::component::entity::guid     gEntity
+    ,   T_CALLBACK&&                      Function
+    ) const noexcept
+    {
+        return std::as_const(m_World.m_ArchetypeDB.m_EntityMap).find( gEntity, [&]( const mecs::component::entity::reference& Reference ) constexpr noexcept 
+        {
+            _getEntityComponentsRelax<true, true>( Reference, std::forward<T_CALLBACK&&>(Function) );
         });
     }
 
@@ -1449,23 +1476,26 @@ namespace mecs::system
     }
 
     //---------------------------------------------------------------------------------
-    template< typename      T_GET_CALLBACK
+    template< bool          T_RELAX_V
+            , typename      T_GET_CALLBACK
             , typename      T_CREATE_CALLBACK
             >
     constexpr xforceinline
-    void instance::getOrCreateEntity( mecs::component::entity::guid         gEntity
+    void instance::getOrCreateEntityRelax( mecs::component::entity::guid    gEntity
                                     , mecs::archetype::specialized_pool&    SpecialiedPool
                                     , T_GET_CALLBACK&&                      GetCallback
                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                     ) noexcept
     {
-        auto& EntityMap = m_World.m_ArchetypeDB.m_EntityMap;
-        EntityMap.getOrCreate( gEntity
-        , [&](const entity::reference& Reference )
+
+        auto& EntityMap     = m_World.m_ArchetypeDB.m_EntityMap;
+
+        EntityMap.getOrCreate<T_RELAX_V>( gEntity
+        , [&](const entity::reference& Reference ) constexpr noexcept
         {
-            _getEntityComponents<true>( Reference, GetCallback );
+            _getEntityComponentsRelax<T_RELAX_V, true>( Reference, GetCallback );
         }
-        , [&]( entity::reference& Reference )
+        , [&]( entity::reference& Reference ) constexpr noexcept
         {
             mecs::archetype::entity_creation Creation
             {
@@ -1484,16 +1514,30 @@ namespace mecs::system
             m_Cache.getOrCreateCache
             ( 0ull
             , *Reference.m_pPool->m_pArchetypeInstance
-            , []( const details::cache::per_function& ) constexpr
+            , []( const details::cache::per_function& ) constexpr noexcept
             {
                 // Nothing to do
             }
-            , []( details::cache::per_function& ) constexpr
+            , []( details::cache::per_function& ) constexpr noexcept
             {
                 // Nothing to do
             }
             );
         });
+    }
+
+    //---------------------------------------------------------------------------------
+    template< typename      T_GET_CALLBACK
+            , typename      T_CREATE_CALLBACK
+            >
+    constexpr xforceinline
+    void instance::getOrCreateEntity( mecs::component::entity::guid         gEntity
+                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                    , T_GET_CALLBACK&&                      GetCallback
+                                    , T_CREATE_CALLBACK&&                   CreateCallback
+                                    ) noexcept
+    {
+        getOrCreateEntityRelax< false >(gEntity, SpecialiedPool, std::forward<T_GET_CALLBACK&&>(GetCallback), std::forward<T_CREATE_CALLBACK&&>(CreateCallback) );
     }
 
     //---------------------------------------------------------------------------------

@@ -255,7 +255,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                 
                             const auto RelativeGridPos  = tools::vector2{ 1 + x, 1 + y } - ID.m_Value;
 
-                            if( false == findEntityComponents( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
+                            if( false == findEntityComponentsRelax( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
                                 , [&]   ( component::count&         Count
                                         , const component::lists&   T0Lists
                                         , component::lists&         T1Lists ) noexcept
@@ -361,7 +361,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         {
                             //XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
                             if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr )
-                            getOrCreateEntity
+                            getOrCreateEntityRelax
                             (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
                                 , *m_pSpecializedPoolCell
                                 // Get entry

@@ -27,7 +27,7 @@ namespace mecs::system
                 std::array<per_function, per_func_list{}.size()>            m_PerFunction;
             };
 
-            using lines = xcore::lock::object< std::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
+            using lines = xcore::lock::object< xcore::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
             
             lines                   m_Lines;        // Fast, cache friendly, linear search loop up.
             xcore::vector<data>     m_Data;         // Data per each line. It should be a 1:1 mapping with lines
@@ -173,6 +173,13 @@ namespace mecs::system
                                                                     , T_CALLBACK&&                      Function 
                                                                     ) noexcept;
         //----------------------------------------------------------------------------
+        template< typename T_CALLBACK
+                >
+        constexpr xforceinline
+        bool                                findEntityComponentsRelax( mecs::component::entity::guid     gEntity
+                                                                     , T_CALLBACK&&                      Function 
+                                                                     ) const noexcept;
+        //----------------------------------------------------------------------------
         template< typename... T_COMPONENTS
                 >
         constexpr xforceinline
@@ -190,6 +197,17 @@ namespace mecs::system
                                                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                                                     ) noexcept;
         //----------------------------------------------------------------------------
+        template< bool          T_RELAX_V           = true
+                , typename      T_GET_CALLBACK
+                , typename      T_CREATE_CALLBACK
+                >
+        constexpr xforceinline
+        void                                getOrCreateEntityRelax  ( mecs::component::entity::guid         gEntity
+                                                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                                                    , T_GET_CALLBACK&&                      GetCallback
+                                                                    , T_CREATE_CALLBACK&&                   CreateCallback
+                                                                    ) noexcept;
+        //----------------------------------------------------------------------------
         template< typename  T_FUNCTION_TYPE
                 , typename  T_COMPONENT_TUPLE = std::tuple<>
                 >
@@ -202,12 +220,13 @@ namespace mecs::system
         //----------------------------------------------------------------------------
 
         //----------------------------------------------------------------------------
-        template< bool      T_ALREADY_LOCKED_V
-                , typename  T_CALLBACK >
+        template<   bool      T_RELAX_V            = true
+                ,   bool      T_ALREADY_LOCKED_V   = false
+                ,   typename  T_CALLBACK >
         constexpr xforceinline
-        void                                _getEntityComponents    ( const mecs::component::entity::reference& Reference
-                                                                    , T_CALLBACK&&                              Function 
-                                                                    ) noexcept;
+        void                                _getEntityComponentsRelax   ( const mecs::component::entity::reference& Reference
+                                                                        , T_CALLBACK&&                              Function 
+                                                                        ) noexcept;
         //----------------------------------------------------------------------------
         virtual
         void*                               _getExclusiveRealEvent  ( const system::event::type_guid 

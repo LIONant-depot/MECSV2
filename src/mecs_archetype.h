@@ -59,6 +59,7 @@ namespace mecs::archetype
                 std::uint8_t                    m_nShareWriters     { 0 };
             };
 
+        #if _XCORE_ASSERTS
             static bool LockQueryComponents     ( system::instance& System,     const mecs::archetype::query::instance&       Query ) noexcept;
             static bool LockQueryComponents     ( system::instance& System,     const mecs::archetype::query::result_entry&   E     ) noexcept;
             static bool LockQueryComponents     ( per_system&       PerSystem,  const mecs::archetype::query::result_entry&   E     ) noexcept;
@@ -66,6 +67,15 @@ namespace mecs::archetype
             static bool UnlockQueryComponents   ( system::instance& System,     const mecs::archetype::query::instance&       Query ) noexcept;
             static bool UnlockQueryComponents   ( system::instance& System,     const mecs::archetype::query::result_entry&   E     ) noexcept;
             static bool UnlockQueryComponents   ( per_system&       PerSystem,  const mecs::archetype::query::result_entry&   E     ) noexcept;
+        #else
+            xforceinline static bool LockQueryComponents     ( system::instance&,  const mecs::archetype::query::instance&     ) noexcept { return false; }
+            xforceinline static bool LockQueryComponents     ( system::instance&,  const mecs::archetype::query::result_entry& ) noexcept { return false; }
+            xforceinline static bool LockQueryComponents     ( per_system&      ,  const mecs::archetype::query::result_entry& ) noexcept { return false; }
+
+            xforceinline static bool UnlockQueryComponents   ( system::instance&,  const mecs::archetype::query::instance&     ) noexcept { return false; }
+            xforceinline static bool UnlockQueryComponents   ( system::instance&,  const mecs::archetype::query::result_entry& ) noexcept { return false; }
+            xforceinline static bool UnlockQueryComponents   ( per_system&      ,  const mecs::archetype::query::result_entry& ) noexcept { return false; }
+        #endif
 
             std::vector<per_system>         m_PerSystem;
         };
@@ -156,7 +166,7 @@ namespace mecs::archetype
         template< typename      T_CALLBACK
                 , typename...   T_COMPONENTS
                 >
-        inline
+        xforceinline constexpr
         void                    ProcessIndirect         ( mecs::component::entity::reference&   Reference
                                                         , T_CALLBACK&&                          Callback
                                                         , std::tuple<T_COMPONENTS...>*          

@@ -105,7 +105,7 @@ namespace mecs::tools
             xassert(Key.isValid());
 
             const auto  RowTrueIndex = Key.m_Value % max_size_v;
-            auto&       Row          = m_Map[RowTrueIndex];
+            const auto& Row          = m_Map[RowTrueIndex];
 
             // User requesting Read only lock here because the function is const
             xcore::lock::scope Lk(Row.m_iHeadEntryOrEmpty);
@@ -149,12 +149,24 @@ namespace mecs::tools
             return false;
         }
 
-        template< typename T_CREATE_CALLBACK, typename T_GET_CALLBACK > xforceinline constexpr
+        template< bool      T_RELAX_V           = false
+                , typename  T_CREATE_CALLBACK
+                , typename  T_GET_CALLBACK >
+        xforceinline constexpr
         bool getOrCreate(key Key, T_GET_CALLBACK&& GetCallback, T_CREATE_CALLBACK&& CreateCallBack) noexcept
         {
         TRY_AGAIN_GET_OR_CREATE:
-            if (find(Key, GetCallback))
-                return true;
+            if constexpr (T_RELAX_V)
+            {
+                const auto& p = *this;
+                if ( p.find(Key, GetCallback))
+                    return true;
+            }
+            else
+            {
+                if (find(Key, GetCallback))
+                    return true;
+            }
 
             if (alloc(Key, CreateCallBack))
                 goto TRY_AGAIN_GET_OR_CREATE;

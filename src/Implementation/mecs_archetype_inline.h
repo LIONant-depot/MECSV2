@@ -104,8 +104,9 @@ namespace mecs::archetype
 
     //----------------------------------------------------------------------------------------------------
 
-    template< typename...T_COMPONENTS > xforceinline
-    constexpr void entity_creation::getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept
+    template< typename...T_COMPONENTS >
+    xforceinline constexpr
+    void entity_creation::getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept
     {
         static constexpr std::array Inputs{ &mecs::component::descriptor_v<T_COMPONENTS> ... };
         static_assert( ((std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T_COMPONENTS>>> == false) && ...) );
@@ -146,7 +147,7 @@ namespace mecs::archetype
 
     //----------------------------------------------------------------------------------------------------
     template< typename T_CALLBACK, typename...T_COMPONENTS >
-    inline
+    xforceinline constexpr
     void entity_creation::ProcessIndirect
     ( mecs::component::entity::reference&   Reference
     , T_CALLBACK&&                          Callback
@@ -157,7 +158,7 @@ namespace mecs::archetype
         static_assert(((mecs::component::descriptor_v<T_COMPONENTS>.m_Type != mecs::component::type::TAG)   && ...));
         static_assert(((std::is_same_v<T_COMPONENTS, xcore::types::decay_full_t<T_COMPONENTS>&>) && ...));
 
-        using raw_tuple = std::tuple<T_COMPONENTS...>;
+        using raw_tuple    = std::tuple<T_COMPONENTS...>;
         using sorted_tuple = xcore::types::tuple_sort_t< mecs::component::smaller_guid, raw_tuple >;
 
         std::array<std::uint8_t, sizeof...(T_COMPONENTS)> ComponentIndices;

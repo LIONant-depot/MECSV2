@@ -1,6 +1,7 @@
 
 namespace mecs::archetype
 {
+#if _XCORE_ASSERTS
     //--------------------------------------------------------------------------------------------------------------------
     inline
     bool CheckWriteComponentOnFullEntityLocked( details::safety& Safety, int ComponentID, bool isConstant, mecs::system::instance& System, mecs::archetype::instance& Archetype )
@@ -465,5 +466,5 @@ namespace mecs::archetype
         xassert(false);
         return true;
     }
-
+#endif
 }
