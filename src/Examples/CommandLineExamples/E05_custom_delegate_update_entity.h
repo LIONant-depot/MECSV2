@@ -82,8 +82,8 @@ namespace mecs::examples::E05_custom_delegate_updated_entity
         printf("E05_custom_delegate_updated_entity\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -97,14 +97,13 @@ namespace mecs::examples::E05_custom_delegate_updated_entity
         //
         // Create the game graph.
         // 
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-        auto& System = DefaultWorld.m_GraphDB.CreateGraphConnection<move_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<move_system>( DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint() );
 
         //
         // Create the delegates.
         //
-        DefaultWorld.m_GraphDB.CreateSystemDelegate< my_delegate >();
-        //DefaultWorld.m_GraphDB.CreateArchetypeDelegate< remove_position_delegate >();
+        DefaultWorld.CreateSystemDelegate< my_delegate >();
+        //DefaultWorld.CreateArchetypeDelegate< remove_position_delegate >();
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -113,26 +112,21 @@ namespace mecs::examples::E05_custom_delegate_updated_entity
         //
         // Create an entity group
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<position>();
 
         //
         // Create one entity
         //
-        Archetype.CreateEntity(System);
+        DefaultWorld.CreateEntity(Archetype);
         //------------------------------------------------------------------------------------------
         // Running
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
 
         xassert(true);
     }

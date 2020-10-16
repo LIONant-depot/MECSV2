@@ -352,7 +352,7 @@ namespace mecs::archetype
         template< typename...T_ADD_COMPONENTS_AND_TAGS
                 , typename...T_REMOVE_COMPONENTS_AND_TAGS >
         constexpr xforceinline
-        instance&                   getOrCreateGroupBy                      ( instance&                                 OldArchetype
+        instance&                   getOrCreateArchetypeBy                  ( instance&                                 OldArchetype
                                                                             , std::tuple<T_ADD_COMPONENTS_AND_TAGS...>*
                                                                             , std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>* 
                                                                             ) noexcept;
@@ -387,14 +387,6 @@ namespace mecs::archetype
         instance&                   getArchetype                            ( mecs::archetype::instance::guid Guid 
                                                                             ) noexcept;
         //-----------------------------------------------------------------------------------
-        xforceinline
-        instance&                   getOrCreateArchitypeDetails             ( mecs::archetype::instance::guid                       Guid
-                                                                            , mecs::archetype::tag_sum_guid                         TagSumGuid
-                                                                            , std::span<const mecs::component::descriptor* const>   DataDiscriptorList
-                                                                            , std::span<const mecs::component::descriptor* const>   ShareDiscriptorList
-                                                                            , std::span<const mecs::component::descriptor* const>   TagDiscriptorList 
-                                                                            ) noexcept;
-        //-----------------------------------------------------------------------------------
         template< typename T_FUNCTION >
         inline
         void                        InitializeQuery                         ( mecs::archetype::query::instance& QueryInstance 
@@ -409,6 +401,22 @@ namespace mecs::archetype
                                                                             , T_CALLBACK&&                Callback = [](){}
                                                                             , T_SHARE_COMPONENTS&&...     ShareComponents 
                                                                             ) noexcept;
+
+        //-----------------------------------------------------------------------------------
+        // Private Functions
+        //-----------------------------------------------------------------------------------
+
+        //-----------------------------------------------------------------------------------
+        xforceinline
+        instance&                   _getOrCreateArchitype                   ( mecs::archetype::instance::guid                       Guid
+                                                                            , mecs::archetype::tag_sum_guid                         TagSumGuid
+                                                                            , std::span<const mecs::component::descriptor* const>   DataDiscriptorList
+                                                                            , std::span<const mecs::component::descriptor* const>   ShareDiscriptorList
+                                                                            , std::span<const mecs::component::descriptor* const>   TagDiscriptorList 
+                                                                            ) noexcept;
+
+        //-----------------------------------------------------------------------------------
+        // Vars
         //-----------------------------------------------------------------------------------
 
         using map_archetypes    = mecs::tools::fixed_map<mecs::archetype::instance::guid, mecs::archetype::instance*, mecs::settings::max_archetype_types >;
@@ -416,6 +424,7 @@ namespace mecs::archetype
         using tag_list          = std::array<details::tag_entry, mecs::settings::max_archetype_types>;
 
         //-----------------------------------------------------------------------------------
+
         details::events                         m_Event;
         mecs::component::entity::map            m_EntityMap;
         map_archetypes                          m_mapArchetypes;

@@ -64,8 +64,8 @@ namespace mecs::examples::E02_system_introduction
         printf( "E02_system_introduction\n");
         printf( "--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -94,8 +94,7 @@ namespace mecs::examples::E02_system_introduction
         // We will discuss later what a syncpoint is. Right now you can think of these two syncpoints as the
         // begging of the frame and the end of the frame. Since MECS is a multicore all system connected to the same
         // two syncpoints will execute in parallel. Additionally each system also execute all its entities in parallel.
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-        auto& PrintSystem  = DefaultWorld.m_GraphDB.CreateGraphConnection<print_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.m_GraphDB.CreateGraphConnection<print_system>( DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint() );
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -107,13 +106,13 @@ namespace mecs::examples::E02_system_introduction
         // Here a group just talk about which components a particular entity has. 
         // A "group of components" if you like to think it that way. 
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<message>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<message>();
 
         //
         // Create one entity
         // To create an entity you need to let the system know which group you are talking about.
         // Note that the creation function has a callback which allows you to initialize the value of the entity.
-        Archetype.CreateEntity( PrintSystem, []( message& Message ) constexpr noexcept
+        DefaultWorld.CreateEntity( Archetype, []( message& Message ) constexpr noexcept
         {
             Message.m_pValue = "Hello World!!";
         });
@@ -123,15 +122,10 @@ namespace mecs::examples::E02_system_introduction
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for( int i=0; i<10; i++) 
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
 
         xassert(true);
     }

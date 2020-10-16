@@ -12,8 +12,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
              my_menu() { reset(); }
         void reset()
         {
-            m_EntitieCount = 250000 XCORE_CMD_DEBUG( / 100 );
-            m_bRenderGrid  = true;
+            m_EntitieCount = 40000 ;//XCORE_CMD_DEBUG( / 100 );
+            m_bRenderGrid  = false;
         }
 
         property_vtable()
@@ -65,7 +65,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                 using                       real_event_t    = define_real_event<  const mecs::component::entity&
                                                                                 , const xcore::vector2&         // Position
                                                                                 , const xcore::vector2&         // Velocity
-                                                                                , float >;                      // Radius
+                                                                                , float                         // Radius
+                                                                                , bool >;
             };
         }
 
@@ -199,6 +200,19 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         namespace system
         {
             //----------------------------------------------------------------------------------------
+            inline
+            auto& getDefaultCellPool(mecs::system::instance& System) noexcept
+            {
+                auto& Archetype = System.getOrCreateArchetype
+                < physics::component::lists
+                , physics::component::count
+                , physics::component::id
+                >();
+
+                return Archetype.getOrCreateSpecializedPool(System, 1, 1000000);
+            }
+
+            //----------------------------------------------------------------------------------------
             // WORLD GRID:: SYSTEM:: ADVANCE CELL
             //----------------------------------------------------------------------------------------
             struct advance_cell : mecs::system::instance
@@ -218,11 +232,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
 
                 void msgGraphInit( mecs::world::instance& ) noexcept
                 {
-                    auto& Archetype = getOrCreateArchetype<   physics::component::lists
-                                                          ,   physics::component::count
-                                                          ,   physics::component::id >();
-
-                    m_pSpecializedPoolCell = &Archetype.getOrCreateSpecializedPool(*this);
+                    m_pSpecializedPoolCell = &getDefaultCellPool( *this );
                 }
 
                 xforceinline
@@ -256,9 +266,9 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                             const auto RelativeGridPos  = tools::vector2{ 1 + x, 1 + y } - ID.m_Value;
 
                             if( false == findEntityComponentsRelax( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
-                                , [&]   ( component::count&         Count
-                                        , const component::lists&   T0Lists
-                                        , component::lists&         T1Lists ) noexcept
+                                , [&]( component::count&         Count
+                                     , const component::lists&   T0Lists
+                                     , component::lists&         T1Lists ) constexpr noexcept
                                 {
                                     T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]     = &T0Lists;
                                     T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]     = &T1Lists;
@@ -282,29 +292,33 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         //
                         // Integrate
                         //
-                        auto           Entity     = T0CellMap[1][1]->m_lEntity[i];
+                        const auto&    Entity     = T0CellMap[1][1]->m_lEntity[i];
                         const auto&    T0Entry    = T0CellMap[1][1]->m_lEntry[i];
                         xcore::vector2 T1Velocity = T0Entry.m_Velocity;
                         xcore::vector2 T1Position = T0Entry.m_Position + T1Velocity * DT;
+                        bool           bCollision = false;
 
                         //
                         // Check for collisions with other objects
                         //
                         {
                             //XCORE_PERF_ZONE_SCOPED_N("CheckCollisions")
-                            const auto     SearchBoxB = tools::MakeBox( T0Entry.m_Position, T1Position, T0Entry.m_Radius );
-                            for( int  y     = SearchBoxB.m_Min.m_Y; y<=SearchBoxB.m_Max.m_Y; y++ )
-                            for( int  x     = SearchBoxB.m_Min.m_X; x<=SearchBoxB.m_Max.m_X; x++ )
+                            const auto  SearchBoxB = tools::MakeBox( T0Entry.m_Position, T1Position, T0Entry.m_Radius );
+                            for( int  y = SearchBoxB.m_Min.m_Y; y<=SearchBoxB.m_Max.m_Y; y++ )
+                            for( int  x = SearchBoxB.m_Min.m_X; x<=SearchBoxB.m_Max.m_X; x++ )
                             {
                                 const auto RelativeGridPos  = tools::vector2{ 1 + x, 1 + y } - ID.m_Value;
 
-                                if( T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y] ) 
+                                if( T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y] )
+                                {
                                     for( std::uint8_t Count = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_ReadOnlyCount, c = 0; c < Count; ++c )
                                     {
                                         xassert( T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntity[c].getGUID().isValid() );
                                         auto& T0Other = T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntry[c];
+
+                                        // If we are dealing with the same entity skip it
                                         if( &T0Entry == &T0Other ) continue;
-                                        
+
                                         // Check for collision
                                         const auto V                    = (T0Other.m_Position - T1Position);
                                         const auto MinDistanceSquare    = xcore::math::Sqr(T0Other.m_Radius + T0Entry.m_Radius);
@@ -312,14 +326,16 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                         if( DistanceSquare >= 0.001f && DistanceSquare <= MinDistanceSquare )
                                         {
                                             // Do hacky collision response
-                                            const auto Normal           = V * -xcore::math::InvSqrt(DistanceSquare);
+                                            const auto Normal           = -V * xcore::math::InvSqrt(DistanceSquare);
                                             T1Velocity = xcore::math::vector2::Reflect( Normal, T1Velocity );
                                             T1Position = T0Other.m_Position + Normal * (T0Other.m_Radius + T0Entry.m_Radius+0.01f);
 
                                             // Notify entities about the collision
                                             EventNotify<event::collision>( T0CellMap[1][1]->m_lEntity[i], T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntity[c] );
+                                            bCollision = true;
                                         }
                                     }
+                                }
                             }
                         }
 
@@ -332,20 +348,18 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                 T1Position.m_X = (tools::world_width_v/-2) + T0Entry.m_Radius;
                                 T1Velocity.m_X = -T1Velocity.m_X;
                             }
+                            else if( (T1Position.m_X + T0Entry.m_Radius) >= (tools::world_width_v/2) )
+                            {
+                                T1Position.m_X = (tools::world_width_v/2) - T0Entry.m_Radius;
+                                T1Velocity.m_X = -T1Velocity.m_X;
+                            }
 
                             if( (T1Position.m_Y - T0Entry.m_Radius) <= (tools::world_height_v/-2) )
                             {
                                 T1Position.m_Y = (tools::world_height_v/-2) + T0Entry.m_Radius;
                                 T1Velocity.m_Y = -T1Velocity.m_Y;
                             }
-
-                            if( (T1Position.m_X + T0Entry.m_Radius) >= (tools::world_width_v/2) )
-                            {
-                                T1Position.m_X = (tools::world_width_v/2) - T0Entry.m_Radius;
-                                T1Velocity.m_X = -T1Velocity.m_X;
-                            }
-
-                            if( (T1Position.m_Y + T0Entry.m_Radius) >= (tools::world_height_v/2) )
+                            else if( (T1Position.m_Y + T0Entry.m_Radius) >= (tools::world_height_v/2) )
                             {
                                 T1Position.m_Y = (tools::world_height_v/2) - T0Entry.m_Radius;
                                 T1Velocity.m_Y = -T1Velocity.m_Y;
@@ -357,45 +371,45 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         //
                         const auto WorldPosition    = tools::WorldToGrid( T1Position );
                         const auto RelativeGridPos  = tools::vector2{1,1} + (WorldPosition - ID.m_Value);
-                        int C;
                         {
                             //XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
                             if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr )
-                            getOrCreateEntityRelax
-                            (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
-                                , *m_pSpecializedPoolCell
-                                // Get entry
-                                , [&]( component::count& Count, component::lists& T1Lists ) noexcept
-                                {
-                                    CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]          = &Count;
-                                    T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]             = &T1Lists;
-                                }
-                                // Create entry
-                                , [&]( component::count& Count, component::id& ID, component::lists& T1Lists ) noexcept
-                                {
-                                    ID.m_Value = WorldPosition;
-                                    xassert( physics::tools::ComputeKeyFromPosition(ID.m_Value) == CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] );
+                                getOrCreateEntityRelax
+                                (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
+                                    , *m_pSpecializedPoolCell
+                                    // Get entry
+                                    , [&]( component::count& Count, component::lists& T1Lists ) constexpr noexcept
+                                    {
+                                        CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]  = &Count;
+                                        T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]     = &T1Lists;
+                                    }
+                                    // Create entry
+                                    , [&]( component::count& Count, component::id& ID, component::lists& T1Lists ) constexpr noexcept
+                                    {
+                                        ID.m_Value = WorldPosition;
+                                        xassert( physics::tools::ComputeKeyFromPosition(ID.m_Value) == CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] );
 
-                                    CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]  = &Count;
-                                    T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]     = &T1Lists;
-                                }
-                            );
+                                        CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]  = &Count;
+                                        T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]     = &T1Lists;
+                                    }
+                                );
 
                             //
                             // Copy the entry in to the cell
                             //
-                                        C               = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_MutableCount++;
-                            auto&       Entry           = T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntry[C];
-                            Entry.m_Position            = T1Position;
-                            Entry.m_Velocity            = T1Velocity;
-                            Entry.m_Radius              = T0Entry.m_Radius;
-                            T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntity[C] = Entity;
+                            const int   C           = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_MutableCount++;
+                            auto&       CellMap     = *T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y];
+                            auto&       Entry       = CellMap.m_lEntry[C];
+                            Entry.m_Position        = T1Position;
+                            Entry.m_Velocity        = T1Velocity;
+                            Entry.m_Radius          = T0Entry.m_Radius;
+                            CellMap.m_lEntity[C]    = Entity;
                         }
 
                         //
                         // Notify whoever cares about the info
                         //
-                        EventNotify<event::render>( Entity, T1Position, T1Velocity, T0Entry.m_Radius );
+                        EventNotify<event::render>( Entity, T1Position, T1Velocity, T0Entry.m_Radius, bCollision );
                     }
 
                     //
@@ -431,9 +445,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                 {
                     query Query;
 
-                    DoQuery< reset_counts >( Query );
-
-                    ForEach( Query, *this, entities_per_job_v );
+                    ForEach( DoQuery< reset_counts >(Query), *this, entities_per_job_v );
                 }
 
                 // This system is reading T0 and it does not need to worry about people changing its value midway.
@@ -477,11 +489,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
 
                     if( m_pSpecializedPoolCell == nullptr )
                     {
-                        auto& Archetype = System.getOrCreateArchetype< physics::component::lists
-                                                                     , physics::component::count
-                                                                     , physics::component::id >();
-
-                        m_pSpecializedPoolCell = &Archetype.getOrCreateSpecializedPool(System);
+                        m_pSpecializedPoolCell = &physics::system::getDefaultCellPool(System);
                     }
 
                     System.getOrCreateEntity
@@ -570,21 +578,6 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
     namespace system
     {
         //----------------------------------------------------------------------------------------
-        // SYSTEM:: RENDER_OBJECTS
-        //----------------------------------------------------------------------------------------
-        struct render_objects : mecs::system::instance
-        {
-            constexpr static auto   entities_per_job_v  = 1000;
-            using mecs::system::instance::instance;
-
-            xforceinline
-            void operator() ( const component::position& Position, const component::collider& Collider ) noexcept
-            {
-                Draw2DQuad( Position.m_Value, xcore::vector2{ Collider.m_Radius }, ~0 );
-            }
-        };
-
-        //----------------------------------------------------------------------------------------
         // SYSTEM:: RENDER_PAGEFLIP
         //----------------------------------------------------------------------------------------
         struct render_pageflip : mecs::system::instance
@@ -617,6 +610,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             xforceinline 
             void operator() ( system& System, const entity& E1, const entity& E2 ) const noexcept
             {
+                while( E1.getGUID() == E2.getGUID() );
+
                 //printf( ">>>>>>>>>>Collision \n");
             }
         };
@@ -624,9 +619,10 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         struct my_render : mecs::system::delegate::instance< physics::event::render >
         {
             xforceinline 
-            void operator() ( mecs::system::instance&, const entity&, const xcore::vector2& Position, const xcore::vector2&, float R ) const noexcept
+            void operator() ( mecs::system::instance&, const entity& Entity, const xcore::vector2& Position, const xcore::vector2&, float R, bool bCollision ) const noexcept
             {
-                Draw2DQuad( Position, xcore::vector2{ R }, ~0 );
+                if(bCollision) Draw2DQuad( Position, xcore::vector2{ R }, Entity.getGUID().m_Value );// ~0 );
+                else           Draw2DQuad(Position, xcore::vector2{ R }, ~0 );
             }
         };
 
@@ -642,8 +638,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         printf( "E01_graphical_2d_basic_physics\n");
         printf( "--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -660,20 +656,18 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //
         // Register the game graph.
         //
-        auto& DefaultWorld  = *upUniverse->m_WorldDB[0];
-        auto& System        = DefaultWorld.m_GraphDB.m_GraphSystem;
-        auto& SyncPhysics   = DefaultWorld.m_GraphDB.CreateSyncPoint();
-                              DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::advance_cell>  ( DefaultWorld.m_GraphDB.m_StartSyncPoint, SyncPhysics             );
-                              DefaultWorld.m_GraphDB.CreateGraphConnection<physics::system::reset_counts>  ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint);
-                              DefaultWorld.m_GraphDB.CreateGraphConnection<system::render_pageflip>        ( SyncPhysics,                             DefaultWorld.m_GraphDB.m_EndSyncPoint).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
+        auto& SyncPhysics   = DefaultWorld.CreateSyncPoint();
+        DefaultWorld.CreateGraphConnection<physics::system::advance_cell>  ( DefaultWorld.getStartSyncpoint(), SyncPhysics                   );
+        DefaultWorld.CreateGraphConnection<physics::system::reset_counts>  ( SyncPhysics,                      DefaultWorld.getEndSyncpoint());
+        DefaultWorld.CreateGraphConnection<system::render_pageflip>        ( SyncPhysics,                      DefaultWorld.getEndSyncpoint()).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
 
         //
         // Create the delegates.
         //
-        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< physics::delegate::create_spatial_entity >();
-        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< physics::delegate::destroy_spatial_entity >();
+        DefaultWorld.CreateArchetypeDelegate< physics::delegate::create_spatial_entity >();
+        DefaultWorld.CreateArchetypeDelegate< physics::delegate::destroy_spatial_entity >();
 
-        DefaultWorld.m_GraphDB.CreateSystemDelegate< delegate::my_render    >();
+        DefaultWorld.CreateSystemDelegate< delegate::my_render    >();
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -682,21 +676,19 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //
         // Create an entity group
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<component::position,component::collider,component::velocity>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<component::position,component::collider,component::velocity>();
 
         //
         // Create Entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, s_MyMenu.m_EntitieCount, {} )
-            ([&](   component::position&  Position
-                ,   component::velocity&  Velocity
-                ,   component::collider&  Collider )
+        DefaultWorld.CreateEntities(Archetype, s_MyMenu.m_EntitieCount, {}
+            , [&](   component::position&  Position
+                 ,   component::velocity&  Velocity
+                 ,   component::collider&  Collider )
             {
-                Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f), (physics::tools::world_width_v/2.0f) )
-                              , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
-
-               // Position.m_Value.setup( 100, 100 );
+                Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f),  (physics::tools::world_width_v/2.0f) )
+                                      , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
 
                 Velocity.m_Value.setup( Rnd.RandF32(-1.0f, 1.0f ), Rnd.RandF32(-1.0f, 1.0f ) );
                 Velocity.m_Value.NormalizeSafe();
@@ -709,9 +701,6 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         // Running
         //------------------------------------------------------------------------------------------
 
-        //
-        // run 100 frames
-        //
         while (system::render_pageflip::s_bContinue)
         {
             DefaultWorld.Play();

@@ -93,8 +93,8 @@ namespace mecs::examples::E14_2d_physics
         printf("E14_physics\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -106,18 +106,13 @@ namespace mecs::examples::E14_2d_physics
         upUniverse->registerTypes<position, velocity, collider, cell_group >();
 
         //
-        // Which world we are building?
-        //
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-
-        //
         // Create the game graph.
         //
         auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
-        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<update_hierarchy_system>( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
-                          DefaultWorld.m_GraphDB.CreateGraphConnection<update_hierarchy_system> ( DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
+        DefaultWorld.CreateGraphConnection<update_hierarchy_system> ( DefaultWorld.getStartSyncpoint(), Syncpoint );
+        DefaultWorld.CreateGraphConnection<update_hierarchy_system> ( DefaultWorld.getStartSyncpoint(), Syncpoint );
 
-        DefaultWorld.m_GraphDB.CreateDelegate<destroy_cell_entity>();
+        //DefaultWorld.CreateDelegate<destroy_cell_entity>();
 
 
         /*

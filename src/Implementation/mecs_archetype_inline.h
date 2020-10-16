@@ -1334,7 +1334,7 @@ namespace mecs::archetype
         constexpr static auto DataTuple  = details::getTupleDataComponentsAddEntity ( reinterpret_cast<mecs::component::tuple_data_components <T_COMPONENTS...>*>(nullptr));
         constexpr static auto TagTuple   = details::getTupleTagComponents           ( reinterpret_cast<mecs::component::tuple_tag_components  <T_COMPONENTS...>*>(nullptr));
         constexpr static auto ShareTuple = details::getTupleShareComponents         ( reinterpret_cast<mecs::component::tuple_share_components<T_COMPONENTS...>*>(nullptr));
-        return getOrCreateArchitypeDetails
+        return _getOrCreateArchitype
         ( 
             archetype::instance::guid   { std::get<0>(DataTuple).m_Value + std::get<0>(TagTuple).m_Value + std::get<0>(ShareTuple).m_Value }
         ,   archetype::tag_sum_guid     { std::get<0>(TagTuple).m_Value }
@@ -1347,7 +1347,7 @@ namespace mecs::archetype
     //---------------------------------------------------------------------------------
 
     template< typename...T_ADD_COMPONENTS_AND_TAGS, typename...T_REMOVE_COMPONENTS_AND_TAGS> constexpr xforceinline
-    instance& data_base::getOrCreateGroupBy( instance& OldArchetype, std::tuple<T_ADD_COMPONENTS_AND_TAGS...>*, std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>* ) noexcept
+    instance& data_base::getOrCreateArchetypeBy( instance& OldArchetype, std::tuple<T_ADD_COMPONENTS_AND_TAGS...>*, std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>* ) noexcept
     {
         // Make sure we are not adding the same component as deleting 
         using remove_tuple = std::tuple<T_REMOVE_COMPONENTS_AND_TAGS...>;
@@ -1375,7 +1375,7 @@ namespace mecs::archetype
         const auto ShareTuple = details::FillArray( ArrayShareComponents,  std::get<1>(AddShareTuple), std::get<1>(SubShareTuple), OldArchetype.m_Descriptor.m_ShareDescriptorSpan );
         const auto TagTuple   = details::FillArray( ArrayTagComponents,    std::get<1>(AddTagTuple),   std::get<1>(SubTagTuple),   OldArchetype.m_Descriptor.m_TagDescriptorSpan   );
 
-        return getOrCreateArchitypeDetails
+        return _getOrCreateArchitype
         ( 
             archetype::instance::guid{ std::get<1>(DataTuple).m_Value + std::get<1>(TagTuple).m_Value + std::get<1>(ShareTuple).m_Value }
         ,   archetype::tag_sum_guid  { std::get<1>(TagTuple) }
@@ -1687,7 +1687,7 @@ namespace mecs::archetype
     //---------------------------------------------------------------------------------
 
     xforceinline
-    instance& data_base::getOrCreateArchitypeDetails(
+    instance& data_base::_getOrCreateArchitype(
           mecs::archetype::instance::guid                       Guid
         , mecs::archetype::tag_sum_guid                         TagSumGuid
         , std::span<const mecs::component::descriptor* const>   DataDiscriptorList

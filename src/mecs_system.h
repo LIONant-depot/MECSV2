@@ -7,37 +7,6 @@ namespace mecs::system
     //----------------------------------------------------------------------------
     // SYSTEM:: INSTANCE OVERRIDES
     //----------------------------------------------------------------------------
-    namespace details
-    {
-        struct cache
-        {
-            struct per_function
-            {
-                mecs::archetype::query::result_entry    m_ResultEntry;
-                std::uint8_t                            m_nDelegatesIndices;
-                std::array<std::uint8_t, 16>            m_UpdateDelegateIndex;
-            };
-
-            struct data
-            {
-                using per_func_list = std::array<std::uint64_t, 16>;
-
-                xcore::lock::object< int, xcore::lock::semaphore >          m_nFunctions;
-                per_func_list                                               m_WhichFunction;
-                std::array<per_function, per_func_list{}.size()>            m_PerFunction;
-            };
-
-            using lines = xcore::lock::object< xcore::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
-            
-            lines                   m_Lines;        // Fast, cache friendly, linear search loop up.
-            xcore::vector<data>     m_Data;         // Data per each line. It should be a 1:1 mapping with lines
-
-            template< typename T_GET_CALLBACK, typename T_CREATE_CALLBACK >
-            xforceinline
-            void getOrCreateCache(std::uint64_t FunctionGUID, mecs::archetype::instance& Archetype, T_GET_CALLBACK&& GetCallBack, T_CREATE_CALLBACK&& Create ) noexcept;
-        };
-    }
-
     struct overrides : xcore::scheduler::job<mecs::settings::max_syncpoints_per_system>
     {
         using                           type_guid       = mecs::system::type_guid;
@@ -89,6 +58,36 @@ namespace mecs::system
     //----------------------------------------------------------------------------
     // SYSTEM:: INSTANCE
     //----------------------------------------------------------------------------
+    namespace details
+    {
+        struct cache
+        {
+            struct per_function
+            {
+                mecs::archetype::query::result_entry    m_ResultEntry;
+                std::uint8_t                            m_nDelegatesIndices;
+                std::array<std::uint8_t, 16>            m_UpdateDelegateIndex;
+            };
+
+            struct data
+            {
+                using per_func_list = std::array<std::uint64_t, 16>;
+
+                xcore::lock::object< int, xcore::lock::semaphore >          m_nFunctions;
+                per_func_list                                               m_WhichFunction;
+                std::array<per_function, per_func_list{}.size()>            m_PerFunction;
+            };
+
+            using lines = xcore::lock::object< xcore::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
+            
+            lines                   m_Lines;        // Fast, cache friendly, linear search loop up.
+            xcore::vector<data>     m_Data;         // Data per each line. It should be a 1:1 mapping with lines
+
+            template< typename T_GET_CALLBACK, typename T_CREATE_CALLBACK >
+            xforceinline
+            void getOrCreateCache(std::uint64_t FunctionGUID, mecs::archetype::instance& Archetype, T_GET_CALLBACK&& GetCallBack, T_CREATE_CALLBACK&& Create ) noexcept;
+        };
+    }
 
     struct instance : overrides
     {
@@ -212,7 +211,7 @@ namespace mecs::system
                 , typename  T_COMPONENT_TUPLE = std::tuple<>
                 >
         constexpr xforceinline
-        void                                DoQuery                 ( query& Query 
+        query&                              DoQuery                 ( query& Query 
                                                                     ) const noexcept;
 
         //----------------------------------------------------------------------------
@@ -232,15 +231,12 @@ namespace mecs::system
         void*                               _getExclusiveRealEvent  ( const system::event::type_guid 
                                                                     ) const noexcept = 0;
         //----------------------------------------------------------------------------
-        template< typename T_PARAMS
-                , typename T_PARAMS2 >
+        template< typename  T_PARAMS
+                , typename  T_PARAMS2 >
         constexpr xforceinline
-        void                                ProcessResult           ( T_PARAMS&                             Params
+        void                                _ProcessResult          ( T_PARAMS&                             Params
                                                                     , T_PARAMS2&                            Params2
                                                                     , const int                             Index 
-                                                                    ) noexcept;
-        //----------------------------------------------------------------------------
-        void                                DetailsClearGroupCache  ( void 
                                                                     ) noexcept;
 
         //----------------------------------------------------------------------------
@@ -249,8 +245,8 @@ namespace mecs::system
 
         // TODO: This will be private
         mecs::world::instance&              m_World;
-        query                               m_Query     {};
         details::cache                      m_Cache     {};
+        query                               m_Query     {};
         mecs::system::instance::guid        m_Guid;
     };
 

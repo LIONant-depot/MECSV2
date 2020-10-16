@@ -66,8 +66,8 @@ namespace mecs::examples::E10_shared_components2_updating
         printf("E10_shared_components2_updating\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -79,16 +79,11 @@ namespace mecs::examples::E10_shared_components2_updating
         upUniverse->registerTypes<position, velocity, mesh_render, group1, group2>();
 
         //
-        // Which world we are building?
-        //
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-
-        //
         // Create the game graph.
         //
         auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
-        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<updating_share_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint);
-                          DefaultWorld.m_GraphDB.CreateGraphConnection<render_system>  (Syncpoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<updating_share_system>   ( DefaultWorld.getStartSyncpoint(), Syncpoint );
+        DefaultWorld.CreateGraphConnection<render_system>           ( Syncpoint,                        DefaultWorld.getEndSyncpoint() );
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -97,35 +92,30 @@ namespace mecs::examples::E10_shared_components2_updating
         //
         // Create an entity group
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, velocity, mesh_render, group1, group2>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<position, velocity, mesh_render, group1, group2>();
 
         //
         // Create entities
         //
         xcore::random::small_generator Rnd;
-        Archetype.CreateEntities(System, 2, {}
-            , mesh_render   { {}, 10, 101, 102 }
-            , group1        { {},   0 }
-            , group2        { {}, 100 } 
-            )
-            ([&](position& Position, velocity& Velocity )
+        DefaultWorld.CreateEntities( Archetype, 2, {},
+            [&](position& Position, velocity& Velocity)
             {
-                Position.m_Value.m_X = Rnd.RandF32(-100.0f, 100.0f );
+                Position.m_Value.m_X = Rnd.RandF32(-100.0f, 100.0f);
                 Position.m_Value.m_Y = Rnd.RandF32(-100.0f, 100.0f);
 
                 Velocity.m_Value.m_X = Rnd.RandF32(-1.0f, 1.0f);
                 Velocity.m_Value.m_Y = Rnd.RandF32(-1.0f, 1.0f);
                 Velocity.m_Value.NormalizeSafe();
-            });
+            }
+            , mesh_render   { {}, 10, 101, 102 }
+            , group1        { {},   0 }
+            , group2        { {}, 100 } 
+            );
 
         //------------------------------------------------------------------------------------------
         // Running
         //------------------------------------------------------------------------------------------
-
-        //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
 
         //
         // run 10 frames
@@ -133,7 +123,7 @@ namespace mecs::examples::E10_shared_components2_updating
         for (int i = 0; i < 10; i++)
         {
             printf("\n");
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
         }
 
         xassert(true);

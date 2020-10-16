@@ -49,8 +49,8 @@ namespace mecs::examples::E03_system_moving_entities
         printf( "E03_system_moving_entities\n");
         printf( "--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -64,8 +64,7 @@ namespace mecs::examples::E03_system_moving_entities
         //
         // Create the game graph.
         // 
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-        auto& System       = DefaultWorld.m_GraphDB.CreateGraphConnection<move_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<move_system>(DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint());
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -74,12 +73,12 @@ namespace mecs::examples::E03_system_moving_entities
         //
         // Create an archetype. The entities in this archetype will have two components, position and velocity.
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, velocity>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<position, velocity>();
 
         //
         // Create an entity and initialize its components
         //
-        Archetype.CreateEntity( System, []( position& Position, velocity& Velocity )
+        DefaultWorld.CreateEntity( Archetype, []( position& Position, velocity& Velocity )
         {
             Position.m_Value.setup( 0.0f, 0.0f );
             Velocity.m_Value.setup( 1.0f, 1.0f );
@@ -90,15 +89,10 @@ namespace mecs::examples::E03_system_moving_entities
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
 
         xassert(true);
     }

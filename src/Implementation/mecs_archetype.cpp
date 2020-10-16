@@ -203,16 +203,13 @@ namespace mecs::archetype
 
     //--------------------------------------------------------------------------------------------------------------------
     inline
-    bool CheckForErrors( details::safety::per_system& PerSystem, const mecs::archetype::query::result_entry& E ) noexcept
+    bool CheckForErrors( mecs::archetype::instance& Archetype, details::safety& Safety, details::safety::per_system& PerSystem, const mecs::archetype::query::result_entry& E ) noexcept
     {
-        auto& Archetype = *E.m_pArchetype;
-        auto& Safety = Archetype.m_Safety.get(); // should already be locked by the other two functions
-
         //
         // Check for any kind of error first
         //
         int i = 0;
-        auto& EntityDesc = *Archetype.m_Descriptor.m_DataDescriptorSpan[0];
+        //auto& EntityDesc = *Archetype.m_Descriptor.m_DataDescriptorSpan[0];
         for (auto& [Desc, isConstant] : E.m_FunctionDescriptors)
         {
             // If we have a conditional component and we have nothing to do with it then we just continue
@@ -223,12 +220,12 @@ namespace mecs::archetype
 
             // Check to make sure that if this archetype is already completely locked because someone is editing the entity
             // Of if we are trying to lock the entity component and there is someone already accessing it
-            if (CheckWriteComponentOnFullEntityLocked(Safety, EntityDesc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
+            if (CheckWriteComponentOnFullEntityLocked(Safety, Desc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
 
             // Check when we are trying to write to a share component
             if (Desc.m_Type == mecs::component::type::SHARE)
             {
-                if (CheckShareWriteComponent(Safety, EntityDesc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
+                if (CheckShareWriteComponent(Safety, Desc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
             }
 
             //
@@ -240,12 +237,12 @@ namespace mecs::archetype
 
             if (Desc.m_DataAccess == mecs::component::type_data_access::LINEAR)
             {
-                if (CheckLinearComponent(Safety, EntityDesc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
+                if (CheckLinearComponent(Safety, Desc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
             }
             else
             {
                 xassert(Desc.m_DataAccess == mecs::component::type_data_access::DOUBLE_BUFFER);
-                if (CheckDoubleBufferComponent(Safety, EntityDesc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
+                if (CheckDoubleBufferComponent(Safety, Desc.m_BitNumber, isConstant, *PerSystem.m_pSystem, Archetype)) return true;
             }
         }
 
@@ -257,17 +254,17 @@ namespace mecs::archetype
     bool details::safety::LockQueryComponents( per_system& PerSystem, const mecs::archetype::query::result_entry& E ) noexcept
     {
         //
-        // Check for errors
-        //
-        if( CheckForErrors(PerSystem, E) )
-            return true;
-
-        //
         // Lock components
         //
         auto&   Archetype   = *E.m_pArchetype;
         auto&   Safety      = Archetype.m_Safety.get(); // should already be locked by the other two functions
         int     i           = 0;
+
+        //
+        // Check for errors
+        //
+        if( CheckForErrors(Archetype, Safety, PerSystem, E) )
+            return true;
 
         for( auto& [Desc, isConstant] : E.m_FunctionDescriptors )
         {
@@ -275,11 +272,12 @@ namespace mecs::archetype
                 continue;
 
             auto& Entry = PerSystem.m_lComponentLocks[Desc.m_BitNumber];
+            /*
             xassert(Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM 
                  || Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM_DOUBLE_BUFFER
                  || Desc.m_DataAccess == mecs::component::type_data_access::DOUBLE_BUFFER
                  || Entry.m_nWriters == 0 );
-
+            */
             PerSystem.m_nTotalInformation++;
 
             if( isConstant )
@@ -288,10 +286,12 @@ namespace mecs::archetype
             }
             else
             {
+                /*
                 xassert(Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM
                      || Desc.m_DataAccess == mecs::component::type_data_access::QUANTUM_DOUBLE_BUFFER
                      || Desc.m_DataAccess == mecs::component::type_data_access::DOUBLE_BUFFER
                      || Entry.m_nReaders == 0 );
+                */
                 Entry.m_nWriters++;
                 if( Desc.m_Type == mecs::component::type::SHARE ) PerSystem.m_nShareWriters++;
             }
@@ -425,7 +425,7 @@ namespace mecs::archetype
 
                 if( PerSys.m_nTotalInformation == 0 )
                 {
-                    PerSys = Safety.m_PerSystem.back();
+                    PerSys = std::move(Safety.m_PerSystem.back());
                     Safety.m_PerSystem.pop_back();
                 }
                 return false;

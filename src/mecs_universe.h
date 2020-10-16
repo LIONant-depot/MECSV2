@@ -2,6 +2,11 @@ namespace mecs::universe
 {
     struct instance
     {
+        instance()
+        {
+            Init();
+        }
+
         void Init()
         {
             m_SyncpointDescriptorsDB.Init();
@@ -10,7 +15,6 @@ namespace mecs::universe
             m_SystemEventDescriptorsDB.Init();
             m_SystemDelegateDescriptorsDB.Init();
             m_ArchetypeDelegateDescriptorsDB.Init();
-
 
             m_WorldDB.push_back( std::make_unique<mecs::world::instance>(*this) );
         }

@@ -124,8 +124,8 @@ namespace mecs::examples::E09_quantum_double_buffer_components
         printf("E09_quantum_double_buffer_components\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -136,14 +136,12 @@ namespace mecs::examples::E09_quantum_double_buffer_components
         //
         upUniverse->registerTypes<position, mutable_count, readonly_count>();
 
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-
         //
         // Create a Syncpoint. Sync-Points are there to help schedule our systems. In this example
         // we want to add (odd, and even) positions and ones both of these are done then we want
         // to run print position. This sync_point allow us to do just that.
         //
-        auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
+        auto& Syncpoint = DefaultWorld.CreateSyncPoint();
 
         //
         // Create the game graph.
@@ -181,7 +179,7 @@ namespace mecs::examples::E09_quantum_double_buffer_components
         //
         // Create one entity
         //
-        Archetype.CreateEntity(System, [&](position& Position, mutable_count& MutableCount, readonly_count& ReadOnlyCount)
+        DefaultWorld.CreateEntity(Archetype, [&](position& Position, mutable_count& MutableCount, readonly_count& ReadOnlyCount)
         {
             xcore::random::small_generator Rnd;
             for (auto& E : Position.m_lPositions)
@@ -205,15 +203,10 @@ namespace mecs::examples::E09_quantum_double_buffer_components
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
 
         xassert(true);
     }

@@ -80,7 +80,8 @@ namespace mecs::examples::E11_complex_system_queries
                     // add a dead_tag component to our entity
                     getArchetypeBy<std::tuple<dead_tag>, std::tuple<>>(Entity, [&](archetype& Archetype)
                     {
-                        moveEntityToArchetype(Entity, Archetype);
+                        // Temp removed
+                        // moveEntityToArchetype(Entity, Archetype);
                     });
                 }
                 else
@@ -102,8 +103,8 @@ namespace mecs::examples::E11_complex_system_queries
         printf("E11_complex_system_queries\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -115,14 +116,9 @@ namespace mecs::examples::E11_complex_system_queries
         upUniverse->registerTypes<position, velocity, health, dead_tag, dynamic_tag>();
 
         //
-        // Which world we are building?
-        //
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-
-        //
         // Create the game graph.
         //
-        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<explosion_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<explosion_system>(DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint());
                        
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -131,33 +127,33 @@ namespace mecs::examples::E11_complex_system_queries
         //
         // Create an entity group
         //
-        auto& DynamicArchetypeV = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, health, velocity, dynamic_tag>();
-        auto& DynamicArchetype  = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, health, dynamic_tag>();
-        auto& StaticArchetype   = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position>();
+        auto& DynamicArchetypeV = DefaultWorld.getOrCreateArchitype<position, health, velocity, dynamic_tag>();
+        auto& DynamicArchetype  = DefaultWorld.getOrCreateArchitype<position, health, dynamic_tag>();
+        auto& StaticArchetype   = DefaultWorld.getOrCreateArchitype<position>();
 
         //
         // Create entities
         //
         xcore::random::small_generator Rnd;
 
-        DynamicArchetypeV.CreateEntity( System, []( health& Health, velocity& Velocity )
+        DefaultWorld.CreateEntity(DynamicArchetypeV, []( health& Health, velocity& Velocity )
         {
             Health.m_Value = 4;
             Velocity.m_Value.m_X = 1;
         });
 
-        DynamicArchetypeV.CreateEntity( System, []( health& Health, velocity& Velocity)
+        DefaultWorld.CreateEntity(DynamicArchetypeV, []( health& Health, velocity& Velocity)
         {
             Health.m_Value = 7;
             Velocity.m_Value.m_Y = 1;
         });
 
-        DynamicArchetype.CreateEntity(System, [](health& Health)
+        DefaultWorld.CreateEntity(DynamicArchetype, [](health& Health)
         {
             Health.m_Value = 8;
         });
 
-        StaticArchetype.CreateEntity(System, []( position& Position )
+        DefaultWorld.CreateEntity(StaticArchetype, []( position& Position )
         {
             Position.m_Value.m_X = 1;
             Position.m_Value.m_Y = 1;
@@ -168,17 +164,12 @@ namespace mecs::examples::E11_complex_system_queries
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
         {
             printf("\n");
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
         }
 
         xassert(true);

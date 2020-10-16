@@ -117,8 +117,9 @@ namespace mecs::examples::E04_delegate_moveinout
         printf( "E04_delegate_moveinout\n");
         printf( "--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
+
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -136,15 +137,14 @@ namespace mecs::examples::E04_delegate_moveinout
         // This is because of the change of state is "visible" at the end of the executing step
         // (ones all the systems connected to the same syncpoint are done).
         // In our example that syncpoint happens to be the last one.
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-        auto& System  = DefaultWorld.m_GraphDB.CreateGraphConnection<will_add_position_system   >(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
-                        DefaultWorld.m_GraphDB.CreateGraphConnection<will_remove_position_system>(DefaultWorld.m_GraphDB.m_StartSyncPoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<will_add_position_system   >(DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint() );
+        DefaultWorld.CreateGraphConnection<will_remove_position_system>(DefaultWorld.getStartSyncpoint(), DefaultWorld.getEndSyncpoint() );
 
         //
         // Create the delegates.
         //
-        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< add_position_delegate    >();
-        DefaultWorld.m_GraphDB.CreateArchetypeDelegate< remove_position_delegate >();
+        DefaultWorld.CreateArchetypeDelegate< add_position_delegate    >();
+        DefaultWorld.CreateArchetypeDelegate< remove_position_delegate >();
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -153,27 +153,22 @@ namespace mecs::examples::E04_delegate_moveinout
         //
         // Create an entity group
         //
-        auto& Archetype = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<position>();
 
         //
         // Create one entity
         //
-        Archetype.CreateEntity(System);
+        DefaultWorld.CreateEntity(Archetype);
 
         //------------------------------------------------------------------------------------------
         // Running
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
 
         xassert(true);
     }

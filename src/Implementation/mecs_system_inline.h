@@ -271,15 +271,22 @@ namespace mecs::system
         inline
         void custom_system<T_SYSTEM>::qt_onRun( void ) noexcept
         {
-            XCORE_PERF_ZONE_SCOPED_N(user_system_t::name_v.m_Str)
-            if constexpr ( &user_system_t::msgUpdate != &system::overrides::msgUpdate )
+            if constexpr (std::is_same_v<T_SYSTEM, mecs::system::instance>)
             {
-                user_system_t::msgUpdate();
+                xassert(false);
             }
             else
             {
-                user_system_t::m_World.m_ArchetypeDB.template DoQuery< user_system_t, typename user_system_t::query_t >(user_system_t::m_Query);
-                user_system_t::ForEach( user_system_t::m_Query, *this, user_system_t::entities_per_job_v );
+                XCORE_PERF_ZONE_SCOPED_N(user_system_t::name_v.m_Str)
+                if constexpr ( &user_system_t::msgUpdate != &system::overrides::msgUpdate )
+                {
+                    user_system_t::msgUpdate();
+                }
+                else
+                {
+                    user_system_t::m_World.m_ArchetypeDB.template DoQuery< user_system_t, typename user_system_t::query_t >(user_system_t::m_Query);
+                    user_system_t::ForEach( user_system_t::m_Query, *this, user_system_t::entities_per_job_v );
+                }
             }
         }
 
@@ -1000,7 +1007,7 @@ namespace mecs::system
             // Process the results
             for (int end = static_cast<int>(MainPool.size()), i = 0; i < end; ++i)
             {
-                ProcessResult(Params, ArchetypeParam, i );
+                _ProcessResult(Params, ArchetypeParam, i );
             }
         }
 
@@ -1036,7 +1043,7 @@ namespace mecs::system
         auto& OldArchetype  = *Entity.getReference().m_pPool->m_pArchetypeInstance;
 
         // Ok we need to fill the cache
-        auto& NewArchetype = m_World.m_ArchetypeDB.getOrCreateGroupBy(
+        auto& NewArchetype = m_World.m_ArchetypeDB.getOrCreateArchetypeBy(
               OldArchetype
             , (T_ADD_COMPONENTS_AND_TAGS*)nullptr
             , (T_REMOVE_COMPONENTS_AND_TAGS*)nullptr);
@@ -1061,7 +1068,7 @@ namespace mecs::system
 
     //----------------------------------------------------------------------------------------------------
     template< typename T_PARAMS, typename T_PARAMS2 > constexpr xforceinline
-    void instance::ProcessResult( T_PARAMS& Params, T_PARAMS2& Params2, const int Index ) noexcept
+    void instance::_ProcessResult( T_PARAMS& Params, T_PARAMS2& Params2, const int Index ) noexcept
     {
         using               function_arg_tuple  = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
         auto&               SpecializedPool     = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
@@ -1191,25 +1198,6 @@ namespace mecs::system
             auto& Event = *std::get< typename T_EVENT::real_event_t* >( This.m_GlobalEvents );
             Event.NotifyAll( *this, std::forward<T_ARGS>(Args)... );
         }
-    }
-
-    //----------------------------------------------------------------------------------------------------
-    inline
-    void instance::DetailsClearGroupCache( void ) noexcept
-    {
-        /*
-        xcore::lock::scope Lk( m_Cache.m_Lines );
-
-        auto& Lines = m_Cache.m_Lines.get();
-
-        // unlock and sync groups from the cache
-        for( const auto& E : Lines )
-        {
-            std::as_const( E.m_pGroup->m_SemaphoreLock).unlock();
-        }
-
-        m_Cache.m_Lines.clear();
-        */
     }
 
     //----------------------------------------------------------------------------------------------------
@@ -1446,7 +1434,8 @@ namespace mecs::system
     //---------------------------------------------------------------------------------
     template< typename T_CALLBACK >
     constexpr xforceinline
-    bool instance::findEntityComponentsRelax
+    bool
+    instance::findEntityComponentsRelax
     (   mecs::component::entity::guid     gEntity
     ,   T_CALLBACK&&                      Function
     ) const noexcept
@@ -1461,10 +1450,12 @@ namespace mecs::system
     template< typename  T_FUNCTION_TYPE
             , typename  T_COMPONENT_TUPLE >
     constexpr xforceinline
-    void instance::DoQuery ( query& Query 
-                 ) const noexcept
+    mecs::archetype::query::instance& instance::DoQuery
+    ( query& Query
+    ) const noexcept
     {
         m_World.m_ArchetypeDB.template DoQuery< T_FUNCTION_TYPE, T_COMPONENT_TUPLE >(Query);
+        return Query;
     }
 
     //---------------------------------------------------------------------------------

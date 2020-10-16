@@ -60,7 +60,7 @@ namespace mecs::examples::E12_basic_hierarchical_components
                 // are creating a query that must be matched against the entity itself. If the query fails then
                 // it the lambda won't get call. Please also be careful of passing an entity which is a zombie.
                 // If it is a zombie it will assert so you should check before calling it.
-                getComponents(E, [&](local_position& LocalPos, position& WorldPos, children* pChildren)
+                getEntityComponents(E, [&](local_position& LocalPos, position& WorldPos, children* pChildren)
                 {
                     WorldPos.m_Value = LocalPos.m_Value + ParentWorldPos.m_Value;
 
@@ -122,8 +122,8 @@ namespace mecs::examples::E12_basic_hierarchical_components
         printf("E12_hierarchy_components\n");
         printf("--------------------------------------------------------------------------------\n");
 
-        auto upUniverse = std::make_unique<mecs::universe::instance>();
-        upUniverse->Init();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
@@ -135,17 +135,12 @@ namespace mecs::examples::E12_basic_hierarchical_components
         upUniverse->registerTypes<position, velocity, parent, children, local_position>();
 
         //
-        // Which world we are building?
-        //
-        auto& DefaultWorld = *upUniverse->m_WorldDB[0];
-
-        //
         // Create the game graph.
         //
         auto& Syncpoint = DefaultWorld.m_GraphDB.CreateSyncPoint();
-        auto& System    = DefaultWorld.m_GraphDB.CreateGraphConnection<local_move_system>       (DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
-                          DefaultWorld.m_GraphDB.CreateGraphConnection<root_move_system>        (DefaultWorld.m_GraphDB.m_StartSyncPoint, Syncpoint );
-                          DefaultWorld.m_GraphDB.CreateGraphConnection<update_hierarchy_system> (Syncpoint, DefaultWorld.m_GraphDB.m_EndSyncPoint);
+        DefaultWorld.CreateGraphConnection<local_move_system>       (DefaultWorld.getStartSyncpoint(),  Syncpoint );
+        DefaultWorld.CreateGraphConnection<root_move_system>        (DefaultWorld.getStartSyncpoint(),  Syncpoint );
+        DefaultWorld.CreateGraphConnection<update_hierarchy_system> (Syncpoint,                         DefaultWorld.getEndSyncpoint());
                        
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -154,15 +149,15 @@ namespace mecs::examples::E12_basic_hierarchical_components
         //
         // Create an entity group
         //
-        auto& ChildrenArchetype   = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, velocity, parent, children, local_position >();
-        auto& ParentArchetype     = DefaultWorld.m_ArchetypeDB.getOrCreateArchitype<position, velocity, children>();
+        auto& ChildrenArchetype   = DefaultWorld.getOrCreateArchitype<position, velocity, parent, children, local_position >();
+        auto& ParentArchetype     = DefaultWorld.getOrCreateArchitype<position, velocity, children>();
 
         //
         // Create entities
         //
-        ParentArchetype.CreateEntity( System, [&]( mecs::component::entity& ParentEntity, children& ChildrenComponent ) noexcept
+        DefaultWorld.CreateEntity(ParentArchetype, [&]( mecs::component::entity& ParentEntity, children& ChildrenComponent ) noexcept
         {
-            ChildrenArchetype.CreateEntity( System, [&](mecs::component::entity& Entity ) noexcept
+            DefaultWorld.CreateEntity(ChildrenArchetype, [&](mecs::component::entity& Entity ) noexcept
             {
                 ChildrenComponent.m_List.push_back(Entity);
             }, parent{ {}, ParentEntity } );
@@ -173,17 +168,12 @@ namespace mecs::examples::E12_basic_hierarchical_components
         //------------------------------------------------------------------------------------------
 
         //
-        // Start executing the world
-        //
-        DefaultWorld.Start();
-
-        //
         // run 10 frames
         //
         for (int i = 0; i < 10; i++)
         {
             printf("\n");
-            DefaultWorld.Resume();
+            DefaultWorld.Play();
         }
 
         xassert(true);
