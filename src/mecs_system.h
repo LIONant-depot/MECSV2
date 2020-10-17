@@ -40,7 +40,7 @@ namespace mecs::system
         // Defaults that can be overwritten by the user
         static constexpr auto               entities_per_job_v  = 5000;
         static constexpr auto               type_guid_v         = type_guid{ nullptr };
-        static constexpr auto               name_v              = xconst_universal_str("mecs::System(Unnamed)");
+        static constexpr auto               type_name_v         = xconst_universal_str("mecs::System(Unnamed)");
         using                               query_t             = std::tuple<>;
         using                               events_t            = std::tuple<>;
 

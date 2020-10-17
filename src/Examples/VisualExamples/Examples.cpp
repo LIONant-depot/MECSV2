@@ -17,9 +17,9 @@ void PageFlip           ( void );
 void Draw2DQuad         ( const xcore::vector2& Center, const xcore::vector2& Entends, std::uint32_t Color = ~0 );
 
 #include "Examples/VisualExamples/E01_graphical_2d_basic_physics.h"
+#include "Examples/VisualExamples/E02_graphical_2d_basic_physics.h"
+#include "Examples/VisualExamples/E03_graphical_2d_basic_physics.h"
 /*
-#include "Examples/GraphicsExamples/E02_graphical_2d_basic_physics.h"
-#include "Examples/GraphicsExamples/E03_graphical_2d_basic_physics.h"
 #include "Examples/GraphicsExamples/E04_graphical_2d_boids.h"
 #include "Examples/GraphicsExamples/E05_graphical_2d_virus_spread.h"
 #include "Examples/GraphicsExamples/E06_graphical_2d_GPU_physics.h"
@@ -179,9 +179,9 @@ extern const std::span<const menu::category> s_Categories;
 static constexpr std::array s_SimplePhysicsDemos
 {
     menu::entry{ []{mecs::examples::E01_graphical_2d_basic_physics::Test(menu::Menu<s_Categories>);}, "Standard Grid"       }
-    /*
 ,   menu::entry{ []{mecs::examples::E02_graphical_2d_basic_physics::Test(menu::Menu<s_Categories>);}, "Minimal Grid"        }
 ,   menu::entry{ []{mecs::examples::E03_graphical_2d_basic_physics::Test(menu::Menu<s_Categories>);}, "Minimal & Compact"   }
+/*
 ,   menu::entry{ []{mecs::examples::E04_graphical_2d_boids::        Test(menu::Menu<s_Categories>);}, "Boids example"       }
 ,   menu::entry{ []{mecs::examples::E05_graphical_2d_virus_spread ::Test(menu::Menu<s_Categories>);}, "Virus example"       }
 ,   menu::entry{ []{mecs::examples::E06_graphical_2d_gpu_physics  ::Test(menu::Menu<s_Categories>);}, "GPU Physics"         }
@@ -198,7 +198,7 @@ static const std::span<const menu::category> s_Categories = s_CategoriesStorage;
 void mainApp()
 {
     // Set the default example
-    menu::s_pActive = &s_Categories[0].m_lEntries[0];
+    menu::s_pActive = &s_Categories[0].m_lEntries[2];
 
     // Run until the app wants us to quit
     menu::s_Inspector.setupWindowSize( 220, 450 );

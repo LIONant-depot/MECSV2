@@ -17,7 +17,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
     //----------------------------------------------------------------------------------------
     // WORLD GRID::
     //----------------------------------------------------------------------------------------
-    namespace world_grid
+    namespace physics
     {
         //----------------------------------------------------------------------------------------
         // WORLD GRID:: EVENTS::
@@ -25,12 +25,12 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         namespace system { struct advance_cell; }
         namespace event
         {
-            struct collision : mecs::examples::E01_graphical_2d_basic_physics::world_grid::event::collision
+            struct collision : mecs::examples::E01_graphical_2d_basic_physics::physics::event::collision
             {
                 using system_t = system::advance_cell;
             };
 
-            struct render : mecs::examples::E01_graphical_2d_basic_physics::world_grid::event::render
+            struct render : mecs::examples::E01_graphical_2d_basic_physics::physics::event::render
             {
                 using system_t = system::advance_cell;
             };
@@ -42,7 +42,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         template< int T_GRID_WIDTH_V, int T_GRID_HEIGHT_V, int T_WORLD_WIDTH = 5500, int T_WORLD_HEIGHT = 3200 >
         struct tools_kit
         {
-            constexpr static int    grid_width_v  = T_GRID_WIDTH_V; static_assert( xcore::bits::isDivBy2PowerX(grid_width_v, 1));
+            constexpr static int    grid_width_v  = T_GRID_WIDTH_V;  static_assert( xcore::bits::isDivBy2PowerX(grid_width_v, 1));
             constexpr static int    grid_height_v = T_GRID_HEIGHT_V; static_assert( xcore::bits::isDivBy2PowerX(grid_height_v, 1));
 
             constexpr static int    grid_width_half_v  = grid_width_v/2;
@@ -157,10 +157,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
             xforceinline constexpr static
             std::uint64_t ComputeKeyFromPosition( const grid_vector V ) noexcept
             {
-                const auto x = (18446744073709551557ull ^ 9223372036854775ull) ^ (static_cast<std::uint64_t>(V.m_X)<<32) ^ static_cast<std::uint64_t>(V.m_Y);
-                xassert(x);
-                return x;
-                //return xcore::bits::MurmurHash3( x );
+                return mecs::examples::E01_graphical_2d_basic_physics::physics::tools::ComputeKeyFromPosition( V.m_X, V.m_Y );
             }
 
             xforceinline constexpr static
@@ -183,13 +180,12 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         //----------------------------------------------------------------------------------------
         namespace component
         {
-            using lists = mecs::examples::E01_graphical_2d_basic_physics::world_grid::component::lists;
-            using count = mecs::examples::E01_graphical_2d_basic_physics::world_grid::component::count;
+            using lists = mecs::examples::E01_graphical_2d_basic_physics::physics::component::lists;
+            using count = mecs::examples::E01_graphical_2d_basic_physics::physics::component::count;
                 
-            struct id : tools::im_vector
+            struct id : mecs::component::data
             {
-                constexpr static mecs::type_guid type_guid_v{"mecs::examples::E02_graphical_2d_basic_physics::world_grid::component::id"};
-                using tools::im_vector::operator =;
+                tools::im_vector m_Value;
             };
         }
 
@@ -199,22 +195,27 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         namespace system
         {
             //----------------------------------------------------------------------------------------
+            inline
+            auto& getDefaultCellPool(mecs::system::instance& System) noexcept
+            {
+                auto& Archetype = System.getOrCreateArchetype
+                    < physics::component::lists
+                    , physics::component::count
+                    , physics::component::id
+                    >();
+
+                return Archetype.getOrCreateSpecializedPool(System, 1, 1000000);
+            }
+
+            //----------------------------------------------------------------------------------------
             // WORLD GRID:: SYSTEM:: ADVANCE CELL
             //----------------------------------------------------------------------------------------
             struct advance_cell : mecs::system::instance
             {
-                constexpr static auto   name_v              = xconst_universal_str("advance_cell");
-                constexpr static auto   guid_v              = mecs::system::guid{ "world_grid::advance_cell" };
+                constexpr static auto   type_name_v         = xconst_universal_str("advance_cell");
                 constexpr static auto   entities_per_job_v  = 50;
 
                 using mecs::system::instance::instance;
-
-                using access_t = mecs::query::access
-                <       const component::lists&
-                    ,   const component::id&
-                    ,         component::lists&
-                    ,         component::count&
-                >;
 
                 using events_t = std::tuple
                 <
@@ -222,8 +223,18 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                     ,   event::render
                 >;
 
+                mecs::archetype::specialized_pool* m_pSpecializedPoolCell;
+
+                void msgGraphInit(mecs::world::instance&) noexcept
+                {
+                    m_pSpecializedPoolCell = &getDefaultCellPool(*this);
+                }
+
                 xforceinline
-                void operator() ( const access_t& Component ) noexcept
+                void operator() ( const component::id&      ID
+                                , const component::lists&   T0List
+                                ,       component::lists&   T1List
+                                ,       component::count&   CountList ) noexcept
                 {
                     std::array< const component::lists*, 7 > T0CellMap    ;
                     std::array<       component::lists*, 7 > T1CellMap    ;
@@ -241,12 +252,11 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                     //
                     // Cache all relevant cells
                     //
-                    const auto ID = Component.get< const component::id& >();
                     {
                         //XCORE_PERF_ZONE_SCOPED_N("CacheCells")
                         const auto p = [&]( const tools::im_vector Delta, const int i ) noexcept 
                         {
-                            if( false == findEntity (  mecs::entity::guid{ CellGuids[i] = world_grid::tools::ComputeKeyFromPosition( ID + Delta ) }
+                            if( false == findEntityComponentsRelax( entity::guid{ CellGuids[i] = physics::tools::ComputeKeyFromPosition( ID.m_Value + Delta ) }
                                 , [&]( component::count& Count, const component::lists& T0Lists, component::lists& T1Lists ) noexcept
                                 {
                                     T0CellMap[i]    = &T0Lists;
@@ -260,10 +270,10 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                             }
                         };
 
-                        T0CellMap[3]            = &Component.get< const component::lists& >     ();
-                        T1CellMap[3]            = &Component.get< component::lists& >           ();
-                        CellMapCount[3]         = &Component.get< component::count& >           ();
-                        CellGuids[3]            = world_grid::tools::ComputeKeyFromPosition( Component.get< const component::id& >() );
+                        T0CellMap[3]            = &T0List;
+                        T1CellMap[3]            = &T1List;
+                        CellMapCount[3]         = &CountList;
+                        CellGuids[3]            = physics::tools::ComputeKeyFromPosition(ID.m_Value);
 
                         p({ -1,-1 }, 0 );
                         p({  1,-1 }, 1 );
@@ -392,13 +402,10 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                         int C;
                         {
                             //XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
-                            if( CellMapCount[Index] == nullptr ) 
-                                getOrCreatEntity
-                                <
-                                        component::lists
-                                    ,   component::count
-                                    ,   component::id
-                                >(  mecs::entity::guid{ CellGuids[Index] }
+                            if( CellMapCount[Index] == nullptr )
+                                getOrCreateEntityRelax(  
+                                    entity::guid{ CellGuids[Index] }
+                                    , *m_pSpecializedPoolCell
                                     // Get entry
                                     , [&]( component::count& Count, component::lists& T1Lists ) noexcept
                                     {
@@ -409,7 +416,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                                     ,   [&]( component::count& Count, component::id& ID, component::lists& T1Lists ) noexcept
                                     {
                                         xassert( T1ImgPosition.m_Y == tools::WorldToGridSpaceY(T1Position.m_Y) );
-                                        ID = T1ImgPosition;
+                                        ID.m_Value = T1ImgPosition;
 
                                         CellMapCount[Index]  = &Count;
                                         T1CellMap[Index]     = &T1Lists;
@@ -439,10 +446,10 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                     //
                     if(s_MyMenu.m_bRenderGrid)
                     {
-                        const auto Position  = ID.getWorldPosition();
+                        const auto Position  = ID.m_Value.getWorldPosition();
                         Draw2DQuad( Position
-                        , xcore::vector2{ world_grid::tools::grid_width_half_v-1, world_grid::tools::grid_height_half_v -1}
-                        , (ID.m_Y&1)?0x88ffffaa:0x88ffffff );
+                        , xcore::vector2{ physics::tools::grid_width_half_v-1, physics::tools::grid_height_half_v -1}
+                        , (ID.m_Value.m_Y&1)?0x88ffffaa:0x88ffffff );
                     }
                 }
 
@@ -453,8 +460,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
             //----------------------------------------------------------------------------------------
             struct reset_counts : mecs::system::instance
             {
-                constexpr static auto   name_v = xconst_universal_str("reset_counts");
-                constexpr static auto   guid_v = mecs::system::guid{ "reset_counts" };
+                constexpr static auto   type_name_v         = xconst_universal_str("reset_counts");
                 constexpr static auto   entities_per_job_v  = 200;
 
                 using mecs::system::instance::instance;
@@ -462,19 +468,15 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
                 // On the start of the game we are going to update all the Counts for the first frame.
                 // Since entities have been created outside the system so our ReadOnlyCounter is set to zero.
                 // But After this update we should be all up to date.
-                void msgWorldStart ( world::instance& ) noexcept
+                void msgGraphInit (world::instance&) noexcept
                 {
-                    query::instance Query;
-                    DoQuery<reset_counts>( Query );
-                    if( false == ForEach<entities_per_job_v>(Query,*this) )
-                    {
-                        xassert(false);
-                    }
+                    query Query;
+                    ForEach(DoQuery< reset_counts >(Query), *this, entities_per_job_v);
                 }
 
                 // This system is reading T0 and it does not need to worry about people changing its value midway.
                 xforceinline
-                void operator() ( mecs::entity::instance& Entity, component::count& Count ) noexcept
+                void operator() ( entity& Entity, component::count& Count ) noexcept
                 {
                     Count.m_ReadOnlyCount = Count.m_MutableCount.load(std::memory_order_relaxed);
                     if( Count.m_ReadOnlyCount == 0 )
@@ -497,56 +499,57 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
             //----------------------------------------------------------------------------------------
             // WORLD GRID:: SYSTEM:: CREATE SPATIAL ENTITY
             //----------------------------------------------------------------------------------------
-            struct create_spatial_entity : mecs::delegate::instance< mecs::event::create_entity >
+            struct create_spatial_entity : mecs::archetype::delegate::instance< mecs::archetype::event::create_entity >
             {
-                constexpr static mecs::delegate::guid guid_v{ "world_grid::delegate::create_spatial_entity" };
+                mecs::archetype::specialized_pool* m_pSpecializedPoolCell = nullptr;
 
                 // This function will be call ones per entity. Since we only will have one entity it will only be call ones per frame.
-                void operator() (       mecs::system::instance&         System
-                                , const mecs::entity::instance&         Entity
+                void operator() (       system&                         System
+                                , const entity&                         Entity
                                 , const example::component::position&   Position
                                 , const example::component::velocity&   Velocity
-                                , const example::component::collider&   Collider ) const noexcept
+                                , const example::component::collider&   Collider )  noexcept
                 {
-                    const auto               ImgPosition    = tools::ToImaginarySpace(Position);
-                    const mecs::entity::guid Guid           { world_grid::tools::ComputeKeyFromPosition( ImgPosition ) };
+                    const auto         ImgPosition    = tools::ToImaginarySpace(Position.m_Value);
+                    const entity::guid Guid           { physics::tools::ComputeKeyFromPosition( ImgPosition ) };
 
                     xassert_block_basic()
                     {
                         auto NewWorld   = ImgPosition.getWorldPosition();
                         auto ImgToG     = ImgPosition.getGridSpace();
-                        xassert( world_grid::tools::ComputeKeyFromPosition( ImgPosition ) == world_grid::tools::ComputeKeyFromPosition( Position ) );
+                        xassert( physics::tools::ComputeKeyFromPosition( ImgPosition ) == physics::tools::ComputeKeyFromPosition( Position.m_Value ) );
                     }
 
-                    System.getOrCreatEntity
-                    < 
-                            component::lists
-                        ,   component::count
-                        ,   component::id
-                    >
+                    if (m_pSpecializedPoolCell == nullptr)
+                    {
+                        m_pSpecializedPoolCell = &physics::system::getDefaultCellPool(System);
+                    }
+
+                    System.getOrCreateEntityRelax
                     (
                         Guid
+                        , *m_pSpecializedPoolCell
                         // Get entry
                         , [&]( component::lists& Lists, component::count& Count ) noexcept
                         {
                             const auto C = Count.m_MutableCount++;
 
                             auto& Entry = Lists.m_lEntry[C];
-                            Entry.m_Position    = Position;
-                            Entry.m_Velocity    = Velocity;
+                            Entry.m_Position    = Position.m_Value;
+                            Entry.m_Velocity    = Velocity.m_Value;
                             Entry.m_Radius      = Collider.m_Radius;
                             Lists.m_lEntity[C]  = Entity;
                         }
                         // Create Entry
                         , [&]( component::lists& Lists, component::count& Count, component::id& ID ) noexcept
                         {
-                            ID = ImgPosition;
+                            ID.m_Value = ImgPosition;
 
                             Count.m_MutableCount.store( 1, std::memory_order_relaxed );
 
                             auto& Entry = Lists.m_lEntry[0];
-                            Entry.m_Position    = Position;
-                            Entry.m_Velocity    = Velocity;
+                            Entry.m_Position    = Position.m_Value;
+                            Entry.m_Velocity    = Velocity.m_Value;
                             Entry.m_Radius      = Collider.m_Radius;
                             Lists.m_lEntity[0]  = Entity;
                         }
@@ -557,13 +560,11 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
             //----------------------------------------------------------------------------------------
             // WORLD GRID:: DELEGATE:: DESTROY SPATIAL ENTITY
             //----------------------------------------------------------------------------------------
-            struct destroy_spatial_entity : mecs::delegate::instance< mecs::event::destroy_entity >
+            struct destroy_spatial_entity : mecs::archetype::delegate::instance< mecs::archetype::event::destroy_entity >
             {
-                constexpr static mecs::delegate::guid guid_v{ "world_grid::delegate::destroy_spatial_entity" };
-
                 // This function will be call ones per entity. Since we only will have one entity it will only be call ones per frame.
-                void operator() (         mecs::system::instance&           System
-                                ,   const mecs::entity::instance&           Entity
+                void operator() (         system&                           System
+                                ,   const entity&                           Entity
                                 ,   const example::component::position&     Position ) const noexcept
                 {
                     /*
@@ -596,10 +597,11 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         //----------------------------------------------------------------------------------------
         // WORLD GRID:: IMPORT
         //----------------------------------------------------------------------------------------
-        void ImportModule( mecs::world::instance& World ) noexcept
+        inline
+        void ImportModule( mecs::universe::instance& Universe ) noexcept
         {
-            World.registerComponents< component::lists, component::count, component::id >();
-            World.registerDelegates< delegate::create_spatial_entity, delegate::destroy_spatial_entity >();
+            Universe.registerTypes< component::lists, component::count, component::id >();
+            Universe.registerTypes< delegate::create_spatial_entity, delegate::destroy_spatial_entity >();
         }
     }
 
@@ -611,7 +613,26 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
     //----------------------------------------------------------------------------------------
     // DELEGATE::
     //----------------------------------------------------------------------------------------
-    namespace delegate = mecs::examples::E01_graphical_2d_basic_physics::delegate;
+    namespace delegate
+    {
+        struct my_collision : mecs::system::delegate::instance< physics::event::collision >
+        {
+            xforceinline
+            void operator() (system& System, const entity& E1, const entity& E2) const noexcept
+            {
+                //printf( ">>>>>>>>>>Collision \n");
+            }
+        };
+
+        struct my_render : mecs::system::delegate::instance< physics::event::render >
+        {
+            xforceinline
+            void operator() (mecs::system::instance&, const entity& Entity, const xcore::vector2& Position, const xcore::vector2&, float R) const noexcept
+            {
+                Draw2DQuad(Position, xcore::vector2{ R }, ~0);
+            }
+        };
+    }
 
     //-----------------------------------------------------------------------------------------
     // Test
@@ -623,41 +644,36 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         printf( "E02_graphical_2d_basic_physics\n");
         printf( "--------------------------------------------------------------------------------\n");
 
-        auto upWorld = std::make_unique<mecs::world::instance>();
+        auto    upUniverse      = std::make_unique<mecs::universe::instance>();
+        auto&   DefaultWorld    = *upUniverse->m_WorldDB[0];
 
         //------------------------------------------------------------------------------------------
         // Registration
         //------------------------------------------------------------------------------------------
 
         // Import that world_grid system
-        world_grid::ImportModule( *upWorld );
+        physics::ImportModule( *upUniverse );
 
         //
         // Register Components
         //
-        upWorld->registerComponents<component::position,component::collider,component::velocity>();
-
-        //
-        // Register Delegates
-        //
-        upWorld->registerDelegates<delegate::my_collision,delegate::my_render>();
-
-        //
-        // Synpoint before the physics
-        //
-        mecs::sync_point::instance SyncPhysics;
+        upUniverse->registerTypes<component::position, component::collider, component::velocity>();
 
         //
         // Register the game graph.
         // 
-        upWorld->registerGraphConnection<world_grid::system::advance_cell>  ( upWorld->m_StartSyncPoint,    SyncPhysics );
-        upWorld->registerGraphConnection<system::render_pageflip>           ( SyncPhysics,                  upWorld->m_EndSyncPoint ).m_Menu = [&] { return Menu(*upWorld, s_MyMenu); };
-        upWorld->registerGraphConnection<world_grid::system::reset_counts>  ( SyncPhysics,                  upWorld->m_EndSyncPoint );
+        auto& SyncPhysics = DefaultWorld.CreateSyncPoint();
+        DefaultWorld.CreateGraphConnection<physics::system::advance_cell>  (DefaultWorld.getStartSyncpoint(),   SyncPhysics);
+        DefaultWorld.CreateGraphConnection<physics::system::reset_counts>  (SyncPhysics,                        DefaultWorld.getEndSyncpoint());
+        DefaultWorld.CreateGraphConnection<system::render_pageflip>        (SyncPhysics,                        DefaultWorld.getEndSyncpoint()).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
 
         //
-        // Done with all the registration
+        // Create the delegates.
         //
-        upWorld->registerFinish();
+        DefaultWorld.CreateArchetypeDelegate< physics::delegate::create_spatial_entity >();
+        DefaultWorld.CreateArchetypeDelegate< physics::delegate::destroy_spatial_entity >();
+
+        DefaultWorld.CreateSystemDelegate< delegate::my_render    >();
 
         //------------------------------------------------------------------------------------------
         // Initialization
@@ -666,44 +682,37 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
         //
         // Create an entity group
         //
-        auto& Group = upWorld->getOrCreateGroup<component::position,component::collider,component::velocity>();
+        auto& Archetype = DefaultWorld.getOrCreateArchitype<component::position, component::collider, component::velocity>();
 
         //
         // Create Entities
         //
-        xcore::random::small_generator Rnd;
-        for( int i=0; i<s_MyMenu.m_EntitieCount; i++ )
-            upWorld->createEntity( Group, [&](  component::position&  Position
-                                            ,   component::velocity&  Velocity
-                                            ,   component::collider&  Collider )
+        xcore::lock::object<xcore::random::small_generator, xcore::lock::spin> Random;
+        DefaultWorld.CreateEntities(Archetype, s_MyMenu.m_EntitieCount, {}
+            , [&](component::position& Position
+                , component::velocity& Velocity
+                , component::collider& Collider)
             {
+                xcore::lock::scope Lk(Random);
+                auto& Rnd = Random.get();
 
-                Position.setup( Rnd.RandF32(-(world_grid::tools::world_width_v/2.0f), (world_grid::tools::world_width_v/2.0f) )
-                              , Rnd.RandF32(-(world_grid::tools::world_height_v/2.0f), (world_grid::tools::world_height_v/2.0f) ) );
+                Position.m_Value.setup(Rnd.RandF32(-(physics::tools::world_width_v / 2.0f), (physics::tools::world_width_v / 2.0f))
+                    , Rnd.RandF32(-(physics::tools::world_height_v / 2.0f), (physics::tools::world_height_v / 2.0f)));
 
-                Velocity.setup( Rnd.RandF32(-1.0f, 1.0f ), Rnd.RandF32(-1.0f, 1.0f ) );
-                Velocity.NormalizeSafe();
-                Velocity *= 10.0f;
+                Velocity.m_Value.setup(Rnd.RandF32(-1.0f, 1.0f), Rnd.RandF32(-1.0f, 1.0f));
+                Velocity.m_Value.NormalizeSafe();
+                Velocity.m_Value *= 10.0f;
 
-                Collider.m_Radius = Rnd.RandF32( 1.5f, 3.0f );
+                Collider.m_Radius = Rnd.RandF32(1.5f, 3.0f);
             });
 
         //------------------------------------------------------------------------------------------
         // Running
         //------------------------------------------------------------------------------------------
 
-        //
-        // Start executing the world
-        //
-        upWorld->Start();
-
-        //
-        // run 100 frames
-        //
         while (system::render_pageflip::s_bContinue)
         {
-            upWorld->Resume();
+            DefaultWorld.Play();
         }
-
     }
 }

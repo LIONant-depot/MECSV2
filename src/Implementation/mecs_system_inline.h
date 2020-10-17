@@ -294,7 +294,7 @@ namespace mecs::system
             }
             else
             {
-                XCORE_PERF_ZONE_SCOPED_N(user_system_t::name_v.m_Str)
+                XCORE_PERF_ZONE_SCOPED_N(user_system_t::type_name_v.m_Str)
                 if constexpr ( &user_system_t::msgUpdate != &system::overrides::msgUpdate )
                 {
                     user_system_t::msgUpdate();
@@ -1571,7 +1571,7 @@ namespace mecs::system
                     auto p = new sys{ std::move(C) };
                     return std::unique_ptr<mecs::system::instance>{ static_cast<mecs::system::instance*>(p) };
                 }
-                , T_SYSTEM::name_v
+                , T_SYSTEM::type_name_v
                 , sys::exclusive_events_descriptors_v
                 , sys::global_events_descriptors_v
             };

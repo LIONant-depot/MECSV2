@@ -227,7 +227,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             //----------------------------------------------------------------------------------------
             struct advance_cell : mecs::system::instance
             {
-                constexpr static auto   name_v              = xconst_universal_str("advance_cell");
+                constexpr static auto   type_name_v              = xconst_universal_str("advance_cell");
                 constexpr static auto   entities_per_job_v  = 50;
 
                 using mecs::system::instance::instance;
@@ -275,7 +275,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                 
                             const auto RelativeGridPos  = tools::vector2{ 1 + x, 1 + y } - ID.m_Value;
 
-                            if( false == findEntityComponentsRelax( mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
+                            if( false == findEntityComponentsRelax( entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] = physics::tools::ComputeKeyFromPosition(x,y) }
                                 , [&]( component::count&         Count
                                      , const component::lists&   T0Lists
                                      , component::lists&         T1Lists ) constexpr noexcept
@@ -385,7 +385,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                           //  XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
                             if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr )
                                 getOrCreateEntityRelax
-                                (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
+                                (  entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
                                     , *m_pSpecializedPoolCell
                                     // Get entry
                                     , [&]( component::count& Count, component::lists& T1Lists ) constexpr noexcept
@@ -447,7 +447,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             struct reset_counts : mecs::system::instance
             {
                 constexpr static auto   entities_per_job_v  = 200;
-                constexpr static auto   name_v              = xconst_universal_str("reset_counts");
+                constexpr static auto   type_name_v         = xconst_universal_str("reset_counts");
 
                 using mecs::system::instance::instance;
 
