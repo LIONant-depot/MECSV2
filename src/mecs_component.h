@@ -379,7 +379,7 @@ namespace mecs::component
 
         map_descriptors                             m_mapDescriptors        {};
         std::vector<const component::descriptor*>   m_lDescriptors          {};
-        std::uint16_t                               m_TagUniqueBitGenerator {0};
-        std::uint16_t                               m_DataUniqueBitGenerator{0};
+        inline static std::uint16_t                 m_TagUniqueBitGenerator {0};
+        inline static std::uint16_t                 m_DataUniqueBitGenerator{0};
     };
 }
