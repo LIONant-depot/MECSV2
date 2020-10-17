@@ -12,7 +12,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
              my_menu() { reset(); }
         void reset()
         {
-            m_EntitieCount = 300000;// XCORE_CMD_DEBUG( / 10 );
+            m_EntitieCount = 250000;// XCORE_CMD_DEBUG( / 10 );
             m_bRenderGrid  = false;
         }
 
@@ -143,12 +143,22 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             }
 
             xforceinline constexpr
+            std::uint64_t murmur64(std::uint64_t h)
+            {
+                h ^= h >> 33;
+                h *= 0xff51afd7ed558ccdL;
+                h ^= h >> 33;
+                h *= 0xc4ceb9fe1a85ec53L;
+                h ^= h >> 33;
+                return h;
+            }
+
+            xforceinline constexpr
             std::uint64_t ComputeKeyFromPosition( const int X, const int Y ) noexcept
             {
-                const auto x = (18446744073709551557ull ^ 9223372036854775ull) ^ (static_cast<std::uint64_t>(X)<<32) ^ static_cast<std::uint64_t>(Y);
+                const auto x = mecs::tools::hash::combine( murmur64(X), murmur64(Y) );
                 xassert(x);
                 return x;
-                
             }
 
             xforceinline constexpr
@@ -252,7 +262,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     //
                     const auto SearchBoxA       = tools::SearchBox( ID.m_Value );
                     {
-                        //XCORE_PERF_ZONE_SCOPED_N("CacheCells")
+                       // XCORE_PERF_ZONE_SCOPED_N("CacheCells")
                         T0CellMap[1][1]             = &ComListT0;
                         T1CellMap[1][1]             = &ComListT1;
                         CellMapCount[1][1]          = &ComCount;
@@ -285,7 +295,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     //
                     // Advance physics for our cell
                     //
-                    //XCORE_PERF_ZONE_SCOPED_N("AdvancePhysics")
+                  //  XCORE_PERF_ZONE_SCOPED_N("AdvancePhysics")
                     const float DT      = getTime().m_DeltaTime;
                     for( std::uint8_t CountT = CellMapCount[1][1]->m_ReadOnlyCount, i=0; i<CountT; ++i )
                     {
@@ -372,7 +382,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         const auto WorldPosition    = tools::WorldToGrid( T1Position );
                         const auto RelativeGridPos  = tools::vector2{1,1} + (WorldPosition - ID.m_Value);
                         {
-                            //XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
+                          //  XCORE_PERF_ZONE_SCOPED_N("MoveToT1")
                             if( CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y] == nullptr )
                                 getOrCreateEntityRelax
                                 (  mecs::component::entity::guid{ CellGuids[RelativeGridPos.m_X][RelativeGridPos.m_Y] }
@@ -437,6 +447,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             struct reset_counts : mecs::system::instance
             {
                 constexpr static auto   entities_per_job_v  = 200;
+                constexpr static auto   name_v              = xconst_universal_str("reset_counts");
 
                 using mecs::system::instance::instance;
 
@@ -480,6 +491,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                 mecs::archetype::specialized_pool* m_pSpecializedPoolCell = nullptr;
 
                 // This function will be call ones per entity. Since we only will have one entity it will only be call ones per frame.
+                xforceinline
                 void operator() (       system&                         System
                                 , const entity&                         Entity
                                 , const example::component::position&   Position

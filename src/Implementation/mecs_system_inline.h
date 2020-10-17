@@ -88,19 +88,31 @@ namespace mecs::system
         , T_CREATE_CALLBACK&&           CreateCallback
         ) noexcept
         {
-            int     i = 0;
+           // XCORE_PERF_ZONE_SCOPED_N("getOrCreateCache")
 
             //
             // Stage one, look entry in the cache
-            //
+            //            
+            int  i      = 0;
             _TRY_AGAIN:
             {
-                xcore::lock::scope Lk1( std::as_const(m_Lines) );
-                auto&   Lines   = m_Lines.get();
-                for( int end = static_cast<int>(Lines.size()); i != end; ++i ) 
+               // XCORE_PERF_ZONE_SCOPED_N("Searching")
+                for( auto nLines = m_nLines.load(std::memory_order_relaxed); i != nLines; ++i )
                 {
+                    mecs::archetype::instance* pLineArchetype = m_Lines[i].load(std::memory_order_relaxed);
+
+                    if( pLineArchetype == nullptr )
+                    {
+                        XCORE_PERF_ZONE_SCOPED_NC("mecs::system::cache:: Waiting for lines", tracy::Color::ColorType::Red)
+                        do
+                        {
+                            // Spining and waiting for someone to finish setting the rest of the functions
+                            pLineArchetype = m_Lines[i].load(std::memory_order_relaxed);
+                        } while (pLineArchetype == nullptr );
+                    }
+
                     // Linear search
-                    if( Lines[i] != &Archetype )
+                    if(pLineArchetype != &Archetype )
                         continue;
 
                     // There are not gets/creates for these kind
@@ -116,10 +128,20 @@ namespace mecs::system
                     // Search which function we are
                     _TRY_AGAIN_PER_FUNCTION:
                     {
-                        xcore::lock::scope  Lk2     (std::as_const(Data.m_nFunctions));
-                        for (int end = Data.m_nFunctions.get(); j != end; ++j)
+                        for( auto nFunctions = Data.m_nFunctions.load(std::memory_order_relaxed); j != nFunctions; ++j )
                         {
-                            if (Data.m_WhichFunction[j] == FunctionGUID)
+                            auto Which = Data.m_WhichFunction[j].load(std::memory_order_relaxed);
+                            if(Which == 0 )
+                            {
+                                XCORE_PERF_ZONE_SCOPED_NC("mecs::system::cache::Waiting for functions", tracy::Color::ColorType::Red)
+                                do
+                                {
+                                    // Spining and waiting for someone to finish setting the rest of the functions
+                                    Which = Data.m_WhichFunction[j].load(std::memory_order_relaxed);
+                                } while( Which == 0 );
+                            }
+
+                            if (Which == FunctionGUID)
                             {
                                 const auto& PerFunction = Data.m_PerFunction[j];
                                 GetCallBack( PerFunction );
@@ -130,19 +152,16 @@ namespace mecs::system
 
                     // Create entry
                     {
-                        xcore::lock::scope  Lk2     (Data.m_nFunctions);
-
-                        // Make sure not one has added anything new
-                        if( j != Data.m_nFunctions.get()) goto _TRY_AGAIN_PER_FUNCTION;
+                        // Lets try to add our new entry
+                        if( false == Data.m_nFunctions.compare_exchange_weak(j, j+1) )
+                            goto _TRY_AGAIN_PER_FUNCTION;
 
                         // Ok now Create new Entry
-                        Data.m_WhichFunction[Data.m_nFunctions.get()] = FunctionGUID;
-                        auto& PerFunction = Data.m_PerFunction[ Data.m_nFunctions.get() ];
-                        CreateCallback( PerFunction );
+                        CreateCallback(Data.m_PerFunction[j]);
 
                         // Done so we can officially added to our entry
-                        Data.m_nFunctions.get()++;
-                        xassert( Data.m_nFunctions.get() < 16 );
+                        Data.m_WhichFunction[j].store(FunctionGUID, std::memory_order_relaxed);
+
                         return;
                     }
                 }
@@ -152,26 +171,24 @@ namespace mecs::system
             // Not in the cache so we must create it
             //
             {
-                xcore::lock::scope  Lk1(m_Lines);
-                auto&               Lines = m_Lines.get();
-                if( i != Lines.size() ) goto _TRY_AGAIN;
+                int x = i;
+                if (false == m_nLines.compare_exchange_weak(i, i + 1))
+                    goto _TRY_AGAIN;
 
-                Lines.append( &Archetype );
-                m_Data.append();
-
-                data& MyData = m_Data.back();
-
-                XCORE_CMD_ASSERT( xcore::lock::scope  Lk2     (MyData.m_nFunctions); )
+                data& MyData = m_Data[i];
                 if( FunctionGUID )
                 {
-                    MyData.m_nFunctions.get() = 1;
-                    MyData.m_WhichFunction[0] = FunctionGUID;
                     CreateCallback(MyData.m_PerFunction[0]);
+                    MyData.m_nFunctions.store( 1, std::memory_order_relaxed );
+                    MyData.m_WhichFunction[0].store(FunctionGUID, std::memory_order_relaxed);
                 }
                 else
                 {
-                    MyData.m_nFunctions.get() = 0;
+                    MyData.m_nFunctions.store(0, std::memory_order_relaxed);
                 }
+
+                // okay release it
+                m_Lines[i].store(&Archetype, std::memory_order_relaxed );
             }
         }
 
@@ -308,8 +325,7 @@ namespace mecs::system
             {
                 for (const auto& MyData : user_system_t::m_Cache.m_Data )
                 {
-                    xcore::lock::scope Lk2(std::as_const(MyData.m_nFunctions));
-                    for( int i=0, end = MyData.m_nFunctions.get(); i < end; ++i )
+                    for( int i=0, end = MyData.m_nFunctions.load(std::memory_order_relaxed); i < end; ++i )
                     {
                         if ( MyData.m_WhichFunction[i] )
                             mecs::archetype::details::safety::UnlockQueryComponents(*this, MyData.m_PerFunction[i].m_ResultEntry);
@@ -322,9 +338,7 @@ namespace mecs::system
             // If we don't then we must call the memory barrier for that archetype
             //
             {
-                XCORE_CMD_ASSERT( xcore::lock::scope Lk(user_system_t::m_Cache.m_Lines) );
-                auto& Lines = user_system_t::m_Cache.m_Lines.get();
-                for( auto pArchetype : Lines )
+                for( int i=0, end = user_system_t::m_Cache.m_nLines.load(std::memory_order_relaxed); i<end; ++i )
                 {
                     /*
                     bool        bFound      = false;
@@ -340,10 +354,10 @@ namespace mecs::system
 
                     if( bFound == false ) pArchetype->MemoryBarrierSync(Syncpoint);
                     */
-                    pArchetype->MemoryBarrierSync(Syncpoint);
+
+                    user_system_t::m_Cache.m_Lines[i].load(std::memory_order_relaxed)->MemoryBarrierSync(Syncpoint);
                 }
-                Lines.clear();
-                user_system_t::m_Cache.m_Data.clear();
+                user_system_t::m_Cache.clear();
             }
 
             //
@@ -439,7 +453,8 @@ namespace mecs::system
         template< typename T_TUPLE >
         using mutable_share_tuple_t = typename details::mutable_share_tuple< T_TUPLE >::type;
 
-        template< typename...T_ARGS > constexpr xforceinline
+        template< typename...T_ARGS >
+        constexpr xforceinline
         auto ProcessInitArray   (   std::tuple<T_ARGS...>*
                                 ,   int                                   iStart
                                 ,   int                                   Index
@@ -465,7 +480,8 @@ namespace mecs::system
             };
         }
 
-        template< typename T, typename...T_ARGS> constexpr xforceinline
+        template< typename T, typename...T_ARGS>
+        constexpr xforceinline
         void ProcesssCall( std::tuple<T_ARGS...>*
                          , std::span<std::byte*>        Span
                          , T&                           Params
@@ -1204,6 +1220,7 @@ namespace mecs::system
     namespace details
     {
         template< typename T_CALLBACK, typename...T_ARGS >
+        xforceinline constexpr
         void get_component_call(std::tuple<T_ARGS...>* , T_CALLBACK&& Callback, std::span<std::byte*> Pointers ) noexcept
         {
             using func_tuple = std::tuple<T_ARGS...>;
@@ -1226,6 +1243,7 @@ namespace mecs::system
     constexpr xforceinline
     void instance::_getEntityComponentsRelax( const mecs::component::entity::reference& Reference, T_CALLBACK&& Function ) noexcept
     {
+       // XCORE_PERF_ZONE_SCOPED_N("_getEntityComponentsRelax")
         using                   func_tuple              = typename xcore::function::traits<T_CALLBACK>::args_tuple;
         static constexpr auto   func_descriptors        = mecs::archetype::query::details::get_arrays< func_tuple >::value;
         using                   func_sorted_tuple       = xcore::types::tuple_sort_t< mecs::component::smaller_guid, func_tuple >;
@@ -1240,7 +1258,7 @@ namespace mecs::system
             }
         );
 
-        auto    Call        = [&]( const mecs::system::details::cache::per_function& Line ) mutable constexpr noexcept
+        auto    Call        = [&]( const mecs::system::details::cache::per_function& Line ) constexpr noexcept
         {
             auto Pointers = details::ProcessInitArray(   reinterpret_cast<func_tuple*>(nullptr)
                                                     ,   Reference.m_Index
@@ -1271,6 +1289,7 @@ namespace mecs::system
         auto& Archetype  = *Reference.m_pPool->m_pArchetypeInstance;
         auto  GetFunctor = [&]( const details::cache::per_function& PerFunction ) constexpr noexcept
         {
+           // XCORE_PERF_ZONE_SCOPED_N("GetFunctor")
             if constexpr (T_ALREADY_LOCKED_V)
             {
                 Call(PerFunction);
@@ -1301,6 +1320,8 @@ namespace mecs::system
         ,   GetFunctor
         ,   [&]( details::cache::per_function& PerFunction )
         {
+           // XCORE_PERF_ZONE_SCOPED_N("getOrCreateCache::Create")
+
             auto& Entry = PerFunction.m_ResultEntry;
             Entry.m_pArchetype                    = &Archetype;
             Entry.m_nParameters                   = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);

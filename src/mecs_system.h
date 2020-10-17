@@ -64,28 +64,67 @@ namespace mecs::system
         {
             struct per_function
             {
-                mecs::archetype::query::result_entry    m_ResultEntry;
-                std::uint8_t                            m_nDelegatesIndices;
-                std::array<std::uint8_t, 16>            m_UpdateDelegateIndex;
+                mecs::archetype::query::result_entry                m_ResultEntry;
+                std::uint8_t                                        m_nDelegatesIndices;
+                std::array<std::uint8_t, 16>                        m_UpdateDelegateIndex;
             };
 
             struct data
             {
-                using per_func_list = std::array<std::uint64_t, 16>;
+                using per_func_list = std::array< std::atomic<std::uint64_t>, 16>;
 
-                xcore::lock::object< int, xcore::lock::semaphore >          m_nFunctions;
+                std::atomic<int>                                            m_nFunctions;
                 per_func_list                                               m_WhichFunction;
                 std::array<per_function, per_func_list{}.size()>            m_PerFunction;
             };
 
-            using lines = xcore::lock::object< xcore::vector<mecs::archetype::instance*>, xcore::lock::semaphore >;
-            
-            lines                   m_Lines;        // Fast, cache friendly, linear search loop up.
-            xcore::vector<data>     m_Data;         // Data per each line. It should be a 1:1 mapping with lines
+            using lines = std::array< std::atomic<mecs::archetype::instance*>, 32 >;
+
+            std::atomic<int>                    m_nLines;
+            lines                               m_Lines;        // Fast, cache friendly, linear search loop up.
+            std::array<data, lines{}.size() >   m_Data;         // Data per each line. It should be a 1:1 mapping with lines
 
             template< typename T_GET_CALLBACK, typename T_CREATE_CALLBACK >
             xforceinline
             void getOrCreateCache(std::uint64_t FunctionGUID, mecs::archetype::instance& Archetype, T_GET_CALLBACK&& GetCallBack, T_CREATE_CALLBACK&& Create ) noexcept;
+
+            cache()
+            {
+                for( auto& E : m_Data )
+                {
+                    E.m_nFunctions.store( 0, std::memory_order_relaxed );
+                    for( auto& F : E.m_WhichFunction )
+                    {
+                        F.store( 0, std::memory_order_relaxed );
+                    }
+                }
+
+                for (auto& E : m_Lines)
+                {
+                    E.store( nullptr, std::memory_order_relaxed);
+                }
+
+                m_nLines.store(0, std::memory_order_relaxed);
+            }
+
+            void clear()
+            {
+                auto Count = m_nLines.load(std::memory_order_relaxed);
+                for( int i=0; i< Count; ++i )
+                {
+                    auto& Data = m_Data[i];
+                    m_Lines[i].store(nullptr, std::memory_order_relaxed);
+
+                    for( int j=0, end = Data.m_nFunctions.load(std::memory_order_relaxed); j<end; ++j )
+                    {
+                        Data.m_WhichFunction[j].store( 0, std::memory_order_relaxed );
+                        //Data.m_PerFunction[j].m_ResultEntry.;;
+                    }
+                    Data.m_nFunctions.store(0, std::memory_order_relaxed);
+                }
+                m_nLines.store(0, std::memory_order_relaxed);
+            }
+
         };
     }
 

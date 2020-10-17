@@ -15,7 +15,7 @@ namespace mecs::tools
             // does not need to be a power of 2 but it will be faster.
             // Add an additional 30% of entries for collisions and such
             const auto t = xcore::bits::RoundToNextPowOfTwo(T_MAXSIZE_V);
-            const auto x = T_MAXSIZE_V + (T_MAXSIZE_V * 30) / 100;
+            const auto x = T_MAXSIZE_V + (T_MAXSIZE_V * 30ull) / 100ull;
             return ( t >= x ) ? t : xcore::bits::RoundToNextPowOfTwo(x);
         }();
         static constexpr std::uint16_t  unused_entry_v          = 0xffff;
@@ -76,8 +76,10 @@ namespace mecs::tools
             auto pEntry         = &Row.m_Entry;
             auto EntryTrueIndex = RowTrueIndex;
             auto L              = pEntry->m_iNextEntryOrEmpty.load(std::memory_order_relaxed);
+            int  SearchCount    = 0;
             do
             {
+                SearchCount++;
                 if( L != unused_entry_v)
                 {
                     EntryTrueIndex++;
@@ -87,11 +89,15 @@ namespace mecs::tools
                 // Store our entry_index so must convert from true_index by adding one
                 else if ( pEntry->m_iNextEntryOrEmpty.compare_exchange_weak(L, Row.m_iHeadEntryOrEmpty.get() )) break;
 
+                // If you have a hit rate larger than 10 this is probably a problem... consider making better keys or larger cache
+                xassert( SearchCount < 10 );
+
             } while (true);
 
             // Set our entry 
             pEntry->m_Key                 = Key;
             Row.m_iHeadEntryOrEmpty.get() = static_cast<entry_magic_offset>( EntryTrueIndex - RowTrueIndex );
+            m_Count++;
 
             // Setup the node
             Callback( pEntry->m_Value );
@@ -231,6 +237,7 @@ namespace mecs::tools
                     else        Row.m_iHeadEntryOrEmpty.get() = E.m_iNextEntryOrEmpty.load(std::memory_order_relaxed);
 
                     E.m_iNextEntryOrEmpty.store( unused_entry_v, std::memory_order_relaxed) ;
+                    m_Count--;
                     return true;
                 }
 
@@ -242,5 +249,6 @@ namespace mecs::tools
         }
 
         xcore::unique_span<row>    m_Map{};
+        std::atomic<std::uint64_t> m_Count;
     };
 }
