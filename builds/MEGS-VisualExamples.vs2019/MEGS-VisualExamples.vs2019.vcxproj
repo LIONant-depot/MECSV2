@@ -210,6 +210,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
+    <None Include="..\..\src\Implementation\feta_h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\dependencies\DiligentEngine\.build\Win64\DiligentTools\Imgui\Diligent-Imgui.vcxproj">

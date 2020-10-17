@@ -1,5 +1,6 @@
 
 #include "xcore.h"
+#include "Implementation/feta_h"
 
 namespace mecs::archetype
 {

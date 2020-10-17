@@ -321,11 +321,14 @@ namespace mecs::component
         }
 
         template< typename T_COMPONENT >
-        inline static constexpr auto descriptor_variable_v = MakeDescriptor<T_COMPONENT>();
+        struct desc
+        {
+            inline static constexpr auto descriptor_variable_v = MakeDescriptor<T_COMPONENT>();
+        };
     }
 
     template< typename T_COMPONENT >
-    static constexpr auto& descriptor_v = details::descriptor_variable_v<std::remove_const_t<xcore::types::decay_full_t<T_COMPONENT>>>;
+    static constexpr auto& descriptor_v = details::desc<std::remove_const_t<xcore::types::decay_full_t<T_COMPONENT>>>::descriptor_variable_v;
 
     //----------------------------------------------------------------------------
     // TOOLS
@@ -364,7 +367,9 @@ namespace mecs::component
             bool b = m_mapDescriptors.alloc(component::descriptor_v<T_COMPONENT>.m_Guid, [&](const component::descriptor*& pValue) constexpr noexcept
             {
                 auto& Desc = component::descriptor_v<T_COMPONENT>;
-                Desc.m_BitNumber = Desc.m_Type == type::TAG ? m_TagUniqueBitGenerator++ : m_DataUniqueBitGenerator++;
+
+                if( Desc.m_BitNumber == -1 )
+                    Desc.m_BitNumber = Desc.m_Type == type::TAG ? m_TagUniqueBitGenerator++ : m_DataUniqueBitGenerator++;
 
                 m_lDescriptors.push_back(&Desc);
                 pValue = &Desc;

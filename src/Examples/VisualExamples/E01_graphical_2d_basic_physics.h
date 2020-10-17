@@ -12,7 +12,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
              my_menu() { reset(); }
         void reset()
         {
-            m_EntitieCount = 40000 ;//XCORE_CMD_DEBUG( / 100 );
+            m_EntitieCount = 300000;// XCORE_CMD_DEBUG( / 10 );
             m_bRenderGrid  = false;
         }
 
@@ -66,7 +66,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                                                                 , const xcore::vector2&         // Position
                                                                                 , const xcore::vector2&         // Velocity
                                                                                 , float                         // Radius
-                                                                                , bool >;
+                                                                                >;
             };
         }
 
@@ -184,8 +184,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             {
                 static constexpr auto type_data_access_v = data::type_data_access::QUANTUM;
 
-                std::atomic< std::uint8_t >                             m_MutableCount  { 0 };
-                std::uint8_t                                            m_ReadOnlyCount { 0 };        // Note this variable is naked/unprotected and should only be written by a single system 
+                std::atomic< std::uint8_t >     m_MutableCount  { 0 };
+                std::uint8_t                    m_ReadOnlyCount { 0 };        // Note this variable is naked/unprotected and should only be written by a single system 
             };
                 
             struct id : mecs::component::data
@@ -296,7 +296,6 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         const auto&    T0Entry    = T0CellMap[1][1]->m_lEntry[i];
                         xcore::vector2 T1Velocity = T0Entry.m_Velocity;
                         xcore::vector2 T1Position = T0Entry.m_Position + T1Velocity * DT;
-                        bool           bCollision = false;
 
                         //
                         // Check for collisions with other objects
@@ -311,10 +310,11 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
 
                                 if( T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y] )
                                 {
+                                    auto& CellOther = *T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y];
                                     for( std::uint8_t Count = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_ReadOnlyCount, c = 0; c < Count; ++c )
                                     {
-                                        xassert( T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntity[c].getGUID().isValid() );
-                                        auto& T0Other = T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntry[c];
+                                        xassert( CellOther.m_lEntity[c].getGUID().isValid() );
+                                        auto& T0Other = CellOther.m_lEntry[c];
 
                                         // If we are dealing with the same entity skip it
                                         if( &T0Entry == &T0Other ) continue;
@@ -323,16 +323,16 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                                         const auto V                    = (T0Other.m_Position - T1Position);
                                         const auto MinDistanceSquare    = xcore::math::Sqr(T0Other.m_Radius + T0Entry.m_Radius);
                                         const auto DistanceSquare       = V.Dot(V);
+                                        
                                         if( DistanceSquare >= 0.001f && DistanceSquare <= MinDistanceSquare )
                                         {
                                             // Do hacky collision response
-                                            const auto Normal           = -V * xcore::math::InvSqrt(DistanceSquare);
-                                            T1Velocity = xcore::math::vector2::Reflect( Normal, T1Velocity );
-                                            T1Position = T0Other.m_Position + Normal * (T0Other.m_Radius + T0Entry.m_Radius+0.01f);
+                                            const auto Normal   = V * -xcore::math::InvSqrt(DistanceSquare);
+                                            T1Position          = T0Other.m_Position + Normal * (T0Other.m_Radius + T0Entry.m_Radius+0.01f);
+                                            T1Velocity          = xcore::math::vector2::Reflect(Normal, T1Velocity);
 
                                             // Notify entities about the collision
-                                            EventNotify<event::collision>( T0CellMap[1][1]->m_lEntity[i], T0CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_lEntity[c] );
-                                            bCollision = true;
+                                            EventNotify<event::collision>( Entity, CellOther.m_lEntity[c] );
                                         }
                                     }
                                 }
@@ -397,19 +397,21 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                             //
                             // Copy the entry in to the cell
                             //
-                            const int   C           = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_MutableCount++;
-                            auto&       CellMap     = *T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y];
-                            auto&       Entry       = CellMap.m_lEntry[C];
-                            Entry.m_Position        = T1Position;
-                            Entry.m_Velocity        = T1Velocity;
-                            Entry.m_Radius          = T0Entry.m_Radius;
-                            CellMap.m_lEntity[C]    = Entity;
+                            {
+                                const int   C           = CellMapCount[RelativeGridPos.m_X][RelativeGridPos.m_Y]->m_MutableCount++;
+                                auto&       CellT1Map   = *T1CellMap[RelativeGridPos.m_X][RelativeGridPos.m_Y];
+                                auto&       Entry       = CellT1Map.m_lEntry[C];
+                                Entry.m_Position        = T1Position;
+                                Entry.m_Velocity        = T1Velocity;
+                                Entry.m_Radius          = T0Entry.m_Radius;
+                                CellT1Map.m_lEntity[C]  = Entity;
+                            }
                         }
 
                         //
                         // Notify whoever cares about the info
                         //
-                        EventNotify<event::render>( Entity, T1Position, T1Velocity, T0Entry.m_Radius, bCollision );
+                        EventNotify<event::render>( Entity, T1Position, T1Velocity, T0Entry.m_Radius );
                     }
 
                     //
@@ -492,7 +494,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         m_pSpecializedPoolCell = &physics::system::getDefaultCellPool(System);
                     }
 
-                    System.getOrCreateEntity
+                    System.getOrCreateEntityRelax
                     (
                         Guid
                         , *m_pSpecializedPoolCell
@@ -510,15 +512,13 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                         // Create Entry
                         , [&]( component::lists& Lists, component::count& Count, component::id& ID ) noexcept
                         {
+                            const auto C = Count.m_MutableCount++;
                             ID.m_Value = GridPosition;
-
-                            Count.m_MutableCount.store( 1, std::memory_order_relaxed );
-
-                            auto& Entry = Lists.m_lEntry[0];
+                            auto& Entry = Lists.m_lEntry[C];
                             Entry.m_Position    = Position.m_Value;
                             Entry.m_Velocity    = Velocity.m_Value;
                             Entry.m_Radius      = Collider.m_Radius;
-                            Lists.m_lEntity[0]  = Entity;
+                            Lists.m_lEntity[C]  = Entity;
                         }
                     );
                 }
@@ -610,8 +610,6 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             xforceinline 
             void operator() ( system& System, const entity& E1, const entity& E2 ) const noexcept
             {
-                while( E1.getGUID() == E2.getGUID() );
-
                 //printf( ">>>>>>>>>>Collision \n");
             }
         };
@@ -619,10 +617,9 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         struct my_render : mecs::system::delegate::instance< physics::event::render >
         {
             xforceinline 
-            void operator() ( mecs::system::instance&, const entity& Entity, const xcore::vector2& Position, const xcore::vector2&, float R, bool bCollision ) const noexcept
+            void operator() ( mecs::system::instance&, const entity& Entity, const xcore::vector2& Position, const xcore::vector2&, float R ) const noexcept
             {
-                if(bCollision) Draw2DQuad( Position, xcore::vector2{ R }, Entity.getGUID().m_Value );// ~0 );
-                else           Draw2DQuad(Position, xcore::vector2{ R }, ~0 );
+                Draw2DQuad(Position, xcore::vector2{ R }, ~0 );
             }
         };
 
@@ -681,12 +678,15 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //
         // Create Entities
         //
-        xcore::random::small_generator Rnd;
+        xcore::lock::object<xcore::random::small_generator,xcore::lock::spin> Random;
         DefaultWorld.CreateEntities(Archetype, s_MyMenu.m_EntitieCount, {}
             , [&](   component::position&  Position
                  ,   component::velocity&  Velocity
                  ,   component::collider&  Collider )
             {
+                xcore::lock::scope Lk(Random);
+                auto& Rnd = Random.get();
+
                 Position.m_Value.setup( Rnd.RandF32(-(physics::tools::world_width_v/2.0f),  (physics::tools::world_width_v/2.0f) )
                                       , Rnd.RandF32(-(physics::tools::world_height_v/2.0f), (physics::tools::world_height_v/2.0f) ) );
 

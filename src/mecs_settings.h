@@ -1,7 +1,9 @@
 
 namespace mecs::settings
 {
-    static constexpr std::uint32_t max_entities_v                   = 10000000;
+    static constexpr std::uint32_t max_entities_v                   = xcore::bits::RoundToNextPowOfTwo(10000000ull)
+                                                                        XCORE_CMD_ASSERT(-xcore::bits::RoundToNextPowOfTwo(10000000ull)
+                                                                                         + xcore::bits::RoundToNextPowOfTwo(1000000ull));
     static constexpr std::uint32_t max_component_types_v            = 10000;
     static constexpr std::uint32_t max_data_components_per_entity   = 64;
     static constexpr std::uint32_t max_tag_components_per_entity    = 32;

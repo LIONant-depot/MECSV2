@@ -357,5 +357,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
+    <None Include="..\..\src\Implementation\feta_h">
+      <Filter>MECS</Filter>
+    </None>
   </ItemGroup>
 </Project>
