@@ -295,13 +295,13 @@ namespace mecs::entity_pool
 
     //-------------------------------------------------------------------------------------------
 
-    template< typename T_COMPONENT > xforceinline
+    template< typename T_COMPONENT, bool T_DO_CONVERSIONS_V > xforceinline
     T_COMPONENT& instance::getComponentByIndex ( const index Index, int iComponentIndex ) noexcept
     {
         xassert(mecs::component::descriptor_v<T_COMPONENT>.m_Guid == m_Descriptors[iComponentIndex]->m_Guid );
 
         auto p = m_Pointers[iComponentIndex] + Index * mecs::component::descriptor_v<T_COMPONENT>.m_Size;
-        if constexpr ( mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SINGLETON )
+        if constexpr (T_DO_CONVERSIONS_V && mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SINGLETON )
         {
             return **reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(p);
         }
@@ -313,13 +313,13 @@ namespace mecs::entity_pool
 
     //-------------------------------------------------------------------------------------------
 
-    template< typename T_COMPONENT > xforceinline
+    template< typename T_COMPONENT, bool T_DO_CONVERSIONS_V > xforceinline
     const T_COMPONENT& instance::getComponentByIndex ( const index Index, int iComponentIndex ) const noexcept
     {
         xassert(mecs::component::descriptor_v<T_COMPONENT>.m_Guid == m_Descriptors[iComponentIndex]->m_Guid);
 
         auto p = m_Pointers[iComponentIndex] + Index * mecs::component::descriptor_v<T_COMPONENT>.m_Size;
-        if constexpr (mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SINGLETON)
+        if constexpr (T_DO_CONVERSIONS_V && mecs::component::descriptor_v<T_COMPONENT>.m_Type == mecs::component::type::SINGLETON)
         {
             return **reinterpret_cast<std::unique_ptr<const T_COMPONENT>*>(p);
         }

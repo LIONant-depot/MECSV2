@@ -471,7 +471,7 @@ namespace mecs::system
                 if( I.m_isShared ) return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_MainPool.getComponentByIndex<t>( Index, I.m_Index ));
 
                 auto& Specialized = R.m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
-                return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t>( iStart, I.m_Index ));
+                return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t, false>( iStart, I.m_Index ));
             };
             
             return std::array<std::byte*, sizeof...(T_ARGS)>
@@ -503,12 +503,22 @@ namespace mecs::system
                         auto  pBackup   = p;
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
                         {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += mecs::component::descriptor_v<T_ARGS>.m_Size; }
+                            else                                              p += mecs::component::descriptor_v<T_ARGS>.m_Size;
                         }
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*pBackup);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                            else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        }
+
                     }())...
                 );
             } while( ++iStart != iEnd );
@@ -625,8 +635,17 @@ namespace mecs::system
                             else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
                         }
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*pBackup);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                            else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        }
                     }())...
                 );
 
@@ -766,8 +785,17 @@ namespace mecs::system
                             else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
                         }
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*pBackup);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                            else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        }
                     }())...
                 );
 
@@ -831,8 +859,17 @@ namespace mecs::system
                             else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
                         }
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*pBackup);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                            else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        }
                     }())...
                 );
 
@@ -877,8 +914,17 @@ namespace mecs::system
                             else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
                         }
 
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
-                        else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*pBackup);
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(pBackup);
+                            else                                     return reinterpret_cast<T_ARGS>(*pBackup);
+                        }
                     }())...
                 );
 
@@ -1229,8 +1275,19 @@ namespace mecs::system
                 ([&]() constexpr noexcept -> T_ARGS
                     {
                         auto& p = Pointers[xcore::types::tuple_t2i_v<T_ARGS, func_tuple>];
-                        if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(p);
-                        else                                     return reinterpret_cast<T_ARGS>(*p);
+
+                        if constexpr ( mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON )
+                        {
+                            auto& UPtr = reinterpret_cast<std::unique_ptr<xcore::types::decay_full_t<T_ARGS>>&>(*p);
+
+                            if constexpr (std::is_pointer_v<T_ARGS>) return UPtr.get();
+                            else                                     return *UPtr;
+                        }
+                        else
+                        {
+                            if constexpr (std::is_pointer_v<T_ARGS>) return reinterpret_cast<T_ARGS>(p);
+                            else                                     return reinterpret_cast<T_ARGS>(*p);
+                        }
                     }())...
             );
         }

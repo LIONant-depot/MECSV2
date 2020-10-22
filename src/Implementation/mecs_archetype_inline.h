@@ -1,5 +1,71 @@
 namespace mecs::archetype
 {
+    namespace details
+    {
+        template< typename  T_TUPLE >
+        struct share_component_get;
+
+        template< typename... T_TUPLE_ARGS >
+        struct share_component_get< std::tuple<T_TUPLE_ARGS...> >
+        {
+            static_assert( (std::is_reference_v<T_TUPLE_ARGS> && ...) );
+
+            using tuple_func   = std::tuple<T_TUPLE_ARGS...>;
+            using tuple_sorted = xcore::types::tuple_sort_t< mecs::component::smaller_guid, tuple_func >;
+
+            constexpr static auto s_SortedComponentGuids = []() constexpr
+            {
+                std::array<mecs::component::type_guid, sizeof...(T_TUPLE_ARGS)> List{};
+                (( List[ xcore::types::tuple_t2i_v<T_TUPLE_ARGS, tuple_sorted > ] = mecs::component::descriptor_v<T_TUPLE_ARGS>.m_Guid ),
+                ...);
+                return List;
+            }();
+
+            template< typename T_CALLBACK >
+            xforceinline constexpr
+            static auto Call( specialized_pool& Pool, T_CALLBACK&& Callback ) noexcept
+            {
+                std::array< std::byte*, sizeof...(T_TUPLE_ARGS) > SortedPointers;
+
+                auto& Archetype      = *Pool.m_EntityPool.m_pArchetype;
+                auto  DescriptorSpan = Archetype.m_Descriptor.m_ShareDescriptorSpan;
+
+                int j=0;
+                for( int i=0, end = static_cast<int>(DescriptorSpan.size()); i<end; ++i )
+                {
+                    if(DescriptorSpan[i]->m_Guid < s_SortedComponentGuids[j] )
+                    {
+                        i++;
+                    }
+                    else if (DescriptorSpan[i]->m_Guid == s_SortedComponentGuids[j])
+                    {
+                        i++;
+                        SortedPointers[j] = Archetype.m_MainPool.getComponentByIndexRaw( Pool.m_MainPoolIndex, i );
+                        j++;
+                    }
+                    else
+                    {
+                        // You enter a component that we do not have
+                        xassert(false);
+                    }
+                }
+                xassert( j == s_SortedComponentGuids.size() );
+
+                Callback( reinterpret_cast<T_TUPLE_ARGS>(*SortedPointers[ xcore::types::tuple_t2i_v<T_TUPLE_ARGS, tuple_sorted > ]) ... );
+            }
+        };
+    }
+
+    template< typename T_CALLBACK >
+    constexpr xforceinline
+    void specialized_pool::getShareComponent( T_CALLBACK&& CallBack ) noexcept
+    {
+        using params = typename xcore::function::traits<T_CALLBACK>::args_tuple;
+        using the    = details::share_component_get<params>;
+
+        the::Call( *this, CallBack );
+    }
+
     //----------------------------------------------------------------------------------------------------
     // ARCHETYPE ENTITY CREATION
     //----------------------------------------------------------------------------------------------------
@@ -106,7 +172,11 @@ namespace mecs::archetype
 
     template< typename...T_COMPONENTS >
     xforceinline constexpr
-    void entity_creation::getTrueComponentIndices( std::span<std::uint8_t> Array, std::span<const mecs::component::descriptor* const> Span, std::tuple<T_COMPONENTS...>* ) const noexcept
+    void entity_creation::getTrueComponentIndices( 
+        std::span<std::uint8_t>                             Array
+    ,   std::span<const mecs::component::descriptor* const> Span
+    ,   std::tuple<T_COMPONENTS...>* 
+    ) const noexcept
     {
         static constexpr std::array Inputs{ &mecs::component::descriptor_v<T_COMPONENTS> ... };
         static_assert( ((std::is_const_v<std::remove_pointer_t<std::remove_reference_t<T_COMPONENTS>>> == false) && ...) );
@@ -711,9 +781,11 @@ namespace mecs::archetype
     specialized_pool& instance::getOrCreateSpecializedPool( system::instance&         System
                                                           , int                       MinFreeEntries
                                                           , int                       MaxEntries    
-                                                          , T_SHARE_COMPONENTS...     ShareComponents
+                                                          , T_SHARE_COMPONENTS&&...   ShareComponents
                                                           ) noexcept
     {
+        static_assert( ((mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_Type == mecs::component::type::SHARE) && ...) );
+
         // Share components count must match the archetype share component list
         xassert( sizeof...(T_SHARE_COMPONENTS) == m_Descriptor.m_ShareDescriptorSpan.size() );
 

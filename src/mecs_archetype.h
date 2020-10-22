@@ -124,6 +124,11 @@ namespace mecs::archetype
         using                           share_component_keys    = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
         using                           share_component_index   = std::array<std::uint32_t, mecs::settings::max_data_components_per_entity>;
 
+        template< typename T_CALLBACK >
+        constexpr xforceinline
+        void getShareComponent( T_CALLBACK&& CallBack ) noexcept;
+
+
         type_guid                       m_TypeGuid                  {};
         instance*                       m_pArchetypeInstance        {};
         mecs::entity_pool::instance     m_EntityPool                {};
@@ -256,7 +261,7 @@ namespace mecs::archetype
         specialized_pool&           getOrCreateSpecializedPool              ( system::instance&         System
                                                                             , int                       MinFreeEntries = 1
                                                                             , int                       MaxEntries     = mecs::settings::max_default_entities_per_pool
-                                                                            , T_SHARE_COMPONENTS...     ShareComponents 
+                                                                            , T_SHARE_COMPONENTS&&...   ShareComponents 
                                                                             ) noexcept;
         //-----------------------------------------------------------------------------------
         

@@ -254,15 +254,16 @@ namespace mecs::component
             else if constexpr( std::is_base_of_v<singleton, T_COMPONENT> )
             {
                 static_assert(T_COMPONENT::type_data_access_v == type_data_access::LINEAR || T_COMPONENT::type_data_access_v == type_data_access::QUANTUM);
+                using uptr = std::unique_ptr<T_COMPONENT>;
                 return descriptor
                 {
                         T_COMPONENT::type_guid_v.isValid() ? T_COMPONENT::type_guid_v : type_guid{ __FUNCSIG__ }
                     ,   T_COMPONENT::type_name_v
                     ,   -1
                     ,   type::SINGLETON
-                    ,   []( void* pData )     constexpr noexcept { new(pData) std::unique_ptr<T_COMPONENT>{ new T_COMPONENT }; }
-                    ,   []( void* pData )     constexpr noexcept { std::destroy_at( reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(pData) ); }
-                    ,   []( void* d, void* s) constexpr noexcept { *reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(d) = std::move(*reinterpret_cast<std::unique_ptr<T_COMPONENT>*>(s)); }
+                    ,   []( void* pData )     constexpr noexcept { new(pData) uptr{ new T_COMPONENT }; }
+                    ,   []( void* pData )     constexpr noexcept { static_cast<uptr*>(pData)->release(); }
+                    ,   []( void* d, void* s) constexpr noexcept { (*static_cast<uptr*>(d)) = std::move(*static_cast<uptr*>(s)); }
                     ,   nullptr
                     ,   nullptr
                     ,   static_cast<std::uint32_t>( sizeof(std::unique_ptr<T_COMPONENT>) )

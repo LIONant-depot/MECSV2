@@ -151,6 +151,7 @@
     <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_2d_basic_physics.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_gridbase_pathfinding.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E02_graphical_2d_basic_physics.h" />
+    <ClInclude Include="..\..\src\Examples\VisualExamples\E04_graphical_2d_basic_physics.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E03_graphical_2d_basic_physics.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E04_graphical_2d_boids.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E05_graphical_2d_virus_spread.h" />
