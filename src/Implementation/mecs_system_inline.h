@@ -1021,7 +1021,11 @@ namespace mecs::system
         //
         // Loop through all the results and lets the system deal with the components
         //
-        xcore::scheduler::channel       Channel(getName());
+#ifdef _XCORE_PROFILE
+        xcore::scheduler::channel Channel{ getName() };
+#else
+        xcore::scheduler::channel Channel{ xconst_universal_str("") };
+#endif
         using                           params_t = details::process_resuts_params<T_CALLBACK>;
         params_t                        Params
         {

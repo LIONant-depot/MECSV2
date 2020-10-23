@@ -519,6 +519,7 @@ struct dbg_render
         std::array<RefCntAutoPtr<ICommandList>,64> lCmdList;
         std::atomic<bool> DoImGuid{true};
         xcore::scheduler::channel Channel( xconst_universal_str("msgPageFlipChannel"));
+        Channel.setupPriority( xcore::scheduler::priority::ABOVE_NORMAL );
         for( int i=0; i<m_PerFramePerThread.size(); ++i )
         {
             auto& DoubleBuffer = m_PerFramePerThread[i];

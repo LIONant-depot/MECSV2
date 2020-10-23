@@ -145,7 +145,6 @@
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_unique_span.h" />
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_units.h" />
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_vector.h" />
-    <ClInclude Include="..\..\src\Examples\Settings\mecs_user_settings.h" />
     <ClInclude Include="..\..\src\Examples\Settings\PropertyConfig.h" />
     <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h" />
     <ClInclude Include="..\..\src\Examples\VisualExamples\E01_graphical_2d_basic_physics.h" />

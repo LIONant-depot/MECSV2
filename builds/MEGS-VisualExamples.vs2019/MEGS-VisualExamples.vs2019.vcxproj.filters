@@ -194,9 +194,6 @@
     <ClInclude Include="..\..\src\Examples\Settings\xcore_user_settings.h">
       <Filter>Settings</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Examples\Settings\mecs_user_settings.h">
-      <Filter>Settings</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\mecs.h">
       <Filter>MECS</Filter>
     </ClInclude>
