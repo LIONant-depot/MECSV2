@@ -173,7 +173,7 @@ namespace mecs::examples::E02_graphical_2d_basic_physics
             }
         };
 
-        using tools = tools_kit<32,32>;
+        using tools = tools_kit<64,64>;
     
         //----------------------------------------------------------------------------------------
         // WORLD GRID:: COMPONENTS::

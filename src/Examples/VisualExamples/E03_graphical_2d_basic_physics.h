@@ -47,7 +47,7 @@ namespace mecs::examples::E03_graphical_2d_basic_physics
         //----------------------------------------------------------------------------------------
         namespace component
         {
-            constexpr static std::size_t max_entity_count = 64;
+            constexpr static std::size_t max_entity_count = 128;
             struct lists : mecs::component::data
             {
                 static constexpr auto type_data_access_v = data::type_data_access::QUANTUM_DOUBLE_BUFFER;
@@ -529,8 +529,8 @@ namespace mecs::examples::E03_graphical_2d_basic_physics
         // 
         auto& SyncPhysics = DefaultWorld.CreateSyncPoint();
         DefaultWorld.CreateGraphConnection<physics::system::advance_cell>  (DefaultWorld.getStartSyncpoint(),   SyncPhysics);
-        DefaultWorld.CreateGraphConnection<physics::system::reset_counts>  (SyncPhysics,                        DefaultWorld.getEndSyncpoint());
         DefaultWorld.CreateGraphConnection<system::render_pageflip>        (SyncPhysics,                        DefaultWorld.getEndSyncpoint()).m_Menu = [&] { return Menu(DefaultWorld, s_MyMenu); };
+        DefaultWorld.CreateGraphConnection<physics::system::reset_counts>  (SyncPhysics,                        DefaultWorld.getEndSyncpoint());
 
         //
         // Create the delegates.

@@ -75,8 +75,8 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //----------------------------------------------------------------------------------------
         namespace tools
         {
-            constexpr static int    grid_width_v        = 32;
-            constexpr static int    grid_height_v       = 32;
+            constexpr static int    grid_width_v        = 64;
+            constexpr static int    grid_height_v       = 64;
 
             constexpr static int    grid_width_half_v   = grid_width_v/2;
             constexpr static int    grid_height_half_v  = grid_height_v/2;
@@ -173,7 +173,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
         //----------------------------------------------------------------------------------------
         namespace component
         {
-            constexpr static std::size_t max_entity_count = 64;
+            constexpr static std::size_t max_entity_count = 128;
 
             struct lists : mecs::component::data 
             {
