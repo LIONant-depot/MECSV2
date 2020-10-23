@@ -631,8 +631,8 @@ namespace mecs::system
                         auto  pBackup   = p;
                         if constexpr ( mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE )
                         {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += mecs::component::descriptor_v<T_ARGS>.m_Size; }
+                            else                                              p += mecs::component::descriptor_v<T_ARGS>.m_Size;
                         }
 
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
@@ -781,8 +781,8 @@ namespace mecs::system
                         auto  pBackup   = p;
                         if constexpr ( mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE )
                         {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += mecs::component::descriptor_v<T_ARGS>.m_Size; }
+                            else                                              p += mecs::component::descriptor_v<T_ARGS>.m_Size;
                         }
 
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
@@ -855,8 +855,8 @@ namespace mecs::system
                         auto  pBackup   = p;
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
                         {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += mecs::component::descriptor_v<T_ARGS>.m_Size; }
+                            else                                              p += mecs::component::descriptor_v<T_ARGS>.m_Size;
                         }
 
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
@@ -910,8 +910,8 @@ namespace mecs::system
                         auto  pBackup   = p;
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type != mecs::component::type::SHARE)
                         {
-                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += sizeof(xcore::types::decay_full_t<T_ARGS>); }
-                            else                                              p += sizeof(xcore::types::decay_full_t<T_ARGS>);
+                            if constexpr (std::is_pointer_v<T_ARGS>) { if (p) p += mecs::component::descriptor_v<T_ARGS>.m_Size; }
+                            else                                              p += mecs::component::descriptor_v<T_ARGS>.m_Size;
                         }
 
                         if constexpr (mecs::component::descriptor_v<T_ARGS>.m_Type == mecs::component::type::SINGLETON)
