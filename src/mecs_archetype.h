@@ -18,20 +18,20 @@ namespace mecs::archetype
             xassert(DataDescriptorList.size());
 
             int i = 0;
-            for (auto& e : DataDescriptorList) m_DataDescriptors[i++] = e;
+            for (auto& e : DataDescriptorList) m_DataDescriptorsArrayData[i++] = e;
             int j = 0;
-            for (auto& e : ShareDescriptorList) m_ShareDescriptors[j++] = e;
+            for (auto& e : ShareDescriptorList) m_ShareDescriptorsArrayData[j++] = e;
 
-            m_TagDescriptorSpan   = TagDescriptorList;
-            m_DataDescriptorSpan  = std::span{ m_DataDescriptors.data(),  static_cast<std::size_t>(i)};
-            m_ShareDescriptorSpan = std::span{ m_ShareDescriptors.data(), static_cast<std::size_t>(j)};
+            m_TagDescriptor   = TagDescriptorList;
+            m_DataDescriptor  = std::span{ m_DataDescriptorsArrayData.data(),  static_cast<std::size_t>(i)};
+            m_ShareDescriptor = std::span{ m_ShareDescriptorsArrayData.data(), static_cast<std::size_t>(j)};
         }
 
-        std::span<const mecs::component::descriptor* const>     m_DataDescriptorSpan    {};
-        std::span<const mecs::component::descriptor* const>     m_ShareDescriptorSpan   {};
-        std::span<const mecs::component::descriptor* const>     m_TagDescriptorSpan     {};
-        ptr_array                                               m_DataDescriptors       {};
-        ptr_array                                               m_ShareDescriptors      {};
+        std::span<const mecs::component::descriptor* const>     m_DataDescriptor            {};
+        std::span<const mecs::component::descriptor* const>     m_ShareDescriptor           {};
+        std::span<const mecs::component::descriptor* const>     m_TagDescriptor             {};
+        ptr_array                                               m_DataDescriptorsArrayData  {};
+        ptr_array                                               m_ShareDescriptorsArrayData {};
     };
 
     //----------------------------------------------------------------------------------------------
@@ -282,8 +282,8 @@ namespace mecs::archetype
 
         mecs::component::entity::map*                   m_pEntityMap                { nullptr };
 
-        descriptor                                      m_Descriptor                {};
-        std::span<const mecs::component::descriptor*>   m_MainPoolDescriptorSpan    {};
+        descriptor                                      m_PoolDescriptors           {};
+        std::span<const mecs::component::descriptor*>   m_MainPoolDescriptor        {};
         mecs::entity_pool::instance                     m_MainPool                  {};     // this pool should be sorted by its share components values
                                                                                             // component of this pool includes: < specialized, ShareComponents... > 
 
@@ -303,7 +303,7 @@ namespace mecs::archetype
 
         std::array<std::shared_ptr<share_map>,mecs::settings::max_data_components_per_entity> m_ShareMapTable;
 
-        main_pool_descriptors                           m_MainPoolDescriptorData    {};
+        main_pool_descriptors                           m_MainPoolDescriptorArrayData{};
     };
 
 

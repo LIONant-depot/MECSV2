@@ -28,7 +28,7 @@ namespace mecs::archetype
                 std::array< std::byte*, sizeof...(T_TUPLE_ARGS) > SortedPointers;
 
                 auto& Archetype      = *Pool.m_EntityPool.m_pArchetype;
-                auto  DescriptorSpan = Archetype.m_Descriptor.m_ShareDescriptorSpan;
+                auto  DescriptorSpan = Archetype.m_PoolDescriptors.m_ShareDescriptor;
 
                 int j=0;
                 for( int i=0, end = static_cast<int>(DescriptorSpan.size()); i<end; ++i )
@@ -361,9 +361,9 @@ namespace mecs::archetype
     ,   const std::span<const mecs::component::descriptor* const>   TagDescriptorList
     ,   mecs::component::entity::map*                               pEntityMap          ) noexcept
     {
-        m_Descriptor.Init(DataDescriptorList, ShareDescriptorList, TagDescriptorList);
-        m_MainPoolDescriptorData[0] = &mecs::component::descriptor_v<specialized_pool>;
-        m_MainPoolDescriptorSpan = std::span{ m_MainPoolDescriptorData.data(), ShareDescriptorList.size() + 1 };
+        m_PoolDescriptors.Init(DataDescriptorList, ShareDescriptorList, TagDescriptorList);
+        m_MainPoolDescriptorArrayData[0] = &mecs::component::descriptor_v<specialized_pool>;
+        m_MainPoolDescriptor = std::span{ m_MainPoolDescriptorArrayData.data(), ShareDescriptorList.size() + 1 };
         m_pEntityMap = pEntityMap;
 
         if (ShareDescriptorList.size())
@@ -372,14 +372,14 @@ namespace mecs::archetype
             {
                 auto pShare = ShareDescriptorList[i];
                 const auto Index = i + 1;
-                m_MainPoolDescriptorData[Index] = pShare;
+                m_MainPoolDescriptorArrayData[Index] = pShare;
 
                 // For those share components that the user wants us to create a hash map we crate one
                 if (pShare->m_ShareComponentMapType != mecs::component::share::type_map::NONE) m_ShareMapTable[pShare->m_BitNumber] = std::make_unique<share_map>();
             }
         }
 
-        m_MainPool.Init(*this, m_MainPoolDescriptorSpan, 100000u);
+        m_MainPool.Init(*this, m_MainPoolDescriptor, 100000u);
     }
 
     //----------------------------------------------------------------------------------------------------
@@ -535,7 +535,7 @@ namespace mecs::archetype
             );
 
             // Initialize the pool
-            Specialized.m_EntityPool.Init(*this, m_Descriptor.m_DataDescriptorSpan, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
+            Specialized.m_EntityPool.Init(*this, m_PoolDescriptors.m_DataDescriptor, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
             Specialized.m_pArchetypeInstance = this;
 
             // Notify possible listeners
@@ -582,7 +582,7 @@ namespace mecs::archetype
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.setNull();
             Specialized.m_MainPoolIndex = PoolIndex;
-            Specialized.m_EntityPool.Init( *this, m_Descriptor.m_DataDescriptorSpan, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
+            Specialized.m_EntityPool.Init( *this, m_PoolDescriptors.m_DataDescriptor, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
             Specialized.m_pArchetypeInstance = this;
 
             // Notify possible listeners
@@ -682,7 +682,7 @@ namespace mecs::archetype
         xassert_block_basic()
         {
             std::uint64_t CRC = 0;
-            for( int i=0, end = static_cast<int>(m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            for( int i=0, end = static_cast<int>(m_PoolDescriptors.m_ShareDescriptor.size()); i<end; ++i )
             {
                 CRC += pListOfCRCFromShareComponents[i];
             }
@@ -720,14 +720,14 @@ namespace mecs::archetype
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.m_Value       = NewCRCPool;
             Specialized.m_MainPoolIndex          = PoolIndex;
-            Specialized.m_EntityPool.Init(*this, m_Descriptor.m_DataDescriptorSpan, 100000 /*MaxEntries*/ );
+            Specialized.m_EntityPool.Init(*this, m_PoolDescriptors.m_DataDescriptor, 100000 /*MaxEntries*/ );
             Specialized.m_pArchetypeInstance     = this;
-            Specialized.m_ShareComponentKeysSpan = std::span{ Specialized.m_ShareComponentKeysMemory.data(), m_Descriptor.m_ShareDescriptorSpan.size() };
+            Specialized.m_ShareComponentKeysSpan = std::span{ Specialized.m_ShareComponentKeysMemory.data(), m_PoolDescriptors.m_ShareDescriptor.size() };
 
             for( int i=0; i< Specialized.m_ShareComponentKeysSpan.size(); i++ )
             {
                 Specialized.m_ShareComponentKeysSpan[i] = pListOfCRCFromShareComponents[i];
-                memcpy( m_MainPool.getComponentByIndexRaw(PoolIndex, 1 + i), pPointersToShareComponents[i], m_Descriptor.m_ShareDescriptorSpan[i]->m_Size );
+                memcpy( m_MainPool.getComponentByIndexRaw(PoolIndex, 1 + i), pPointersToShareComponents[i], m_PoolDescriptors.m_ShareDescriptor[i]->m_Size );
             }
 
             // Notify possible listeners
@@ -750,9 +750,9 @@ namespace mecs::archetype
         }
 
         auto& OldSpecialized = m_MainPool.getComponentByIndex<specialized_pool>(FromSpecializePoolIndex, 0);
-        for( i=0; i< m_Descriptor.m_DataDescriptorSpan.size(); i++ )
+        for( i=0; i< m_PoolDescriptors.m_DataDescriptor.size(); i++ )
         {
-            m_Descriptor.m_DataDescriptorSpan[i]->m_fnMove(pPool->m_EntityPool.getComponentByIndexRaw(Index, i),
+            m_PoolDescriptors.m_DataDescriptor[i]->m_fnMove(pPool->m_EntityPool.getComponentByIndexRaw(Index, i),
                 OldSpecialized.m_EntityPool.getComponentByIndexRaw(EntityIndexInSpecializedPool, i) );
         }
 
@@ -829,7 +829,7 @@ namespace mecs::archetype
             Pool.m_ShareComponentKeysSpan = std::span{ Pool.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
             Pool.m_TypeGuid.m_Value       = ShareKey;
             Pool.m_pArchetypeInstance     = this;
-            Pool.m_EntityPool.Init( *this, m_Descriptor.m_DataDescriptorSpan, MaxEntries );
+            Pool.m_EntityPool.Init( *this, m_PoolDescriptors.m_DataDescriptor, MaxEntries );
 
             if( m_Events.m_CreatedPool.hasSubscribers() )
                 m_Events.m_CreatedPool.NotifyAll( System, Pool );
@@ -1153,7 +1153,7 @@ namespace mecs::archetype
             static constexpr std::array         SortedDesc     { &mecs::component::descriptor_v< std::tuple_element_t< xcore::types::tuple_t2i_v< T_ARGS, function_tuple >, sorted_tuple>> ... };
             static constexpr std::array         RemapArray     { xcore::types::tuple_t2i_v<      std::tuple_element_t< xcore::types::tuple_t2i_v< T_ARGS, function_tuple >, sorted_tuple>, function_tuple_decay > ... };
             const auto&                         Archetype      = *Pool.m_pArchetypeInstance;
-            const auto&                         Desc           = Archetype.m_MainPoolDescriptorSpan;
+            const auto&                         Desc           = Archetype.m_MainPoolDescriptor;
             std::array<int, sizeof...(T_ARGS)>  Indices;
 
             for( int i=0, c=0, end = static_cast<int>(Desc.size()); i<end; ++i )
@@ -1443,9 +1443,9 @@ namespace mecs::archetype
         std::array<const mecs::component::descriptor*, settings::max_data_components_per_entity + 1>  ArrayShareComponents;
         std::array<const mecs::component::descriptor*, settings::max_tag_components_per_entity  + 1>  ArrayTagComponents;
 
-        const auto DataTuple  = details::FillArray( ArrayDataComponents,   std::get<1>(AddDataTuple),  std::get<1>(SubDataTuple),  OldArchetype.m_Descriptor.m_DataDescriptorSpan  );
-        const auto ShareTuple = details::FillArray( ArrayShareComponents,  std::get<1>(AddShareTuple), std::get<1>(SubShareTuple), OldArchetype.m_Descriptor.m_ShareDescriptorSpan );
-        const auto TagTuple   = details::FillArray( ArrayTagComponents,    std::get<1>(AddTagTuple),   std::get<1>(SubTagTuple),   OldArchetype.m_Descriptor.m_TagDescriptorSpan   );
+        const auto DataTuple  = details::FillArray( ArrayDataComponents,   std::get<1>(AddDataTuple),  std::get<1>(SubDataTuple),  OldArchetype.m_PoolDescriptors.m_DataDescriptor  );
+        const auto ShareTuple = details::FillArray( ArrayShareComponents,  std::get<1>(AddShareTuple), std::get<1>(SubShareTuple), OldArchetype.m_PoolDescriptors.m_ShareDescriptor );
+        const auto TagTuple   = details::FillArray( ArrayTagComponents,    std::get<1>(AddTagTuple),   std::get<1>(SubTagTuple),   OldArchetype.m_PoolDescriptors.m_TagDescriptor   );
 
         return _getOrCreateArchitype
         ( 
@@ -1487,8 +1487,8 @@ namespace mecs::archetype
     static void data_base::DetailsDoQuery( mecs::archetype::query::result_entry& Entry ) noexcept
     {
         const auto&     Archetype                   = *Entry.m_pArchetype;
-        const auto&     ArchetypeDataCompDescSpan   = Archetype.m_Descriptor.m_DataDescriptorSpan;
-        const auto&     ArchetypeShareCompDescSpan  = Archetype.m_Descriptor.m_ShareDescriptorSpan;
+        const auto&     ArchetypeDataCompDescSpan   = Archetype.m_PoolDescriptors.m_DataDescriptor;
+        const auto&     ArchetypeShareCompDescSpan  = Archetype.m_PoolDescriptors.m_ShareDescriptor;
         const int       ArchetypeDataCompSize       = static_cast<int>(ArchetypeDataCompDescSpan.size());
         const int       ArchetypeShareCompSize      = static_cast<int>(ArchetypeShareCompDescSpan.size());
         const int       FunctionParamSize           = Entry.m_nParameters;
@@ -1858,8 +1858,8 @@ namespace mecs::archetype
         // Mark the old entity as a zombie now... since it is about to move
         OldEntity.MarkAsZombie();
 
-        auto& NewDescriptor = NewArchetype.m_Descriptor;
-        auto& OldDescriptor = OldArchetype.m_Descriptor;
+        auto& NewDescriptor = NewArchetype.m_PoolDescriptors;
+        auto& OldDescriptor = OldArchetype.m_PoolDescriptors;
 
         xassert(NewDescriptor.m_ShareDescriptorSpan.size() == sizeof...(T_SHARE_COMPONENTS) );
 
@@ -1929,7 +1929,7 @@ namespace mecs::archetype
                     Specialized.m_TypeGuid.m_Value          = 0u;
                     Specialized.m_MainPoolIndex             = Index;
                     Specialized.m_ShareComponentKeysSpan    = std::span{ Specialized.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
-                    Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
+                    Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_PoolDescriptors.m_DataDescriptor, settings::max_default_entities_per_pool );
                     for (int k = 0, end2 = static_cast<int>(Specialized.m_ShareComponentKeysSpan.size()); k != end2; ++k) 
                         Specialized.m_ShareComponentKeysMemory[k] = ShareKeys[k];
 
@@ -1975,7 +1975,7 @@ namespace mecs::archetype
                     Specialized.m_pArchetypeInstance        = &NewArchetype;
                     Specialized.m_TypeGuid.m_Value          = 0u;
                     Specialized.m_MainPoolIndex             = Index;
-                    Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_Descriptor.m_DataDescriptorSpan, settings::max_default_entities_per_pool );
+                    Specialized.m_EntityPool.Init( NewArchetype, NewArchetype.m_PoolDescriptors.m_DataDescriptor, settings::max_default_entities_per_pool );
 
                     if (NewArchetype.m_Events.m_CreatedPool.hasSubscribers())
                         NewArchetype.m_Events.m_CreatedPool.NotifyAll(System, Specialized);
@@ -1997,13 +1997,13 @@ namespace mecs::archetype
             //
             // Move all the components to the new entry
             //
-            const int NewEnd = static_cast<int>(NewDescriptor.m_DataDescriptorSpan.size());
-            const int OldEnd = static_cast<int>(OldDescriptor.m_DataDescriptorSpan.size());
+            const int NewEnd = static_cast<int>(NewDescriptor.m_DataDescriptor.size());
+            const int OldEnd = static_cast<int>(OldDescriptor.m_DataDescriptor.size());
             int iNew = 1, iOld = 1; // We can skip the entity so start at 1
             while( iOld != OldEnd && iNew != NewEnd )
             {
-                const auto& DescNew = *NewDescriptor.m_DataDescriptorSpan[iNew];
-                const auto& DescOld = *OldDescriptor.m_DataDescriptorSpan[iOld];
+                const auto& DescNew = *NewDescriptor.m_DataDescriptor[iNew];
+                const auto& DescOld = *OldDescriptor.m_DataDescriptor[iOld];
                 if(DescNew.m_Guid.m_Value > DescOld.m_Guid.m_Value )
                 {
                     ++iOld;

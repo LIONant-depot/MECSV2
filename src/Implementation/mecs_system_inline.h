@@ -555,7 +555,7 @@ namespace mecs::system
             // Create a Map between Function Parameters (Share Writable Component Only) To ShareComponentIndex in the pool
             //
             {
-                const auto& Desc    = Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan;
+                const auto& Desc    = Pool.m_pArchetypeInstance->m_PoolDescriptors.m_ShareDescriptor;
                 const int   end     = static_cast<int>(Desc.size());
                 int         Index   = 0;
                 const auto  FindPos = [&]( auto& i, auto& ComponentDesc ) constexpr 
@@ -592,7 +592,7 @@ namespace mecs::system
             //
             // Copy all keys and pointers
             //
-            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_PoolDescriptors.m_ShareDescriptor.size()); i<end; ++i )
             {
                 ShareComponentData[i] = Pool.m_pArchetypeInstance->m_MainPool.getComponentByIndexRaw( Pool.m_MainPoolIndex, 1+i );
                 ComponentCRC[i]       = Pool.m_ShareComponentKeysSpan[i];
@@ -712,7 +712,7 @@ namespace mecs::system
             // Create a Map between Function Parameters (Share Writable Component Only) To ShareComponentIndex in the pool
             //
             {
-                const auto& Desc    = Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan;
+                const auto& Desc    = Pool.m_pArchetypeInstance->m_PoolDescriptors.m_ShareDescriptor;
                 const int   end     = static_cast<int>(Desc.size());
                 int         Index   = 0;
                 const auto  FindPos = [&]( auto& i, auto& ComponentDesc ) constexpr 
@@ -749,7 +749,7 @@ namespace mecs::system
             //
             // Copy all keys and pointers
             //
-            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_Descriptor.m_ShareDescriptorSpan.size()); i<end; ++i )
+            for( int i=0, end = static_cast<int>(Pool.m_pArchetypeInstance->m_PoolDescriptors.m_ShareDescriptor.size()); i<end; ++i )
             {
                 ShareComponentData[i] = Pool.m_pArchetypeInstance->m_MainPool.getComponentByIndexRaw( Pool.m_MainPoolIndex, 1+i );
                 ComponentCRC[i]       = Pool.m_ShareComponentKeysSpan[i];
