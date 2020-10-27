@@ -39,14 +39,14 @@ namespace mecs::archetype::event
 
     struct create_pool final : details::base_event
     {
-        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::specialized_pool& >;
+        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::pool& >;
         constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::create_pool" };
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::create_pool" );
     };
 
     struct destroy_pool final : details::base_event
     {
-        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::specialized_pool& >;
+        using                   event_t             = mecs::tools::event< mecs::system::instance&, mecs::archetype::pool& >;
         constexpr static auto   type_guid_v         = type_guid                 { "mecs::archetype::event::destroy_pool" };
         constexpr static auto   type_name_v         = xconst_universal_str      ( "mecs::archetype::event::destroy_pool" );
     };

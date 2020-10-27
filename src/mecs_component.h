@@ -80,7 +80,7 @@ namespace mecs::component
     {
         struct reference
         {
-            mecs::archetype::specialized_pool*  m_pPool;
+            mecs::archetype::pool*  m_pPool;
             mecs::entity_pool::index            m_Index;
         };
 

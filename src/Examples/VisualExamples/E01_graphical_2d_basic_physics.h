@@ -238,7 +238,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
                     ,   event::render
                 >;
 
-                mecs::archetype::specialized_pool* m_pSpecializedPoolCell;
+                mecs::archetype::pool* m_pSpecializedPoolCell;
 
                 void msgGraphInit( mecs::world::instance& ) noexcept
                 {
@@ -488,7 +488,7 @@ namespace mecs::examples::E01_graphical_2d_basic_physics
             //----------------------------------------------------------------------------------------
             struct create_spatial_entity : mecs::archetype::delegate::instance< mecs::archetype::event::create_entity >
             {
-                mecs::archetype::specialized_pool* m_pSpecializedPoolCell = nullptr;
+                mecs::archetype::pool* m_pSpecializedPoolCell = nullptr;
 
                 // This function will be call ones per entity. Since we only will have one entity it will only be call ones per frame.
                 xforceinline

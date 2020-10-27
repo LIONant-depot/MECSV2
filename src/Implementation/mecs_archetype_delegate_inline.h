@@ -187,7 +187,7 @@ namespace mecs::archetype::delegate
         }
 
         template< typename T_USER_DELEGATE > inline
-        void custom_instance< T_USER_DELEGATE >::HandlePoolEvents( mecs::system::instance& System, mecs::archetype::specialized_pool& Pool ) noexcept
+        void custom_instance< T_USER_DELEGATE >::HandlePoolEvents( mecs::system::instance& System, mecs::archetype::pool& Pool ) noexcept
         {
             if constexpr ( std::is_same_v< typename event_t::event_t, mecs::archetype::event::details::base_event::event_t> )
             {

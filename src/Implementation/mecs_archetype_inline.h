@@ -23,7 +23,7 @@ namespace mecs::archetype
 
             template< typename T_CALLBACK >
             xforceinline constexpr
-            static auto Call( specialized_pool& Pool, T_CALLBACK&& Callback ) noexcept
+            static auto Call( pool& Pool, T_CALLBACK&& Callback ) noexcept
             {
                 std::array< std::byte*, sizeof...(T_TUPLE_ARGS) > SortedPointers;
 
@@ -58,7 +58,7 @@ namespace mecs::archetype
 
     template< typename T_CALLBACK >
     constexpr xforceinline
-    void specialized_pool::getShareComponent( T_CALLBACK&& CallBack ) noexcept
+    void pool::getShareComponent( T_CALLBACK&& CallBack ) noexcept
     {
         using params = typename xcore::function::traits<T_CALLBACK>::args_tuple;
         using the    = details::share_component_get<params>;
@@ -362,7 +362,7 @@ namespace mecs::archetype
     ,   mecs::component::entity::map*                               pEntityMap          ) noexcept
     {
         m_PoolDescriptors.Init(DataDescriptorList, ShareDescriptorList, TagDescriptorList);
-        m_MainPoolDescriptorArrayData[0] = &mecs::component::descriptor_v<specialized_pool>;
+        m_MainPoolDescriptorArrayData[0] = &mecs::component::descriptor_v<pool>;
         m_MainPoolDescriptor = std::span{ m_MainPoolDescriptorArrayData.data(), ShareDescriptorList.size() + 1 };
         m_pEntityMap = pEntityMap;
 
@@ -412,7 +412,7 @@ namespace mecs::archetype
 
         for( int i=0, end = static_cast<int>(m_EntityPool.size()); i != end; ++i )
         {
-            auto& Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(i,0);
+            auto& Specialized = m_EntityPool.getComponentByIndex<pool>(i,0);
             Specialized.m_EntityPool.MemoryBarrier();
         }
 
@@ -437,7 +437,7 @@ namespace mecs::archetype
         //
         for (int end = m_EntityPool.size(), i = 0; i < end; ++i)
         {
-            auto& Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(i, 0);
+            auto& Specialized = m_EntityPool.getComponentByIndex<pool>(i, 0);
             Specialized.m_EntityPool.MemoryBarrier();
         }
 
@@ -488,12 +488,12 @@ namespace mecs::archetype
             std::array<std::uint64_t, sizeof...(T_SHARE_COMPONENTS)> ShareComponentKeys;
             ((ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, sorted_tuple>] = mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey(&ShareComponents)), ...);
 
-            const specialized_pool::type_guid SpecializedGuidTypeGuid{ (ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, share_tuple>] + ...) };
+            const pool::type_guid SpecializedGuidTypeGuid{ (ShareComponentKeys[xcore::types::tuple_t2i_v<T_SHARE_COMPONENTS, share_tuple>] + ...) };
 
             static constexpr auto nKeys = sizeof...(T_SHARE_COMPONENTS);
             for (int end = static_cast<int>(m_EntityPool.size()), i = 0; i < end; ++i)
             {
-                auto& Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(i, 0);
+                auto& Specialized = m_EntityPool.getComponentByIndex<pool>(i, 0);
 
                 if( Specialized.m_TypeGuid == SpecializedGuidTypeGuid )
                 {
@@ -514,7 +514,7 @@ namespace mecs::archetype
             //TODO: The append may need to take a call back here to keep it thread safe
             //      Allocates an pool entry
             const int PoolIndex   = m_EntityPool.append(); m_EntityPool.MemoryBarrier();
-            auto&     Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(PoolIndex, 0);
+            auto&     Specialized = m_EntityPool.getComponentByIndex<pool>(PoolIndex, 0);
 
             // Copy all the keys
             for( int nKeys = static_cast<int>(ShareComponentKeys.size()), k = 0; k < nKeys; ++k) Specialized.m_ShareComponentKeysMemory[k] = ShareComponentKeys[k];
@@ -560,7 +560,7 @@ namespace mecs::archetype
 
             for (int end = m_EntityPool.size(), i = 0; i < end; ++i)
             {
-                auto&       Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(i, 0);
+                auto&       Specialized = m_EntityPool.getComponentByIndex<pool>(i, 0);
                 const auto  Index       = Specialized.m_EntityPool.append(nEntities); 
                 if (Index != ~0u) return
                 {
@@ -577,7 +577,7 @@ namespace mecs::archetype
             //TODO: The append may need to take a call back here to keep it thread safe
             //      Allocates an pool entry
             const int PoolIndex = m_EntityPool.append(); m_EntityPool.MemoryBarrier();
-            auto& Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(PoolIndex, 0);
+            auto& Specialized = m_EntityPool.getComponentByIndex<pool>(PoolIndex, 0);
 
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.setNull();
@@ -627,7 +627,7 @@ namespace mecs::archetype
     //----------------------------------------------------------------------------------------------------
 
     template< typename...T_SHARE_COMPONENTS >constexpr
-    specialized_pool::type_guid instance::getSpecializedPoolGuid( const instance& Instance, T_SHARE_COMPONENTS&&...ShareComponents ) const noexcept
+    pool::type_guid instance::getSpecializedPoolGuid( const instance& Instance, T_SHARE_COMPONENTS&&...ShareComponents ) const noexcept
     {
         static_assert(mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_Type == mecs::component::type::SHARE);
         xassert( sizeof...(T_SHARE_COMPONENTS) == Instance.m_PoolDescriptors.m_ShareDescriptor.size() );
@@ -693,12 +693,12 @@ namespace mecs::archetype
         // Try to find an existing pool
         //
         int               i     = 0;
-        specialized_pool* pPool = nullptr;
+        pool* pPool = nullptr;
     TRY_FIND_AGAIN:
 
         for( int end = m_EntityPool.size(); i<end; ++i )
         {
-            auto& Specialized = m_EntityPool.getComponentByIndex<specialized_pool>(i, 0);
+            auto& Specialized = m_EntityPool.getComponentByIndex<pool>(i, 0);
             if(Specialized.m_TypeGuid.m_Value == NewCRCPool)
             {
                 pPool = &Specialized;
@@ -715,7 +715,7 @@ namespace mecs::archetype
             if( i != m_EntityPool.size() ) goto TRY_FIND_AGAIN;
 
             const int PoolIndex = m_EntityPool.append(); m_EntityPool.MemoryBarrier();
-            auto& Specialized   = m_EntityPool.getComponentByIndex<specialized_pool>(PoolIndex, 0);
+            auto& Specialized   = m_EntityPool.getComponentByIndex<pool>(PoolIndex, 0);
 
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.m_Value       = NewCRCPool;
@@ -749,7 +749,7 @@ namespace mecs::archetype
             goto TRY_FIND_AGAIN;
         }
 
-        auto& OldSpecialized = m_EntityPool.getComponentByIndex<specialized_pool>(FromSpecializePoolIndex, 0);
+        auto& OldSpecialized = m_EntityPool.getComponentByIndex<pool>(FromSpecializePoolIndex, 0);
         for( i=0; i< m_PoolDescriptors.m_DataDescriptor.size(); i++ )
         {
             m_PoolDescriptors.m_DataDescriptor[i]->m_fnMove(pPool->m_EntityPool.getComponentByIndexRaw(Index, i),
@@ -778,7 +778,7 @@ namespace mecs::archetype
 
     template< typename... T_SHARE_COMPONENTS >
     inline
-    specialized_pool& instance::getOrCreateSpecializedPool( system::instance&         System
+    pool& instance::getOrCreateSpecializedPool( system::instance&         System
                                                           , int                       MinFreeEntries
                                                           , int                       MaxEntries    
                                                           , T_SHARE_COMPONENTS&&...   ShareComponents
@@ -801,7 +801,7 @@ namespace mecs::archetype
             const std::uint32_t MinFree = MinFreeEntries;
             for (int end = m_EntityPool.size(); i < end; ++i)
             {
-                auto& Pool = m_EntityPool.getComponentByIndex<specialized_pool>(i, 0);
+                auto& Pool = m_EntityPool.getComponentByIndex<pool>(i, 0);
                 if (Pool.m_TypeGuid.m_Value == ShareKey && Pool.m_EntityPool.FreeCount() >= MinFree) return Pool;
             }
         }
@@ -814,7 +814,7 @@ namespace mecs::archetype
             if (i != m_EntityPool.size()) goto CONTINUE_SEARCHING;
 
             const auto Index = m_EntityPool.append(1);
-            auto&      Pool  = m_EntityPool.getComponentByIndex<specialized_pool>( Index, 0 );
+            auto&      Pool  = m_EntityPool.getComponentByIndex<pool>( Index, 0 );
 
             using unsorted_tuple = std::tuple<T_SHARE_COMPONENTS ...>;
             using sorted_tuple   = xcore::types::tuple_sort_t< mecs::component::smaller_guid, unsorted_tuple >;
@@ -1141,7 +1141,7 @@ namespace mecs::archetype
 
         //---------------------------------------------------------------------------------
         template< typename T_CALLBACK, typename...T_ARGS, typename...T_EXTRA_ARGS > xforceinline
-        void CallPoolFunction( mecs::archetype::specialized_pool& Pool, T_CALLBACK&& Callback, std::tuple<T_ARGS...>*, T_EXTRA_ARGS&... ExtraArgs ) noexcept
+        void CallPoolFunction( mecs::archetype::pool& Pool, T_CALLBACK&& Callback, std::tuple<T_ARGS...>*, T_EXTRA_ARGS&... ExtraArgs ) noexcept
         {
             static_assert(( (mecs::component::descriptor_v< xcore::types::decay_full_t<T_ARGS> >.m_Type == mecs::component::type::SHARE) && ... ));
             static_assert( ((std::is_same_v< const T_ARGS, T_ARGS> ) && ...));
@@ -1873,7 +1873,7 @@ namespace mecs::archetype
         // Allocate the entity in the new pool
         //
         std::uint32_t       Index        = ~0u;
-        specialized_pool*   pSpecialized = nullptr;
+        pool*   pSpecialized = nullptr;
         if(!!sizeof...(T_SHARE_COMPONENTS))
         {
             auto& MainPool = NewArchetype.m_EntityPool;
@@ -1881,7 +1881,7 @@ namespace mecs::archetype
             {
                 for (int i = 0, end = static_cast<int>(NewArchetype.m_EntityPool.size()); i != end; ++i)
                 {
-                    auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(i,0);
+                    auto& Specialized = MainPool.getComponentByIndex<pool>(i,0);
                     bool  bCompatible = true;
                     for( int k=0, end2 = static_cast<int>(Specialized.m_ShareComponentKeysSpan.size()); k != end2; ++k )
                     {
@@ -1924,7 +1924,7 @@ namespace mecs::archetype
                        , ... 
                     );
 
-                    auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
+                    auto& Specialized = MainPool.getComponentByIndex<pool>(Index, 0);
                     Specialized.m_pArchetypeInstance        = &NewArchetype;
                     Specialized.m_TypeGuid.m_Value          = 0u;
                     Specialized.m_MainPoolIndex             = Index;
@@ -1951,7 +1951,7 @@ namespace mecs::archetype
             {
                 for (int i = 0, end = static_cast<int>(NewArchetype.m_EntityPool.size()); i != end; ++i)
                 {
-                    auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(i, 0);
+                    auto& Specialized = MainPool.getComponentByIndex<pool>(i, 0);
                     Index = Specialized.m_EntityPool.append();
                     if (Index != ~0)
                     {
@@ -1971,7 +1971,7 @@ namespace mecs::archetype
                     auto& MainPool = NewArchetype.m_EntityPool;
                     Index = MainPool.append(1);
 
-                    auto& Specialized = MainPool.getComponentByIndex<specialized_pool>(Index, 0);
+                    auto& Specialized = MainPool.getComponentByIndex<pool>(Index, 0);
                     Specialized.m_pArchetypeInstance        = &NewArchetype;
                     Specialized.m_TypeGuid.m_Value          = 0u;
                     Specialized.m_MainPoolIndex             = Index;

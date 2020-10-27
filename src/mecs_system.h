@@ -230,7 +230,7 @@ namespace mecs::system
                 >
         constexpr xforceinline
         void                                getOrCreateEntity       ( mecs::component::entity::guid         gEntity
-                                                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                                                    , mecs::archetype::pool&    SpecialiedPool
                                                                     , T_GET_CALLBACK&&                      GetCallback
                                                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                                                     ) noexcept;
@@ -241,7 +241,7 @@ namespace mecs::system
                 >
         constexpr xforceinline
         void                                getOrCreateEntityRelax  ( mecs::component::entity::guid         gEntity
-                                                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                                                    , mecs::archetype::pool&    SpecialiedPool
                                                                     , T_GET_CALLBACK&&                      GetCallback
                                                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                                                     ) noexcept;

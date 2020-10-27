@@ -5,7 +5,7 @@
 namespace mecs::archetype
 {
     struct instance;
-    struct specialized_pool;
+    struct pool;
     using index = std::uint32_t;
 }
 

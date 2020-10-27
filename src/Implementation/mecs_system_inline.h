@@ -470,7 +470,7 @@ namespace mecs::system
 
                 if( I.m_isShared ) return reinterpret_cast<std::byte*>(&R.m_pArchetype->m_EntityPool.getComponentByIndex<t>( Index, I.m_Index ));
 
-                auto& Specialized = R.m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+                auto& Specialized = R.m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::pool>(Index, 0);
                 return reinterpret_cast<std::byte*>(&Specialized.m_EntityPool.getComponentByIndex<t, false>( iStart, I.m_Index ));
             };
             
@@ -531,7 +531,7 @@ namespace mecs::system
         constexpr xforceinline
         void ProcesssCallMutableShareComponents (  std::tuple<T_SHARE_COMPS...>*                        // Share components are order by their guids (less to more)
                                                 ,  std::tuple<T_ARGS...>*                               // Arguments are order base on the function call
-                                                ,  mecs::archetype::specialized_pool&   Pool
+                                                ,  mecs::archetype::pool&   Pool
                                                 ,  std::span<std::byte*>                Span
                                                 ,  T&                                   Params
                                                 ,  params_per_archetype&                Params2
@@ -690,7 +690,7 @@ namespace mecs::system
         constexpr xforceinline
         void ProcesssCallMutableShareComponents (  std::tuple<T_SHARE_COMPS...>*                        // Share components are order by their guids (less to more)
                                                 ,  std::tuple<T_ARGS...>*                               // Arguments are order base on the function call
-                                                ,  mecs::archetype::specialized_pool&   Pool
+                                                ,  mecs::archetype::pool&   Pool
                                                 ,  std::span<std::byte*>                Span
                                                 ,  T&                                   Params
                                                 ,  int                                  iStart
@@ -1137,7 +1137,7 @@ namespace mecs::system
     void instance::_ProcessResult( T_PARAMS& Params, T_PARAMS2& Params2, const int Index ) noexcept
     {
         using               function_arg_tuple  = typename xcore::function::traits<T_PARAMS::call_back_t>::args_tuple;
-        auto&               SpecializedPool     = Params2.m_pResult->m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+        auto&               SpecializedPool     = Params2.m_pResult->m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::pool>(Index, 0);
         using               mutable_share_tuple = details::mutable_share_tuple_t<function_arg_tuple>;
 
         // If we have to update share components we have to do things more carefully 
@@ -1156,7 +1156,7 @@ namespace mecs::system
                 ] () constexpr noexcept
                 {
                     auto        Pointers                = details::ProcessInitArray( reinterpret_cast<function_arg_tuple*>(nullptr), iStart, Index, *Params2.m_pResult );
-                    auto&       SpecializedPool         = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+                    auto&       SpecializedPool         = Params2.m_pResult->m_pArchetype->m_MainPool.getComponentByIndex<mecs::archetype::pool>(Index, 0);
 
                     if (Params2.m_DelegateSpan.size())
                     {
@@ -1210,7 +1210,7 @@ namespace mecs::system
 
                     if( Params2.m_DelegateSpan.size() )
                     {
-                        auto&                    SpecializedPool = Params2.m_pResult->m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::specialized_pool>(Index, 0);
+                        auto&                    SpecializedPool = Params2.m_pResult->m_pArchetype->m_EntityPool.getComponentByIndex<mecs::archetype::pool>(Index, 0);
                         mecs::component::entity* pEntityPool     = &SpecializedPool.m_EntityPool.getComponentByIndex<mecs::component::entity>( iStart, 0 );
 
                         details::ProcesssCall
@@ -1555,7 +1555,7 @@ namespace mecs::system
             >
     constexpr xforceinline
     void instance::getOrCreateEntityRelax( mecs::component::entity::guid    gEntity
-                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                    , mecs::archetype::pool&    SpecialiedPool
                                     , T_GET_CALLBACK&&                      GetCallback
                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                     ) noexcept
@@ -1605,7 +1605,7 @@ namespace mecs::system
             >
     constexpr xforceinline
     void instance::getOrCreateEntity( mecs::component::entity::guid         gEntity
-                                    , mecs::archetype::specialized_pool&    SpecialiedPool
+                                    , mecs::archetype::pool&    SpecialiedPool
                                     , T_GET_CALLBACK&&                      GetCallback
                                     , T_CREATE_CALLBACK&&                   CreateCallback
                                     ) noexcept

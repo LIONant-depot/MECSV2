@@ -115,7 +115,7 @@ namespace mecs::archetype
     // represent a "unique" or specialized archetype.
     // This archetypes are what can't be share across systems.
     //----------------------------------------------------------------------------------------------
-    struct specialized_pool : mecs::component::singleton
+    struct pool : mecs::component::singleton
     {
         constexpr static auto           type_guid_v             = mecs::component::type_guid{ 2ull };
         constexpr static auto           name_v                  = xconst_universal_str("mecs::archetype::specialized");
@@ -148,7 +148,7 @@ namespace mecs::archetype
 
         std::span<mecs::component::entity::guid>    m_Guids;
         mecs::component::entity::map*               m_pEntityMap;
-        specialized_pool*                           m_pPool;
+        pool*                           m_pPool;
         mecs::entity_pool::index                    m_StartIndex;
         int                                         m_Count;
         mecs::system::instance&                     m_System;
@@ -196,7 +196,7 @@ namespace mecs::archetype
     // ARCHETYPE:: INSTANCE
     //----------------------------------------------------------------------------------------------
 
-    struct instance : specialized_pool
+    struct instance : pool
     {
         using guid = xcore::guid::unit<64, struct archetype_tag>;
 
@@ -243,7 +243,7 @@ namespace mecs::archetype
         //-----------------------------------------------------------------------------------
         template< typename...   T_SHARE_COMPONENTS >
         constexpr
-        specialized_pool::type_guid     getSpecializedPoolGuid ( const instance&                        Instance
+        pool::type_guid     getSpecializedPoolGuid ( const instance&                        Instance
                                                                , T_SHARE_COMPONENTS&&...                ShareComponents
                                                                ) const noexcept;
         //-----------------------------------------------------------------------------------
@@ -258,7 +258,7 @@ namespace mecs::archetype
         //-----------------------------------------------------------------------------------
         template< typename... T_SHARE_COMPONENTS >
         inline
-        specialized_pool&           getOrCreateSpecializedPool              ( system::instance&         System
+        pool&           getOrCreateSpecializedPool              ( system::instance&         System
                                                                             , int                       MinFreeEntries = 1
                                                                             , int                       MaxEntries     = mecs::settings::max_default_entities_per_pool
                                                                             , T_SHARE_COMPONENTS&&...   ShareComponents 
@@ -275,7 +275,7 @@ namespace mecs::archetype
 
         using main_pool_descriptors = std::array<const mecs::component::descriptor*, mecs::settings::max_data_components_per_entity>;
         using safety_lock_object    = xcore::lock::object<details::safety, xcore::lock::semaphore >;
-        using share_one_to_many_map = mecs::tools::fixed_map<guid, std::vector<specialized_pool*>, settings::max_specialized_pools_v>;
+        using share_one_to_many_map = mecs::tools::fixed_map<guid, std::vector<pool*>, settings::max_specialized_pools_v>;
         using share_map             = std::shared_ptr<share_one_to_many_map>;
 
         //-----------------------------------------------------------------------------------
