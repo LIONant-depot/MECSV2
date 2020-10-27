@@ -196,7 +196,7 @@ namespace mecs::archetype
     // ARCHETYPE:: INSTANCE
     //----------------------------------------------------------------------------------------------
 
-    struct instance
+    struct instance : specialized_pool
     {
         using guid = xcore::guid::unit<64, struct archetype_tag>;
 
@@ -284,8 +284,6 @@ namespace mecs::archetype
 
         descriptor                                      m_PoolDescriptors           {};
         std::span<const mecs::component::descriptor*>   m_MainPoolDescriptor        {};
-        mecs::entity_pool::instance                     m_MainPool                  {};     // this pool should be sorted by its share components values
-                                                                                            // component of this pool includes: < specialized, ShareComponents... > 
 
         double_buffer_info                              m_DoubleBufferInfo          {};
         mecs::archetype::event::details::events         m_Events                    {};
