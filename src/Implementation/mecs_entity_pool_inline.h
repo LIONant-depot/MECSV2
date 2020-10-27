@@ -149,6 +149,7 @@ namespace mecs::entity_pool
 
             NewCount.m_Count = CaptureCount.m_Count + nEntries;
             NewCount.m_Lock  = !!Types;
+            xassert(NewCount.m_Count <= capacity() );
 
             if (m_NewCount.compare_exchange_strong(CaptureCount, NewCount)) break;
 

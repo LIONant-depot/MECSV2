@@ -479,7 +479,7 @@ namespace mecs::archetype
             static_assert( ((mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_Type == mecs::component::type::SHARE) && ...) );
             static_assert( ((std::is_same_v<T_SHARE_COMPONENTS, xcore::types::decay_full_t<T_SHARE_COMPONENTS>>) && ...) );
 
-            xassert(sizeof...(T_SHARE_COMPONENTS) == m_Descriptor.m_ShareDescriptorSpan.size());
+            xassert(sizeof...(T_SHARE_COMPONENTS) == m_PoolDescriptors.m_ShareDescriptor.size());
 
             using share_tuple  = std::tuple<T_SHARE_COMPONENTS...>;
             using sorted_tuple = xcore::types::tuple_sort_t< mecs::component::smaller_guid, share_tuple >;
@@ -556,7 +556,7 @@ namespace mecs::archetype
         else
         {
             // If you hit this assert is because you forgot to pass the share component
-            xassert( m_Descriptor.m_ShareDescriptorSpan.size() == 0 );
+            xassert( m_PoolDescriptors.m_ShareDescriptor.size() == 0 );
 
             for (int end = m_EntityPool.size(), i = 0; i < end; ++i)
             {
@@ -630,7 +630,7 @@ namespace mecs::archetype
     specialized_pool::type_guid instance::getSpecializedPoolGuid( const instance& Instance, T_SHARE_COMPONENTS&&...ShareComponents ) const noexcept
     {
         static_assert(mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_Type == mecs::component::type::SHARE);
-        xassert( sizeof...(T_SHARE_COMPONENTS) == Instance.m_Descriptor.m_ShareDescriptorSpan.size() );
+        xassert( sizeof...(T_SHARE_COMPONENTS) == Instance.m_PoolDescriptors.m_ShareDescriptor.size() );
         return{ (mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fn_getKey(&ShareComponents) + ... ) };
     }
 
@@ -787,7 +787,7 @@ namespace mecs::archetype
         static_assert( ((mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_Type == mecs::component::type::SHARE) && ...) );
 
         // Share components count must match the archetype share component list
-        xassert( sizeof...(T_SHARE_COMPONENTS) == m_Descriptor.m_ShareDescriptorSpan.size() );
+        xassert( sizeof...(T_SHARE_COMPONENTS) == m_PoolDescriptors.m_ShareDescriptor.size() );
 
         const std::array<std::uint64_t, sizeof...(T_SHARE_COMPONENTS)> ArrayList{ mecs::component::descriptor_v<T_SHARE_COMPONENTS>.m_fnGetKey(&ShareComponents)  ... };
         const auto ShareKey = [] ( auto& Array ){ std::uint64_t Key = 0; for( auto x : Array ) Key += x; return Key; }( ArrayList );
@@ -1861,7 +1861,7 @@ namespace mecs::archetype
         auto& NewDescriptor = NewArchetype.m_PoolDescriptors;
         auto& OldDescriptor = OldArchetype.m_PoolDescriptors;
 
-        xassert(NewDescriptor.m_ShareDescriptorSpan.size() == sizeof...(T_SHARE_COMPONENTS) );
+        xassert(NewDescriptor.m_ShareDescriptor.size() == sizeof...(T_SHARE_COMPONENTS) );
 
         const auto ShareKeys = [&]() constexpr noexcept
         {
