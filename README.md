@@ -19,7 +19,7 @@
 [              ![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## (MECS) Mulicore Events Component and Systems
-Simple yet powerful **ECS** system in **C++ 17**. It leverages many of the C++ features to provide a simple
+Simple yet powerful Entity Component System (**ECS**) system in **C++ 17**. It leverages many of the C++ features to provide a simple
 to use API to the end user yet deliver near optimum code. It is also designed so the user does not need to know
 very much about multi-core and when the user makes a mistake MECS should be able to detected.
 It also allows advance users to take advantage of complex multi-core features easily and cleanly. 
@@ -77,6 +77,7 @@ The main concept of MECS is to leverage all the features of the hardware to the 
 * **Command Line examples**. Minimizes dependencies and keeps the project simple to follow.
 * **Visual Examples**. Shows how MECS can be used with a multi-core graphics APIs.
 * **Follows Unity3D**. Name of concepts follows unity3D when possible.
+* **Blog.** https://rationalworlds.github.io/LIONant/
 
 # Code Example
 
