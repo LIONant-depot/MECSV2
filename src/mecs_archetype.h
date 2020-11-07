@@ -118,9 +118,9 @@ namespace mecs::archetype
     struct pool : mecs::component::singleton
     {
         constexpr static auto           type_guid_v             = mecs::component::type_guid{ 2ull };
-        constexpr static auto           name_v                  = xconst_universal_str("mecs::archetype::specialized");
-        using                           guid                    = xcore::guid::unit<64, struct specialized_pool_tag>;
-        using                           type_guid               = xcore::guid::unit<64, struct specialized_pool_type_tag>;
+        constexpr static auto           name_v                  = xconst_universal_str("mecs::archetype::pool");
+        using                           guid                    = xcore::guid::unit<64, struct archetype_pool_tag>;
+        using                           type_guid               = xcore::guid::unit<64, struct archetype_pool_type_tag>;
         using                           share_component_keys    = std::array<std::uint64_t, mecs::settings::max_data_components_per_entity>;
         using                           share_component_index   = std::array<std::uint32_t, mecs::settings::max_data_components_per_entity>;
 
@@ -200,6 +200,9 @@ namespace mecs::archetype
     {
         using guid = xcore::guid::unit<64, struct archetype_tag>;
 
+        constexpr static auto           type_guid_v = mecs::component::type_guid{ "MECS::Archetype::Instance" };
+        constexpr static auto           name_v      = xconst_universal_str("mecs::archetype::instance");
+
         //-----------------------------------------------------------------------------------
         inline
         void                            Init                ( const std::span<const mecs::component::descriptor* const>   DataDescriptorList
@@ -243,12 +246,12 @@ namespace mecs::archetype
         //-----------------------------------------------------------------------------------
         template< typename...   T_SHARE_COMPONENTS >
         constexpr
-        pool::type_guid     getSpecializedPoolGuid ( const instance&                        Instance
-                                                               , T_SHARE_COMPONENTS&&...                ShareComponents
-                                                               ) const noexcept;
+        pool::type_guid                 getSpecializedPoolGuid              ( const instance&           Instance
+                                                                            , T_SHARE_COMPONENTS&&...   ShareComponents
+                                                                            ) const noexcept;
         //-----------------------------------------------------------------------------------
         inline
-        void                        moveEntityBetweenSpecializePools        ( system::instance&         System
+        void                            moveEntityBetweenSpecializePools    ( system::instance&         System
                                                                             , int                       FromSpecializePoolIndex
                                                                             , int                       EntityIndexInSpecializedPool
                                                                             , std::uint64_t             NewCRCPool
@@ -258,7 +261,7 @@ namespace mecs::archetype
         //-----------------------------------------------------------------------------------
         template< typename... T_SHARE_COMPONENTS >
         inline
-        pool&           getOrCreateSpecializedPool              ( system::instance&         System
+        pool&                       getOrCreateSpecializedPool              ( system::instance&         System
                                                                             , int                       MinFreeEntries = 1
                                                                             , int                       MaxEntries     = mecs::settings::max_default_entities_per_pool
                                                                             , T_SHARE_COMPONENTS&&...   ShareComponents 
