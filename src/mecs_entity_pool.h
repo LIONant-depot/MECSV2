@@ -10,7 +10,7 @@ namespace mecs::entity_pool
         using                           self            = instance;
 
         inline                         ~instance                ( void )                                                            noexcept;
-        inline      void                Init                    ( mecs::archetype::instance& Archetype, const std::span<const mecs::component::descriptor* const> Descriptors, index MaxEntries )          noexcept;
+        inline      void                Init                    ( const std::span<const mecs::component::descriptor* const> Descriptors, index MaxEntries )          noexcept;
         inline      void                Kill                    ( void )                                                            noexcept;
         inline      void                clear                   ( void )                                                            noexcept;
         inline      std::uint32_t       append                  ( int nEntries = 1 )                                                noexcept;
@@ -53,6 +53,5 @@ namespace mecs::entity_pool
         std::span<const mecs::component::descriptor* const>     m_Descriptors           {};
         index                                                   m_MaxEntries            {0};
         mecs::tools::qvstp<std::uint32_t>                       m_DeleteList            {};
-        mecs::archetype::instance*                              m_pArchetype            {nullptr};
     };
 }

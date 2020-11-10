@@ -9,13 +9,12 @@ namespace mecs::entity_pool
 
     //-------------------------------------------------------------------------------------------
 
-    void instance::Init(mecs::archetype::instance& Archetype, const std::span<const mecs::component::descriptor* const> Descriptors, std::uint32_t MaxEntries ) noexcept
+    void instance::Init(const std::span<const mecs::component::descriptor* const> Descriptors, std::uint32_t MaxEntries ) noexcept
     {
         xassert(Descriptors.size());
        // xassert(Descriptors[0] == &mecs::component::descriptor_v<component::entity> );
 
         m_MaxEntries    = MaxEntries;
-        m_pArchetype    = &Archetype;
         m_Descriptors   = Descriptors;
 
         //

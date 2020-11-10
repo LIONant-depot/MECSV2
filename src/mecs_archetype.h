@@ -322,7 +322,7 @@ namespace mecs::archetype
                 struct architype_entry
                 {
                     component::filter_bits                                                            m_ArchitypeBits   {nullptr};
-                    std::unique_ptr<archetype::instance>                                              m_upArchetype     {};
+                    archetype::instance*                                                              m_pArchetype      {nullptr};
                 };
 
                 using list = std::array<architype_entry, mecs::settings::max_archetype_types>;
@@ -433,8 +433,9 @@ namespace mecs::archetype
         //-----------------------------------------------------------------------------------
 
         details::events                         m_Event;
+
         mecs::component::entity::map            m_EntityMap;
-        map_archetypes                          m_mapArchetypes;
+        pool                                    m_ArchetypesPool;
         map_tags                                m_mapTags;
         std::uint16_t                           m_nTagEntries{0};
         tag_list                                m_lTagEntries{};

@@ -27,7 +27,7 @@ namespace mecs::archetype
             {
                 std::array< std::byte*, sizeof...(T_TUPLE_ARGS) > SortedPointers;
 
-                auto& Archetype      = *Pool.m_EntityPool.m_pArchetype;
+                auto& Archetype      = *Pool.m_pArchetypeInstance;
                 auto  DescriptorSpan = Archetype.m_PoolDescriptors.m_ShareDescriptor;
 
                 int j=0;
@@ -379,7 +379,7 @@ namespace mecs::archetype
             }
         }
 
-        m_PoolList.m_EntityPool.Init(*this, m_MainPoolDescriptor, 100000u);
+        m_PoolList.m_EntityPool.Init(m_MainPoolDescriptor, 100000u);
     }
 
     //----------------------------------------------------------------------------------------------------
@@ -582,7 +582,7 @@ namespace mecs::archetype
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.setNull();
             Specialized.m_MainPoolIndex = PoolIndex;
-            Specialized.m_EntityPool.Init( *this, m_PoolDescriptors.m_DataDescriptor, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
+            Specialized.m_EntityPool.Init( m_PoolDescriptors.m_DataDescriptor, std::max<int>(nEntities, 100000 /*MaxEntries*/ ));
             Specialized.m_pArchetypeInstance = this;
 
             // Notify possible listeners
@@ -720,7 +720,7 @@ namespace mecs::archetype
             //TODO: Preallocate nEntites before returning
             Specialized.m_TypeGuid.m_Value       = NewCRCPool;
             Specialized.m_MainPoolIndex          = PoolIndex;
-            Specialized.m_EntityPool.Init(*this, m_PoolDescriptors.m_DataDescriptor, 100000 /*MaxEntries*/ );
+            Specialized.m_EntityPool.Init(m_PoolDescriptors.m_DataDescriptor, 100000 /*MaxEntries*/ );
             Specialized.m_pArchetypeInstance     = this;
             Specialized.m_ShareComponentKeysSpan = std::span{ Specialized.m_ShareComponentKeysMemory.data(), m_PoolDescriptors.m_ShareDescriptor.size() };
 
@@ -829,7 +829,7 @@ namespace mecs::archetype
             Pool.m_ShareComponentKeysSpan = std::span{ Pool.m_ShareComponentKeysMemory.data(), sizeof...(T_SHARE_COMPONENTS) };
             Pool.m_TypeGuid.m_Value       = ShareKey;
             Pool.m_pArchetypeInstance     = this;
-            Pool.m_EntityPool.Init( *this, m_PoolDescriptors.m_DataDescriptor, MaxEntries );
+            Pool.m_EntityPool.Init( m_PoolDescriptors.m_DataDescriptor, MaxEntries );
 
             if( m_Events.m_CreatedPool.hasSubscribers() )
                 m_Events.m_CreatedPool.NotifyAll( System, Pool );
@@ -1461,6 +1461,12 @@ namespace mecs::archetype
     inline
     void data_base::Init( void ) noexcept
     {
+        static std::array<const mecs::component::descriptor* , 2> DataDescriptors
+        {
+            &mecs::component::descriptor_v<mecs::component::entity>
+        ,   &mecs::component::descriptor_v<archetype::instance>
+        };
+        m_ArchetypesPool.m_EntityPool.Init( DataDescriptors, mecs::settings::max_archetype_types );
     }
 
     //---------------------------------------------------------------------------------
@@ -1476,7 +1482,7 @@ namespace mecs::archetype
             xcore::lock::scope Lk(TagE.m_ArchetypeDB);
             for (auto& ArchetypeEntry : std::span{ TagE.m_ArchetypeDB.get().m_uPtr->data(), TagE.m_ArchetypeDB.get().m_nArchetypes })
             {
-                ArchetypeEntry.m_upArchetype->Start();
+                ArchetypeEntry.m_pArchetype->Start();
             }
         }
     }
@@ -1648,13 +1654,13 @@ namespace mecs::archetype
             for( auto& ArchetypeE : std::span{ TagE.m_ArchetypeDB.get().m_uPtr->data(), TagE.m_ArchetypeDB.get().m_nArchetypes } )
             {
                 if( false == ArchetypeE.m_ArchitypeBits.Query( Instance.m_ComponentQuery.m_All, Instance.m_ComponentQuery.m_Any, Instance.m_ComponentQuery.m_None ) ) continue;
-                if( ArchetypeE.m_upArchetype->m_PoolList.m_EntityPool.size() == 0 ) continue;
+                if( ArchetypeE.m_pArchetype->m_PoolList.m_EntityPool.size() == 0 ) continue;
 
                 //
                 // Create new entry for this query
                 //
                 auto&           Entry                       = Instance.m_lResults.append();
-                Entry.m_pArchetype                          = ArchetypeE.m_upArchetype.get();
+                Entry.m_pArchetype                          = ArchetypeE.m_pArchetype;
                 Entry.m_nParameters                         = static_cast<std::uint8_t>(std::tuple_size_v<func_tuple>);
                 Entry.m_FunctionDescriptors                 = func_descriptors;
 
@@ -1753,7 +1759,8 @@ namespace mecs::archetype
     xforceinline
     instance& data_base::getArchetype( mecs::archetype::instance::guid Guid ) noexcept
     {
-        return *m_mapArchetypes.get(Guid);
+        auto Entity = m_EntityMap.get( mecs::component::entity::guid{ Guid.m_Value} );
+        return Entity.m_pPool->m_EntityPool.getComponentByIndex<instance>( Entity.m_Index, 1 );
     }
 
     //---------------------------------------------------------------------------------
@@ -1767,12 +1774,12 @@ namespace mecs::archetype
         , std::span<const mecs::component::descriptor* const>   TagDiscriptorList ) noexcept
     {
         mecs::archetype::instance* p;
-        m_mapArchetypes.getOrCreate( Guid
-        , [&]( auto& pInstance ) constexpr noexcept
+        m_EntityMap.getOrCreate( mecs::component::entity::guid{ Guid.m_Value }
+        , [&]( auto& Entity ) constexpr noexcept
         {
-            p = pInstance;
+            p = &Entity.m_pPool->m_EntityPool.getComponentByIndex<instance>(Entity.m_Index, 1);
         }
-        , [&]( auto& pInstance ) constexpr noexcept
+        , [&]( auto& Entity ) constexpr noexcept
         {
             details::tag_entry* pt;
             const auto TagGuid = TagSumGuid.isValid() ? TagSumGuid : mecs::archetype::tag_sum_guid{1};
@@ -1803,14 +1810,18 @@ namespace mecs::archetype
 
             for (auto& e : DataDiscriptorList ) E.m_ArchitypeBits.AddBit(e->m_BitNumber);
             for (auto& e : ShareDiscriptorList) E.m_ArchitypeBits.AddBit(e->m_BitNumber);
-            E.m_upArchetype = std::make_unique<mecs::archetype::instance>();
-            E.m_upArchetype->Init(DataDiscriptorList, ShareDiscriptorList, pt->m_TagDescriptors, &m_EntityMap );
-            E.m_upArchetype->m_Guid = Guid;
-            E.m_upArchetype->m_ArchitypeBits = E.m_ArchitypeBits;
-            E.m_upArchetype->m_TagBits       = pt->m_TagBits;
-            p = pInstance = E.m_upArchetype.get();
+
+            Entity.m_pPool = &m_ArchetypesPool;
+            Entity.m_Index = m_ArchetypesPool.m_EntityPool.append(1); m_ArchetypesPool.m_EntityPool.UpdateCount();
+            E.m_pArchetype = &Entity.m_pPool->m_EntityPool.getComponentByIndex<archetype::instance>(Entity.m_Index,1);
+            E.m_pArchetype->Init(DataDiscriptorList, ShareDiscriptorList, pt->m_TagDescriptors, &m_EntityMap );
+            E.m_pArchetype->m_Guid = Guid;
+            E.m_pArchetype->m_ArchitypeBits = E.m_ArchitypeBits;
+            E.m_pArchetype->m_TagBits       = pt->m_TagBits;
+
+            p = E.m_pArchetype;
             if(m_Event.m_CreatedArchetype.hasSubscribers()) 
-                m_Event.m_CreatedArchetype.NotifyAll(*E.m_upArchetype);
+                m_Event.m_CreatedArchetype.NotifyAll(*E.m_pArchetype);
         });
 
         return *p;
