@@ -196,7 +196,7 @@ namespace mecs::archetype
     // ARCHETYPE:: INSTANCE
     //----------------------------------------------------------------------------------------------
 
-    struct instance : pool
+    struct instance : mecs::component::singleton
     {
         using guid = xcore::guid::unit<64, struct archetype_tag>;
 
@@ -287,6 +287,7 @@ namespace mecs::archetype
 
         descriptor                                      m_PoolDescriptors           {};
         std::span<const mecs::component::descriptor*>   m_MainPoolDescriptor        {};
+        pool                                            m_PoolList                  {};
 
         double_buffer_info                              m_DoubleBufferInfo          {};
         mecs::archetype::event::details::events         m_Events                    {};

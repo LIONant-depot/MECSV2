@@ -200,7 +200,7 @@ static const std::span<const menu::category> s_Categories = s_CategoriesStorage;
 void mainApp()
 {
     // Set the default example
-    menu::s_pActive = &s_Categories[0].m_lEntries[3];
+    menu::s_pActive = &s_Categories[0].m_lEntries[0];
 
     // Run until the app wants us to quit
     menu::s_Inspector.setupWindowSize( 220, 450 );
