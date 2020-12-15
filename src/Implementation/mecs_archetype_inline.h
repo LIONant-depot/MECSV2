@@ -373,9 +373,6 @@ namespace mecs::archetype
                 auto pShare = ShareDescriptorList[i];
                 const auto Index = i + 1;
                 m_MainPoolDescriptorArrayData[Index] = pShare;
-
-                // For those share components that the user wants us to create a hash map we crate one
-                if (pShare->m_ShareComponentMapType != mecs::component::share::type_map::NONE) m_ShareMapTable[pShare->m_BitNumber] = std::make_unique<share_map>();
             }
         }
 

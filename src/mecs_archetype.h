@@ -303,7 +303,6 @@ namespace mecs::archetype
         mecs::component::filter_bits                    m_ArchitypeBits             { nullptr };
         mecs::component::filter_bits                    m_TagBits                   { nullptr };
 
-        std::array<std::shared_ptr<share_map>,mecs::settings::max_data_components_per_entity> m_ShareMapTable;
 
         main_pool_descriptors                           m_MainPoolDescriptorArrayData{};
     };
