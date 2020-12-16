@@ -176,7 +176,11 @@ struct dbg_render
 
     void CreatePipelineStates( void )
     {
-        std::array<BlendStateDesc, num_blend_states> BlendState;
+        GraphicsPipelineStateCreateInfo                 PSOCreateInfo;
+        std::array<BlendStateDesc, num_blend_states>    BlendState;
+        GraphicsPipelineDesc&                           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+        PipelineStateDesc&                              PSODesc          = PSOCreateInfo.PSODesc;
+
         /*
         BlendState[0].RenderTargets[0].BlendEnable = true;
         BlendState[0].RenderTargets[0].SrcBlend    = BLEND_FACTOR_SRC_ALPHA;
@@ -198,10 +202,6 @@ struct dbg_render
         BlendState[4].RenderTargets[0].SrcBlend    = BLEND_FACTOR_INV_SRC_COLOR;
         BlendState[4].RenderTargets[0].DestBlend   = BLEND_FACTOR_SRC_COLOR;
 
-        // Pipeline state object encompasses configuration of all GPU stages
-        PipelineStateCreateInfo     PSOCreateInfo;
-        PipelineStateDesc&          PSODesc = PSOCreateInfo.PSODesc;
-
         // Pipeline state name is used by the engine to report issues.
         // It is always a good idea to give objects descriptive names.
         PSODesc.Name = "dbg_render::Pipelines";
@@ -211,17 +211,17 @@ struct dbg_render
 
         // clang-format off
         // This tutorial will render to a single render target
-        PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
+        GraphicsPipeline.NumRenderTargets             = 1;
         // Set render target format which is the format of the swap chain's color buffer
-        PSODesc.GraphicsPipeline.RTVFormats[0]                = graphical_app::s_pTheApp->m_pSwapChain->GetDesc().ColorBufferFormat;
+        GraphicsPipeline.RTVFormats[0]                = graphical_app::s_pTheApp->m_pSwapChain->GetDesc().ColorBufferFormat;
         // Set depth buffer format which is the format of the swap chain's back buffer
-        PSODesc.GraphicsPipeline.DSVFormat                    = graphical_app::s_pTheApp->m_pSwapChain->GetDesc().DepthBufferFormat;
+        GraphicsPipeline.DSVFormat                    = graphical_app::s_pTheApp->m_pSwapChain->GetDesc().DepthBufferFormat;
         // Primitive topology defines what kind of primitives will be rendered by this pipeline state
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         // Disable back face culling
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         // Disable depth testing
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
         // clang-format on
 
         ShaderCreateInfo ShaderCI;
@@ -282,19 +282,20 @@ struct dbg_render
         };
 
         // clang-format on
-        PSODesc.GraphicsPipeline.InputLayout.LayoutElements = LayoutElems;
-        PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(LayoutElems);
+        GraphicsPipeline.InputLayout.LayoutElements = LayoutElems;
+        GraphicsPipeline.InputLayout.NumElements    = _countof(LayoutElems);
 
-        PSODesc.GraphicsPipeline.pVS = pVS;
-        PSODesc.GraphicsPipeline.pPS = pPS;
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
+
 
         // Define variable type that will be used by default
         PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
 
         for (int state = 0; state < num_blend_states; ++state)
         {
-            PSODesc.GraphicsPipeline.BlendDesc = BlendState[state];
-            graphical_app::s_pTheApp->m_pDevice->CreatePipelineState(PSOCreateInfo, &m_pPSO[state]);
+            GraphicsPipeline.BlendDesc = BlendState[state];
+            graphical_app::s_pTheApp->m_pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO[state]);
 
             if (state > 0)
                 VERIFY(m_pPSO[state]->IsCompatibleWith(m_pPSO[0]), "PSOs are expected to be compatible");

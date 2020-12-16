@@ -245,8 +245,9 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
         ,   Diligent::RefCntAutoPtr<Diligent::IEngineFactory>&  pEngineFactory
         )
     {
-        Diligent::PipelineStateCreateInfo PSOCreateInfo;
-        Diligent::PipelineStateDesc& PSODesc = PSOCreateInfo.PSODesc;
+        Diligent::GraphicsPipelineStateCreateInfo   PSOCreateInfo;
+        Diligent::PipelineStateDesc&                PSODesc          = PSOCreateInfo.PSODesc;
+        Diligent::GraphicsPipelineDesc&             GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         // Pipeline state name is used by the engine to report issues.
         PSODesc.Name                                            = "Render particles PSO";
@@ -256,20 +257,20 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
 
         // clang-format off
         // This tutorial will render to a single render target
-        PSODesc.GraphicsPipeline.NumRenderTargets               = 1;
+        GraphicsPipeline.NumRenderTargets               = 1;
         // Set render target format which is the format of the swap chain's color buffer
-        PSODesc.GraphicsPipeline.RTVFormats[0]                  = pSwapChain->GetDesc().ColorBufferFormat;
+        GraphicsPipeline.RTVFormats[0]                  = pSwapChain->GetDesc().ColorBufferFormat;
         // Set depth buffer format which is the format of the swap chain's back buffer
-        PSODesc.GraphicsPipeline.DSVFormat                      = pSwapChain->GetDesc().DepthBufferFormat;
+        GraphicsPipeline.DSVFormat                      = pSwapChain->GetDesc().DepthBufferFormat;
         // Primitive topology defines what kind of primitives will be rendered by this pipeline state
-        PSODesc.GraphicsPipeline.PrimitiveTopology              = Diligent::PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        GraphicsPipeline.PrimitiveTopology              = Diligent::PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         // Disable back face culling
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode        = Diligent::CULL_MODE_NONE;
+        GraphicsPipeline.RasterizerDesc.CullMode        = Diligent::CULL_MODE_NONE;
         // Disable depth testing
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable   = false;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable   = false;
         // clang-format on
 
-        auto& BlendDesc = PSODesc.GraphicsPipeline.BlendDesc;
+        auto& BlendDesc = GraphicsPipeline.BlendDesc;
 
         BlendDesc.RenderTargets[0].BlendEnable                  = true;
         BlendDesc.RenderTargets[0].SrcBlend                     = Diligent::BLEND_FACTOR_SRC_ALPHA;
@@ -309,8 +310,8 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
             xassert(pPS);
         }
 
-        PSODesc.GraphicsPipeline.pVS    = pVS;
-        PSODesc.GraphicsPipeline.pPS    = pPS;
+        PSOCreateInfo.pVS    = pVS;
+        PSOCreateInfo.pPS    = pPS;
 
         // Define variable type that will be used by default
         PSODesc.ResourceLayout.DefaultVariableType = Diligent::SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
@@ -326,7 +327,7 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
         PSODesc.ResourceLayout.Variables        = Vars;
         PSODesc.ResourceLayout.NumVariables     = _countof(Vars);
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &m_pRenderParticlePSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &m_pRenderParticlePSO);
         m_pRenderParticlePSO->GetStaticVariableByName(Diligent::SHADER_TYPE_VERTEX, "Constants")->Set(m_Constants);
     }
 
@@ -399,8 +400,8 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
             xassert(pUpdatedSpeedCS);
         }
 
-        Diligent::PipelineStateCreateInfo PSOCreateInfo;
-        Diligent::PipelineStateDesc& PSODesc = PSOCreateInfo.PSODesc;
+        Diligent::ComputePipelineStateCreateInfo    PSOCreateInfo;
+        Diligent::PipelineStateDesc&                PSODesc       = PSOCreateInfo.PSODesc;
 
         // This is a compute pipeline
         PSODesc.PipelineType = Diligent::PIPELINE_TYPE::PIPELINE_TYPE_COMPUTE;
@@ -416,24 +417,24 @@ namespace mecs::examples::E06_graphical_2d_gpu_physics
         PSODesc.ResourceLayout.Variables    = Vars;
         PSODesc.ResourceLayout.NumVariables = _countof(Vars);
 
-        PSODesc.Name = "Reset particle lists PSO";
-        PSODesc.ComputePipeline.pCS = pResetParticleListsCS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &m_pResetParticleListsPSO);
+        PSODesc.Name        = "Reset particle lists PSO";
+        PSOCreateInfo.pCS   = pResetParticleListsCS;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &m_pResetParticleListsPSO);
         m_pResetParticleListsPSO->GetStaticVariableByName(Diligent::SHADER_TYPE_COMPUTE, "Constants")->Set(m_Constants);
 
-        PSODesc.Name = "Move particles PSO";
-        PSODesc.ComputePipeline.pCS = pMoveParticlesCS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &m_pMoveParticlesPSO);
+        PSODesc.Name        = "Move particles PSO";
+        PSOCreateInfo.pCS   = pMoveParticlesCS;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &m_pMoveParticlesPSO);
         m_pMoveParticlesPSO->GetStaticVariableByName(Diligent::SHADER_TYPE_COMPUTE, "Constants")->Set(m_Constants);
 
-        PSODesc.Name = "Collidse particles PSO";
-        PSODesc.ComputePipeline.pCS = pCollideParticlesCS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &m_pCollideParticlesPSO);
+        PSODesc.Name        = "Collidse particles PSO";
+        PSOCreateInfo.pCS   = pCollideParticlesCS;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &m_pCollideParticlesPSO);
         m_pCollideParticlesPSO->GetStaticVariableByName(Diligent::SHADER_TYPE_COMPUTE, "Constants")->Set(m_Constants);
 
-        PSODesc.Name = "Update particle speed PSO";
-        PSODesc.ComputePipeline.pCS = pUpdatedSpeedCS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &m_pUpdateParticleSpeedPSO);
+        PSODesc.Name        = "Update particle speed PSO";
+        PSOCreateInfo.pCS   = pUpdatedSpeedCS;
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &m_pUpdateParticleSpeedPSO);
         m_pUpdateParticleSpeedPSO->GetStaticVariableByName(Diligent::SHADER_TYPE_COMPUTE, "Constants")->Set(m_Constants);
     }
 
