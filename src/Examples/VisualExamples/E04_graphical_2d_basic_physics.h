@@ -99,10 +99,8 @@ namespace mecs::examples::E04_graphical_2d_basic_physics
             // +-+-+-+-+-+-+   |
             //   | 5 | 6 |     |
             //   +---+---+     |
-            inline static constexpr std::array<int, 7> g_CellPositionInNeighbours =
-            {
-                6, 5, 4, 3, 2, 1, 0
-            };
+            //inline static constexpr std::array<int, 7> g_CellPositionInNeighbours = { 6, 5, 4, 3, 2, 1, 0 };
+            xforceinline constexpr int CellPositionNeighbours( const int Index ) noexcept { return 6-Index; }
 
             //----------------------------------------------------------------------------------------
             // WORLD GRID:: SYSTEM:: ADVANCE CELL
@@ -290,7 +288,7 @@ namespace mecs::examples::E04_graphical_2d_basic_physics
 
                                     // Since we already have the neighbour close to the cache lets just add ourselves there
                                     // This entry is exclusively ours so we don't need to fight any multicore races
-                                    NewCell.m_Buffer[1-Indexer.m_T0].m_Neighbours[g_CellPositionInNeighbours[Index] ].store(&Cell, std::memory_order_relaxed);
+                                    NewCell.m_Buffer[1-Indexer.m_T0].m_Neighbours[CellPositionNeighbours(Index) ].store(&Cell, std::memory_order_relaxed);
                                 };
                                 
                                 getOrCreateEntityRelax( Cell.m_NeighboursGuids[Index], *m_pSpecializedPoolCell, CallBack, CallBack );
@@ -396,7 +394,7 @@ namespace mecs::examples::E04_graphical_2d_basic_physics
                                 xassert(Cell.m_MutableCount.load(std::memory_order_relaxed) > 0);
                                 findEntityComponentsRelax( Cell.m_NeighboursGuids[i], [&](component::cell& NewCell )
                                 {
-                                    NewCell.m_Buffer[1 - Indexer.m_T0].m_Neighbours[g_CellPositionInNeighbours[i]].store(&Cell, std::memory_order_relaxed);
+                                    NewCell.m_Buffer[1 - Indexer.m_T0].m_Neighbours[CellPositionNeighbours(i)].store(&Cell, std::memory_order_relaxed);
                                 });
                             }
                         }
@@ -417,12 +415,12 @@ namespace mecs::examples::E04_graphical_2d_basic_physics
                             {
                                 findEntityComponentsRelax( Cell.m_NeighboursGuids[i], [&]( component::cell& NewCell )
                                 {
-                                    NewCell.m_Buffer[1 - Indexer.m_T0].m_Neighbours[g_CellPositionInNeighbours[i]].store(nullptr, std::memory_order_relaxed);
+                                    NewCell.m_Buffer[1 - Indexer.m_T0].m_Neighbours[CellPositionNeighbours(i)].store(nullptr, std::memory_order_relaxed);
                                 });
                             }
                             else
                             {
-                                p->m_Buffer[1 - Indexer.m_T0].m_Neighbours[g_CellPositionInNeighbours[i]].store(nullptr, std::memory_order_relaxed);
+                                p->m_Buffer[1 - Indexer.m_T0].m_Neighbours[CellPositionNeighbours(i)].store(nullptr, std::memory_order_relaxed);
                             }
                         }
 
