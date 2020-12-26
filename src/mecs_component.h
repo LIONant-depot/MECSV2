@@ -65,7 +65,6 @@ namespace mecs::component
             GLOBAL                          // Value is Share by every archetype. Reference is factor out by pools. Systems can access this type of share components as long as they lock.
         ,   ARCHETYPE                       // Value is Share by all the pools in an archetype, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
         ,   POOL                            // Value is Share by all entities in one pool, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
-        ,   UNKEY_GLOBAL                    // Value is Share by all archetypes (like a global) but the reference is NOT factor out at all (So different values wont change the entity pool so getKey is never used)
         };
 
         using                   type_guid                   = component::type_guid;
@@ -76,6 +75,7 @@ namespace mecs::component
 
         constexpr static bool   type_free_on_unreference_v  { true  };      // When no pool has a reference to it then it will die. Can be set to false for resources
         constexpr static bool   type_list_reference_v       { false };      // Stead on just a simple integer to count references it will have a list of pools referencing this component
+        constexpr static bool   type_disable_factor_out_v   { false };      // Factor out means it will used the share guid value to factor the entity out to another pool using that guid
 
         static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }
     };
