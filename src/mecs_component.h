@@ -64,14 +64,14 @@ namespace mecs::component
             GLOBAL                          // Value is Share by every archetype. Reference is factor out by pools. Systems can access this type of share components as long as they lock.
         ,   ARCHETYPE                       // Value is Share by all the pools in an archetype, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
         ,   POOL                            // Value is Share by all entities in one pool, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
-        ,   UNORDER_GLOBAL                  // Value is Share by all archetypes (like a global) but the reference is NOT factor out at all (So different values wont change the entity pool so getKey is never used)
+        ,   UNKEY_GLOBAL                    // Value is Share by all archetypes (like a global) but the reference is NOT factor out at all (So different values wont change the entity pool so getKey is never used)
         };
 
         using                   type_guid                   = component::type_guid;
         constexpr static auto   type_data_access_v          = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
         constexpr static auto   type_guid_v                 { type_guid{ nullptr } };
         constexpr static auto   type_name_v                 { xconst_universal_str("unnamed share") };
-        constexpr static auto   type_scope_v                { scope::ARCHETYPE };
+        constexpr static auto   type_scope_v                { scope::GLOBAL };
 
         constexpr static bool   type_free_on_unreference_v  { true  };      // When no pool has a reference to it then it will die. Can be set to false for resources
         constexpr static bool   type_list_reference_v       { false };      // Stead on just a simple integer to count references it will have a list of pools referencing this component
@@ -210,7 +210,7 @@ namespace mecs::component
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   T_COMPONENT::type_data_access_v == type_data_access::DOUBLE_BUFFER || T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
-                    ,   share::scope::ARCHETYPE
+                    ,   share::type_scope_v
                 };
             }
             else if constexpr (std::is_base_of_v<tag, T_COMPONENT>)
@@ -231,7 +231,7 @@ namespace mecs::component
                     ,   0u
                     ,   type_data_access::ENUM_COUNT
                     ,   false
-                    ,   share::scope::ARCHETYPE
+                    ,   share::type_scope_v
                 };
             }
             else if constexpr( std::is_base_of_v<singleton, T_COMPONENT> )
@@ -253,7 +253,7 @@ namespace mecs::component
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<std::unique_ptr<T_COMPONENT>> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   false
-                    ,   share::scope::ARCHETYPE
+                    ,   share::type_scope_v
                 };
             }
             else if constexpr (std::is_base_of_v<share, T_COMPONENT>)
@@ -299,7 +299,7 @@ namespace mecs::component
                     , 0u
                     , type_data_access::ENUM_COUNT
                     , false
-                    , share::scope::ARCHETYPE
+                    , share::type_scope_v
                 };
             }
         }
