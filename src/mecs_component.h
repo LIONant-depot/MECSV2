@@ -59,6 +59,7 @@ namespace mecs::component
 
     struct share
     {
+        // When a share component changes its value the scope limits its effect.
         enum class scope : std::uint8_t
         {
             GLOBAL                          // Value is Share by every archetype. Reference is factor out by pools. Systems can access this type of share components as long as they lock.
