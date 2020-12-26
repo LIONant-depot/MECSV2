@@ -67,11 +67,18 @@ namespace mecs::component
         ,   POOL                            // Value is Share by all entities in one pool, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
         };
 
+        enum class owership : std::uint8_t
+        {
+            ENTITY                          // This share component is own by the entity so when an entity moves it takes along the component
+        ,   POOL                            // This share component is own by the pool so when the entity moves it will lose this component
+        };
+
         using                   type_guid                   = component::type_guid;
         constexpr static auto   type_data_access_v          = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
         constexpr static auto   type_guid_v                 { type_guid{ nullptr } };
         constexpr static auto   type_name_v                 { xconst_universal_str("unnamed share") };
         constexpr static auto   type_scope_v                { scope::GLOBAL };
+        constexpr static auto   type_ownership_v            { owership::ENTITY };
 
         constexpr static bool   type_free_on_unreference_v  { true  };      // When no pool has a reference to it then it will die. Can be set to false for resources
         constexpr static bool   type_list_reference_v       { false };      // Stead on just a simple integer to count references it will have a list of pools referencing this component
