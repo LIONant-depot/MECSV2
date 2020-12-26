@@ -61,9 +61,10 @@ namespace mecs::component
     {
         enum class scope : std::uint8_t
         {
-            GLOBAL                          // Share by every archetype. Systems can access this type of share components as long as they lock.
-        ,   ARCHETYPE                       // Share by all the pools in an archetype
-        ,   POOL                            // Share by all entities in one pool
+            GLOBAL                          // Value is Share by every archetype. Reference is factor out by pools. Systems can access this type of share components as long as they lock.
+        ,   ARCHETYPE                       // Value is Share by all the pools in an archetype, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
+        ,   POOL                            // Value is Share by all entities in one pool, Reference is factor out by pools. (The value of this components may be duplicated multiple times by the system)
+        ,   UNORDER_GLOBAL                  // Value is Share by all archetypes (like a global) but the reference is NOT factor out at all (So different values wont change the entity pool so getKey is never used)
         };
 
         using                   type_guid                   = component::type_guid;
@@ -99,25 +100,6 @@ namespace mecs::component
         xforceinline      const reference&  getReference  ( void ) const noexcept { return getMapEntry().m_Value; }
         xforceinline      guid              getGUID       ( void ) const noexcept { return getMapEntry().m_Key; }
         xforceinline      void              MarkAsZombie  ( void )       noexcept { reinterpret_cast<std::size_t&>(m_pInstance) = reinterpret_cast<std::size_t>(m_pInstance) | 1; }
-    };
-
-    // Possibly new type of component. Still pending definition details...
-    struct reference
-    {
-        constexpr static auto   type_guid_v         { nullptr };
-        constexpr static auto   type_name_v         { xconst_universal_str("unnamed reference") };
-        using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
-        entity m_Entity{ {}, nullptr };
-    };
-
-    // Possibly new type of components. Still pending definition details...
-    struct share_reference : share
-    {
-        constexpr static auto   type_guid_v         { nullptr };
-        constexpr static auto   type_name_v         { xconst_universal_str("unnamed share reference") };
-        using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
-        entity::guid m_Entity{ nullptr };
-        static constexpr std::uint64_t   getKey(const void* p) noexcept { return static_cast<const share_reference*>(p)->m_Entity.m_Value; }
     };
 
     //----------------------------------------------------------------------------
