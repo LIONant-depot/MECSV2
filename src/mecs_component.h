@@ -28,13 +28,6 @@ namespace mecs::component
         ,   SHARE_REF
     };
 
-    enum class type_scope : std::uint8_t
-    {
-            GLOBAL
-        ,   ARCHETYPE
-        ,   POOL
-    };
-
     //----------------------------------------------------------------------------
     // COMPONENT TYPES
     //----------------------------------------------------------------------------
@@ -66,42 +59,31 @@ namespace mecs::component
 
     struct share
     {
-        // We use the type map other than NONE when we want to be able to use this share component in the actual component query
-        // If you don't need to do that leave it as NONE. Other wise there is a memory hit as well as a performance hit.
-        // enum class type_map : std::uint8_t
-        // {
-        //     NONE                    // We don't need a HashMap that will map the key to any custom_pool pools.
-        // ,   ONE_TO_MANY             // Create a HashMap between the key and potentially many custom_pools. (such a level in a Hierarchy)
-        // ,   ONE_TO_ONE              // Create a HashMap between the key and a single custom_pool. They key must only map to a single pool. (Such a unique point in space)
-        // };
-        // constexpr static auto   type_map_v          { type_map::NONE };
+        enum class scope : std::uint8_t
+        {
+            GLOBAL                          // Share by every archetype. Systems can access this type of share components as long as they lock.
+        ,   ARCHETYPE                       // Share by all the pools in an archetype
+        ,   POOL                            // Share by all entities in one pool
+        };
 
-        using                   type_scope          = mecs::component::type_scope;
-        using                   type_guid           = component::type_guid;
-        constexpr static auto   type_data_access_v  = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
-        constexpr static auto   type_guid_v         { type_guid{ nullptr } };
-        constexpr static auto   type_name_v         { xconst_universal_str("unnamed share") };
+        using                   type_guid                   = component::type_guid;
+        constexpr static auto   type_data_access_v          = /*DO NOT OVERRIDE*/ mecs::component::type_data_access::LINEAR;
+        constexpr static auto   type_guid_v                 { type_guid{ nullptr } };
+        constexpr static auto   type_name_v                 { xconst_universal_str("unnamed share") };
+        constexpr static auto   type_scope_v                { scope::ARCHETYPE };
+
+        constexpr static bool   type_free_on_unreference_v  { true  };      // When no pool has a reference to it then it will die. Can be set to false for resources
+        constexpr static bool   type_list_reference_v       { false };      // Stead on just a simple integer to count references it will have a list of pools referencing this component
 
         static constexpr std::uint64_t   getKey(const void*) noexcept { return 0; }
-    };
-
-    struct scope
-    {
-        // Scope component (Can be access by systems) Writing to them does not change
-        // where the entity is unlike the share component. All entities which access this component
-        // will be affected by its change. So they work like a global variable for the given scope.
-        using                   type_scope          = mecs::component::type_scope;
-        using                   type_guid           = component::type_guid;
-        constexpr static auto   type_guid_v         { type_guid{ nullptr } };
-        constexpr static auto   type_name_v         { xconst_universal_str("unnamed scope") };
     };
 
     struct entity final : data
     {
         struct reference
         {
-            mecs::archetype::pool*  m_pPool;
-            mecs::entity_pool::index            m_Index;
+            mecs::archetype::pool*      m_pPool;
+            mecs::entity_pool::index    m_Index;
         };
 
         using guid  = xcore::guid::unit<64, struct entity_tag>;
@@ -119,14 +101,13 @@ namespace mecs::component
         xforceinline      void              MarkAsZombie  ( void )       noexcept { reinterpret_cast<std::size_t&>(m_pInstance) = reinterpret_cast<std::size_t>(m_pInstance) | 1; }
     };
 
-    // Possibly new type of components. Still pending definition details...
+    // Possibly new type of component. Still pending definition details...
     struct reference
     {
         constexpr static auto   type_guid_v         { nullptr };
         constexpr static auto   type_name_v         { xconst_universal_str("unnamed reference") };
         using                   reference_t         = std::tuple<>; // (must have, including tags) Archetype type definition (ex: render mesh)
-        entity::guid m_Entity{ nullptr };
-        static constexpr std::uint64_t getKey(const void* p) noexcept { return static_cast<const reference*>(p)->m_Entity.m_Value; }
+        entity m_Entity{ {}, nullptr };
     };
 
     // Possibly new type of components. Still pending definition details...
@@ -165,6 +146,7 @@ namespace mecs::component
         const std::uint16_t                     m_Alignment;
         const type_data_access                  m_DataAccess;
         const bool                              m_isDoubleBuffer;
+        const share::scope                      m_ShareScope;
     };
 
     namespace details
@@ -246,6 +228,7 @@ namespace mecs::component
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   T_COMPONENT::type_data_access_v == type_data_access::DOUBLE_BUFFER || T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
+                    ,   share::scope::ARCHETYPE
                 };
             }
             else if constexpr (std::is_base_of_v<tag, T_COMPONENT>)
@@ -266,6 +249,7 @@ namespace mecs::component
                     ,   0u
                     ,   type_data_access::ENUM_COUNT
                     ,   false
+                    ,   share::scope::ARCHETYPE
                 };
             }
             else if constexpr( std::is_base_of_v<singleton, T_COMPONENT> )
@@ -287,6 +271,7 @@ namespace mecs::component
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<std::unique_ptr<T_COMPONENT>> )
                     ,   T_COMPONENT::type_data_access_v
                     ,   false
+                    ,   share::scope::ARCHETYPE
                 };
             }
             else if constexpr (std::is_base_of_v<share, T_COMPONENT>)
@@ -310,6 +295,7 @@ namespace mecs::component
                     ,   static_cast<std::uint16_t>( std::alignment_of_v<T_COMPONENT> )
                     ,   type_data_access::LINEAR
                     ,   false
+                    ,   T_COMPONENT::type_scope_v
                 };
             }
             else if constexpr (std::is_base_of_v< share_ref, T_COMPONENT> )
@@ -331,6 +317,7 @@ namespace mecs::component
                     , 0u
                     , type_data_access::ENUM_COUNT
                     , false
+                    , share::scope::ARCHETYPE
                 };
             }
         }
