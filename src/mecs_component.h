@@ -137,6 +137,7 @@ namespace mecs::component
         const type_data_access                  m_DataAccess;
         const bool                              m_isDoubleBuffer;
         const share::scope                      m_ShareScope;
+        const share::owership                   m_ShareOwnership;
     };
 
     namespace details
@@ -219,6 +220,7 @@ namespace mecs::component
                     ,   T_COMPONENT::type_data_access_v
                     ,   T_COMPONENT::type_data_access_v == type_data_access::DOUBLE_BUFFER || T_COMPONENT::type_data_access_v == type_data_access::QUANTUM_DOUBLE_BUFFER
                     ,   share::type_scope_v
+                    ,   share::type_ownership_v
                 };
             }
             else if constexpr (std::is_base_of_v<tag, T_COMPONENT>)
@@ -240,6 +242,7 @@ namespace mecs::component
                     ,   type_data_access::ENUM_COUNT
                     ,   false
                     ,   share::type_scope_v
+                    ,   share::type_ownership_v
                 };
             }
             else if constexpr( std::is_base_of_v<singleton, T_COMPONENT> )
@@ -262,6 +265,7 @@ namespace mecs::component
                     ,   T_COMPONENT::type_data_access_v
                     ,   false
                     ,   share::type_scope_v
+                    ,   share::type_ownership_v
                 };
             }
             else if constexpr (std::is_base_of_v<share, T_COMPONENT>)
@@ -286,6 +290,7 @@ namespace mecs::component
                     ,   type_data_access::LINEAR
                     ,   false
                     ,   T_COMPONENT::type_scope_v
+                    ,   T_COMPONENT::type_ownership_v
                 };
             }
             else if constexpr (std::is_base_of_v< share_ref, T_COMPONENT> )
@@ -308,6 +313,7 @@ namespace mecs::component
                     , type_data_access::ENUM_COUNT
                     , false
                     , share::type_scope_v
+                    , share::type_ownership_v
                 };
             }
         }
