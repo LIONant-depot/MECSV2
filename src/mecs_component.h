@@ -22,7 +22,6 @@ namespace mecs::component
             TAG
         ,   DATA
         ,   SINGLETON
-        ,   RESOURCE
         ,   SHARE
         ,   ENUM_COUNT
         ,   SHARE_REF
